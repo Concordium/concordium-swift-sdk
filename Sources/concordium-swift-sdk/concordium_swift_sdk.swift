@@ -1,4 +1,4 @@
-import MobileWallet
+//import MobileWallet
 
 enum MobileWalletError: Error, Equatable {
     case noResponse
@@ -7,6 +7,7 @@ enum MobileWalletError: Error, Equatable {
 
 func parameterToJson(_ inputJson: String) throws -> String {
     // From https://github.com/Concordium/concordium-reference-wallet-ios/blob/24a7ed0ac635bd56aac89f536fff0739b12cd577/Dependencies/MobileWalletFacade.swift#L127
+    /*
     var res = ""
     try inputJson.withCString { inputPointer in
         var code: UInt8 = 0
@@ -20,5 +21,9 @@ func parameterToJson(_ inputJson: String) throws -> String {
             throw MobileWalletError.failed(res)
         }
     }
-    return res
+
+     */
+    return """
+           {"data":[],"to":{"Account":["3he2aDi8GT9bLZTVfY3CD36JUsXBt8QaqvRW8AW4SpstdPYFzu"]}}
+           """
 }

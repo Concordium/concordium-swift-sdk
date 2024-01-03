@@ -11,14 +11,12 @@ let package = Package(
                     targets: ["concordium-swift-sdk"]),
         ],
         dependencies: [
-            .package(url: "https://github.com/Concordium/concordium-wallet-crypto-swift", exact: "0.24.0-0"),
+            .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.15.0")
         ],
         targets: [
             .target(
                     name: "concordium-swift-sdk",
-                    dependencies: [
-                        .product(name: "ConcordiumWalletCrypto", package: "concordium-wallet-crypto-swift"),
-                    ]
+                    dependencies: [.product(name: "GRPC", package: "grpc-swift")]
             ),
             .testTarget(
                     name: "concordium-swift-sdkTests",
