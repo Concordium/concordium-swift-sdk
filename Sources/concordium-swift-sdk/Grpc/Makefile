@@ -16,9 +16,6 @@ SWIFT_BUILD_RELEASE:=${SWIFT} build ${SWIFT_FLAGS_RELEASE}
 SWIFT_TEST:=${SWIFT} test ${SWIFT_FLAGS}
 SWIFT_PACKAGE:=${SWIFT} package ${SWIFT_FLAGS}
 
-# Name of generated xcodeproj
-XCODEPROJ:=GRPC.xcodeproj
-
 ### Package and plugin build targets ###########################################
 
 all:
@@ -59,27 +56,22 @@ interop-backoff-test-runner:
 		--grpc-swift_opt=Visibility=Public \
 		--grpc-swift_out=$(dir $<)
 
-ECHO_PROTO=Sources/Examples/Echo/Model/echo.proto
-ECHO_PB=$(ECHO_PROTO:.proto=.pb.swift)
-ECHO_GRPC=$(ECHO_PROTO:.proto=.grpc.swift)
+SERVICE_PROTO=Sources/concordium-swift-sdk/Grpc/service.proto
+SERVICE_PB=$(SERVICE_PROTO:.proto=.pb.swift)
+SERVICE_GRPC=$(SERVICE_PROTO:.proto=.grpc.swift)
 
-# For Echo we'll generate the test client as well.
-${ECHO_GRPC}: ${ECHO_PROTO} ${PROTOC_GEN_GRPC_SWIFT}
+# Generate the test client
+${SERVICE_GRPC}: ${SERVICE_PROTO} ${PROTOC_GEN_GRPC_SWIFT}
 	protoc $< \
 		--proto_path=$(dir $<) \
 		--plugin=${PROTOC_GEN_GRPC_SWIFT} \
 		--grpc-swift_opt=Visibility=Public,TestClient=true \
 		--grpc-swift_out=$(dir $<)
 
+
+
+
 # Generates protobufs and gRPC client and server for the Echo example
-.PHONY:
-generate-echo: ${ECHO_PB} ${ECHO_GRPC}
-
-SERVICE_PROTO=Sources/concordium-swift-sdk/Grpc/service.proto
-SERVICE_PB=$(SERVICE_PROTO:.proto=.pb.swift)
-SERVICE_GRPC=$(SERVICE_PROTO:.proto=.grpc.swift)
-
-# Generates protobufs and gRPC client and server for the Hello World example
 .PHONY:
 generate-grpc: ${SERVICE_PB} ${SERVICE_GRPC}
 
