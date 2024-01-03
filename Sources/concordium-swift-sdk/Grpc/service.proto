@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "v2/concordium/types.proto";
+import "types.proto";
 
 package concordium.v2;
 
