@@ -2,7 +2,6 @@
 import XCTest
 
 import GRPC
-import NIOCore
 import NIOPosix
 
 /// Temporary test for exercising the gRPC client. To run, adjust the channel target to point to a running node.
