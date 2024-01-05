@@ -3,24 +3,24 @@
 import PackageDescription
 
 let package = Package(
-        name: "concordium-swift-sdk",
+        name: "ConcordiumSwiftSDK",
         products: [
             .library(
-                    name: "concordium-swift-sdk",
-                    targets: ["concordium-swift-sdk"]),
+                    name: "ConcordiumSwiftSDK",
+                    targets: ["ConcordiumSwiftSDK"]),
         ],
         dependencies: [
             .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.15.0")
         ],
         targets: [
             .target(
-                    name: "concordium-swift-sdk",
+                    name: "ConcordiumSwiftSDK",
                     dependencies: [.product(name: "GRPC", package: "grpc-swift")]
             ),
             .testTarget(
-                    name: "concordium-swift-sdkTests",
+                    name: "ConcordiumSwiftSDKTests",
                     dependencies: [
-                        "concordium-swift-sdk",
+                        "ConcordiumSwiftSDK",
                     ]
             ),
         ]

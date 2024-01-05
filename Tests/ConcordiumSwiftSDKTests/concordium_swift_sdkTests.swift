@@ -1,4 +1,4 @@
-@testable import concordium_swift_sdk
+@testable import ConcordiumSwiftSDK
 import XCTest
 
 final class concordium_swift_sdkTests: XCTestCase {
