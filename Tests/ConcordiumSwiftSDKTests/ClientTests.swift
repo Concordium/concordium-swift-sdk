@@ -5,13 +5,10 @@ import GRPC
 import NIOPosix
 
 /// Temporary test for exercising the gRPC client. To run, adjust the channel target to point to a running node.
-final class concordium_swift_sdkExampleTests: XCTestCase {
+final class ClientTests: XCTestCase {
     let channelTarget = ConnectionTarget.host("localhost", port: 20000)
     
-    func testExampleClientConsensusStatus() throws {
-        // Setup an `EventLoopGroup` for the connection to run on.
-        //
-        // See: https://github.com/apple/swift-nio#eventloops-and-eventloopgroups
+    func testClientGetCryptographicParameters() async throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         // Make sure the group is shutdown when we're done with it.
         defer {
@@ -26,12 +23,13 @@ final class concordium_swift_sdkExampleTests: XCTestCase {
         defer {
           try! channel.close().wait()
         }
-        let client = Concordium_V2_QueriesNIOClient(channel: channel)
         
-        let req = Concordium_V2_Empty()
-        let res = client.getNodeInfo(req)
-        let info = try res.response.wait()
-        print(info)
-        XCTAssertNotNil(info)
+        let client = Client(channel: channel)
+        let res = await client.getCryptographicParameters(blockHash: try Data(fromHexString: "a21c1c18b70c64680a4eceea655ab68d164e8f1c82b8b8566388391d8da81e41"))
+        do {
+            print(try await res.get())
+        } catch let err {
+            print(err)
+        }
     }
 }
