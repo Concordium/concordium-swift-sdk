@@ -34,9 +34,7 @@ class Client {
     }
     
     func getCryptographicParameters(blockHash: BlockHash?) async -> EventLoopFuture<CryptographicParameters> {
-        let bh = getBlockHashInput(blockHash: blockHash)
-        print(bh)
-        let res = grpc.getCryptographicParameters(bh)
+        let res = grpc.getCryptographicParameters(getBlockHashInput(blockHash: blockHash))
         return res.response.map({v in
             CryptographicParameters(
                 onChainCommitmentKey: v.onChainCommitmentKey.hexadecimalString(),
