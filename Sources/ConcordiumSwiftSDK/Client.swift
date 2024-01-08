@@ -4,14 +4,6 @@ import GRPC
 import NIOPosix
 import NIOCore
 
-typealias BlockHash = Data
-
-struct CryptographicParameters {
-    let onChainCommitmentKey: String
-    let bulletproofGenerators: String
-    let genesisString: String
-}
-
 class Client {
     let grpc: Concordium_V2_QueriesNIOClient
     
@@ -33,13 +25,16 @@ class Client {
         }
     }
     
-    func getCryptographicParameters(blockHash: BlockHash?) async -> EventLoopFuture<CryptographicParameters> {
-        let res = grpc.getCryptographicParameters(getBlockHashInput(blockHash: blockHash))
-        return res.response.map({v in
-            CryptographicParameters(
-                onChainCommitmentKey: v.onChainCommitmentKey.hexadecimalString(),
-                bulletproofGenerators: v.bulletproofGenerators.hexadecimalString(),
-                genesisString: v.genesisString)
-        })
+    func getCryptographicParameters(at block: BlockIdentifier) async -> EventLoopFuture<CryptographicParameters> {
+        return grpc
+            .getCryptographicParameters(block.toGrpcType())
+            .response
+            .map({v in
+                CryptographicParameters(
+                    onChainCommitmentKey: v.onChainCommitmentKey.hexadecimalString(),
+                    bulletproofGenerators: v.bulletproofGenerators.hexadecimalString(),
+                    genesisString: v.genesisString
+                )
+            })
     }
 }

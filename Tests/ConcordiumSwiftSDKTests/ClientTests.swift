@@ -25,8 +25,10 @@ final class ClientTests: XCTestCase {
         }
         
         let client = Client(channel: channel)
-        let res = await client.getCryptographicParameters(blockHash: try Data(fromHexString: "a21c1c18b70c64680a4eceea655ab68d164e8f1c82b8b8566388391d8da81e41"))
+        let hash = try BlockHash(fromHexString: "a21c1c18b70c64680a4eceea655ab68d164e8f1c82b8b8566388391d8da81e41")
+        let res = await client.getCryptographicParameters(at: .hash(hash))
         let params = try await res.get()
         print(params)
+        
     }
 }

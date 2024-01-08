@@ -19,7 +19,6 @@ extension Data {
             }
             data.append(byte)
         }
-
         self = data
     }
     
