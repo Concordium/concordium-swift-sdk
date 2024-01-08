@@ -17,10 +17,11 @@ import Foundation
 ///    var property1: String?
 ///    var property2: Int?
 /// }
-//// Usage
+/// Usage
 /// let myObject = with(MyStruct()) {
 ///    $0.property1 = "Hello"
 ///    $0.property2 = 42
+/// ```
 /// }
 func with<T>(_ receiver: T, _ block: (inout T) -> Void) -> T {
     var copy = receiver
