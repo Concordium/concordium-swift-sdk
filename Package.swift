@@ -1,29 +1,29 @@
 // swift-tools-version: 5.6
-// The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
 let package = Package(
-        name: "concordium-swift-sdk",
+        name: "ConcordiumSwiftSDK",
+        platforms: [
+            .iOS(.v15),
+        ],
         products: [
             .library(
-                    name: "concordium-swift-sdk",
-                    targets: ["concordium-swift-sdk"]),
+                    name: "ConcordiumSwiftSDK",
+                    targets: ["ConcordiumSwiftSDK"]),
         ],
         dependencies: [
-            .package(url: "https://github.com/Concordium/concordium-wallet-crypto-swift", exact: "0.24.0-0"),
+            .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.15.0")
         ],
         targets: [
             .target(
-                    name: "concordium-swift-sdk",
-                    dependencies: [
-                        .product(name: "ConcordiumWalletCrypto", package: "concordium-wallet-crypto-swift"),
-                    ]
+                    name: "ConcordiumSwiftSDK",
+                    dependencies: [.product(name: "GRPC", package: "grpc-swift")]
             ),
             .testTarget(
-                    name: "concordium-swift-sdkTests",
+                    name: "ConcordiumSwiftSDKTests",
                     dependencies: [
-                        "concordium-swift-sdk",
+                        "ConcordiumSwiftSDK",
                     ]
             ),
         ]
