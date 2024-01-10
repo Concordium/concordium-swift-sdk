@@ -53,25 +53,25 @@ struct CryptographicParameters {
     let genesisString: String
 }
 
-struct Nonce {
-    var nonce: UInt
+struct SequenceNumber {
+    var value: UInt
 
-    init(nonce: UInt) {
-        self.nonce = nonce
+    init(value: UInt) {
+        self.value = value
     }
 
-    /// Get the next nonce.
-    func next() -> Nonce {
-        return Nonce(nonce: self.nonce + 1)
+    /// Get the next sequence number.
+    func next() -> SequenceNumber {
+        return SequenceNumber(value: self.value + 1)
     }
 
-    /// Increase the nonce to the next nonce.
+    /// Increase the sequence number to the next value.
     mutating func nextMut() {
-        self.nonce += 1
+        self.value += 1
     }
 }
 
-struct NextAccountNonce {
-    let nanNonce: Nonce
+struct NextAccountSequenceNumber {
+    let nanSequenceNumber: SequenceNumber
     let nanAllFinal: Bool
 }
