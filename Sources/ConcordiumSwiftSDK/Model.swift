@@ -52,3 +52,26 @@ struct CryptographicParameters {
     let bulletproofGenerators: String
     let genesisString: String
 }
+
+struct Nonce {
+    var nonce: UInt
+
+    init(nonce: UInt) {
+        self.nonce = nonce
+    }
+
+    /// Get the next nonce.
+    func next() -> Nonce {
+        return Nonce(nonce: self.nonce + 1)
+    }
+
+    /// Increase the nonce to the next nonce.
+    mutating func nextMut() {
+        self.nonce += 1
+    }
+}
+
+struct NextAccountNonce {
+    let nanNonce: Nonce
+    let nanAllFinal: Bool
+}
