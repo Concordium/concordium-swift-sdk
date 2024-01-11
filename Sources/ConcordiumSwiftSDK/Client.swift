@@ -12,7 +12,7 @@ class Client {
     }
 
     func getCryptographicParameters(at block: BlockIdentifier) async throws -> CryptographicParameters {
-        var req = block.toGrpcType()
+        let req = block.toGrpcType()
         let res = try await grpc.getCryptographicParameters(req).response.get()
         return CryptographicParameters(
                 onChainCommitmentKey: res.onChainCommitmentKey.hexadecimalString(),
@@ -23,7 +23,7 @@ class Client {
 
     func getNextAccountSequenceNumber(of address: AccountAddress) async throws -> NextAccountSequenceNumber {
         var req = Concordium_V2_AccountAddress()
-        req.value = address
+        req.value = address.bytes
         let res = try await grpc.getNextAccountSequenceNumber(req).response.get()
         return NextAccountSequenceNumber(
                 sequenceNumber: res.sequenceNumber.value,
