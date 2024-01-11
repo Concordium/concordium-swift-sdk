@@ -42,7 +42,7 @@ class Client {
         var grpcAddress = Concordium_V2_AccountAddress()
         grpcAddress.value = address
         return grpc.getNextAccountSequenceNumber(grpcAddress).response.map({ res in
-            NextAccountSequenceNumber(sequenceNumber: SequenceNumber.from(res.sequenceNumber), allFinal: res.allFinal)
+            NextAccountSequenceNumber(sequenceNumber: res.sequenceNumber.value, allFinal: res.allFinal)
         })
     }
 }

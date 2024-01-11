@@ -2,6 +2,7 @@ import Foundation
 
 typealias BlockHash = Data
 typealias AccountAddress = Data
+typealias SequenceNumber = UInt64
 
 enum BlockIdentifier {
     case lastFinal
@@ -52,29 +53,6 @@ struct CryptographicParameters {
     let onChainCommitmentKey: String
     let bulletproofGenerators: String
     let genesisString: String
-}
-
-struct SequenceNumber {
-    var value: UInt64
-
-    init(value: UInt64) {
-        self.value = value
-    }
-
-    /// Get the next sequence number.
-    func next() -> SequenceNumber {
-        return SequenceNumber(value: self.value + 1)
-    }
-
-    /// Increase the sequence number to the next value.
-    mutating func nextMut() {
-        self.value += 1
-    }
-
-    static func from(_ grpcType: Concordium_V2_SequenceNumber) -> SequenceNumber {
-        return SequenceNumber(value: grpcType.value)
-    }
-
 }
 
 struct NextAccountSequenceNumber {
