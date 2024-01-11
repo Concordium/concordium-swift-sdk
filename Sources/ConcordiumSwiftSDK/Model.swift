@@ -1,6 +1,7 @@
 import Foundation
 
 typealias BlockHash = Data
+typealias AccountAddress = Data
 
 enum BlockIdentifier {
     case lastFinal
@@ -72,6 +73,6 @@ struct SequenceNumber {
 }
 
 struct NextAccountSequenceNumber {
-    let nanSequenceNumber: SequenceNumber
-    let nanAllFinal: Bool
+    let sequenceNumber: SequenceNumber
+    let allFinal: Bool
 }
