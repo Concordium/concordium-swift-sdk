@@ -1,8 +1,6 @@
 import Foundation
 
-typealias BlockHash = Data
-typealias AccountAddress = Data
-typealias SequenceNumber = UInt64
+typealias BlockHash = Data // 32 bytes
 
 enum BlockIdentifier {
     case lastFinal
@@ -47,15 +45,4 @@ enum BlockIdentifier {
             return b
         }
     }
-}
-
-struct CryptographicParameters {
-    let onChainCommitmentKey: String
-    let bulletproofGenerators: String
-    let genesisString: String
-}
-
-struct NextAccountSequenceNumber {
-    let sequenceNumber: SequenceNumber
-    let allFinal: Bool
 }
