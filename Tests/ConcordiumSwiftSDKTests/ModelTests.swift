@@ -5,7 +5,7 @@ import XCTest
 class SequenceNumberTests: XCTestCase {
 
     func testInitialization() {
-        let initialValue: UInt = 42
+        let initialValue: UInt64 = 42
 
         let sequenceNumber = SequenceNumber(value: initialValue)
 

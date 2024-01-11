@@ -9,7 +9,7 @@ enum BlockIdentifier {
     case hash(BlockHash)
     case absoluteHeight(height: UInt64)
     case relativeHeight(genesisIndex: UInt32, height: UInt64, restrictedToGenesisIndex: Bool)
-    
+
     func toGrpcType() -> Concordium_V2_BlockHashInput {
         switch self {
         case .lastFinal:
@@ -55,9 +55,9 @@ struct CryptographicParameters {
 }
 
 struct SequenceNumber {
-    var value: UInt
+    var value: UInt64
 
-    init(value: UInt) {
+    init(value: UInt64) {
         self.value = value
     }
 
@@ -70,6 +70,11 @@ struct SequenceNumber {
     mutating func nextMut() {
         self.value += 1
     }
+
+    static func from(_ grpcType: Concordium_V2_SequenceNumber) -> SequenceNumber {
+        return SequenceNumber(value: grpcType.value)
+    }
+
 }
 
 struct NextAccountSequenceNumber {
