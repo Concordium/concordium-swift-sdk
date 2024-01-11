@@ -21,7 +21,3 @@ struct NextAccountSequenceNumber {
     let sequenceNumber: SequenceNumber
     let allFinal: Bool
 }
-
-extension AccountAddress {
-
-}
