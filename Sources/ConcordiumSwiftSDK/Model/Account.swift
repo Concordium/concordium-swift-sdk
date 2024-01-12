@@ -1,5 +1,5 @@
-import Foundation
 import Base58Check
+import Foundation
 
 enum AccountIdentifier {
     case address(AccountAddress)
@@ -34,11 +34,11 @@ fileprivate let accountAddressBase58CheckVersion: UInt8 = 1
 
 struct AccountAddress {
     let bytes: Data // 32 bytes
-    
+
     init(_ bytes: Data) {
         self.bytes = bytes
     }
-    
+
     /// Construct address from the standard representation (Base58Check).
     init(base58Check: String) throws {
         var bytes = try Base58Check().decode(string: base58Check)
@@ -49,6 +49,7 @@ struct AccountAddress {
         self.bytes = bytes // excludes initial version byte
     }
 }
+
 typealias SequenceNumber = UInt64
 
 struct NextAccountSequenceNumber {
@@ -91,7 +92,9 @@ struct AccountReleaseSchedule {
     let schedule: [Release]
 
     static func fromGrpcType(_ grpc: Concordium_V2_ReleaseSchedule) -> AccountReleaseSchedule {
-        .init(total: grpc.total.value, schedule: grpc.schedules.map { .fromGrpcType($0) })
+        .init(total: grpc.total.value, schedule: grpc.schedules.map {
+            .fromGrpcType($0)
+        })
     }
 }
 
@@ -108,6 +111,17 @@ typealias AttributeTag = UInt32
 typealias Threshold = UInt32
 typealias ArIdentity = UInt32
 
+extension VerifyKey {
+    static func fromGrpcType(_ grpc: Concordium_V2_AccountVerifyKey) -> VerifyKey? {
+        switch grpc.key {
+        case nil:
+            return nil
+        case let .ed25519Key(d):
+            return d
+        }
+    }
+}
+
 struct CredentialPublicKeys {
     let keys: [KeyIndex: VerifyKey]
     let threshold: SignatureThreshold
@@ -115,12 +129,9 @@ struct CredentialPublicKeys {
     static func fromGrpcType(_ grpc: Concordium_V2_CredentialPublicKeys) throws -> CredentialPublicKeys {
         CredentialPublicKeys(
                 keys: try grpc.keys.mapValues {
-                    switch $0.key {
-                    case nil:
+                    try VerifyKey.fromGrpcType($0) ?? {
                         throw GrpcError.requiredValueMissing("credential public keys")
-                    case let .ed25519Key(d):
-                        return d
-                    }
+                    }()
                 },
                 threshold: grpc.threshold.value
         )
@@ -171,10 +182,10 @@ enum AccountCredentialWithoutProofs<C, A> {
     case initial(InitialCredentialDeploymentValues<C, A>)
     case normal(CredentialDeploymentValues<C, A>, CredentialDeploymentCommitments<C>)
 
-    static func fromGrpcType(_ cred: Concordium_V2_AccountCredential) throws -> AccountCredentialWithoutProofs<ArCurve, AttributeKind> {
+    static func fromGrpcType(_ cred: Concordium_V2_AccountCredential) throws -> AccountCredentialWithoutProofs<ArCurve, AttributeKind>? {
         switch cred.credentialValues {
         case nil:
-            throw GrpcError.requiredValueMissing("credential values")
+            return nil
         case let .initial(v):
             return .initial(
                     InitialCredentialDeploymentValues(
@@ -193,7 +204,9 @@ enum AccountCredentialWithoutProofs<C, A> {
                             credKeyInfo: try .fromGrpcType(v.keys),
                             ipIdentity: v.ipID.value,
                             threshold: v.arThreshold.value,
-                            arData: v.arData.mapValues { $0.encIDCredPubShare }
+                            arData: v.arData.mapValues {
+                                $0.encIDCredPubShare
+                            }
                     ),
                     CredentialDeploymentCommitments(
                             cmmPrf: v.commitments.prf.value,
@@ -259,13 +272,13 @@ enum StakePendingChange {
     case removeStake(effectiveTime: Date)
 
     static func fromGrpcType(_ grpc: Concordium_V2_StakePendingChange) -> StakePendingChange? {
-        grpc.change.map {
-            switch $0 {
-            case let .reduce(r):
-                return .reduceStake(newStake: r.newStake.value, effectiveTime: dateFromUnixTimeMillis(r.effectiveTime.value))
-            case let .remove(r):
-                return .removeStake(effectiveTime: dateFromUnixTimeMillis(r.value))
-            }
+        switch grpc.change {
+        case nil:
+            return nil
+        case let .reduce(r):
+            return .reduceStake(newStake: r.newStake.value, effectiveTime: dateFromUnixTimeMillis(r.effectiveTime.value))
+        case let .remove(r):
+            return .removeStake(effectiveTime: dateFromUnixTimeMillis(r.value))
         }
     }
 }
@@ -320,10 +333,10 @@ enum DelegationTarget {
     case passive
     case baker(BakerId)
 
-    static func fromGrpcType(_ grpc: Concordium_V2_DelegationTarget) throws -> DelegationTarget {
+    static func fromGrpcType(_ grpc: Concordium_V2_DelegationTarget) -> DelegationTarget? {
         switch grpc.target {
         case nil:
-            throw GrpcError.requiredValueMissing("delegation target")
+            return nil
         case .passive:
             return .passive
         case let .baker(b):
@@ -363,7 +376,9 @@ enum AccountStakingInfo {
             return .delegated(
                     stakedAmount: d.stakedAmount.value,
                     restakeEarnings: d.restakeEarnings,
-                    delegationTarget: try .fromGrpcType(d.target),
+                    delegationTarget: try .fromGrpcType(d.target) ?? {
+                        throw GrpcError.requiredValueMissing("delegation target")
+                    }(),
                     pendingChange: .fromGrpcType(d.pendingChange)
             )
         }
@@ -381,4 +396,26 @@ struct AccountInfo {
     let accountIndex: AccountIndex
     let accountStake: AccountStakingInfo?
     let accountAddress: AccountAddress
+
+    static func fromGrpcType(_ grpc: Concordium_V2_AccountInfo) throws -> AccountInfo {
+        AccountInfo(
+                accountNonce: grpc.sequenceNumber.value,
+                accountAmount: grpc.amount.value,
+                accountReleaseSchedule: AccountReleaseSchedule.fromGrpcType(grpc.schedule),
+                accountCredentials: try grpc.creds.mapValues {
+                    Versioned<AccountCredentialWithoutProofs<ArCurve, AttributeKind>>(
+                            version: 0, // same as in Rust SDK
+                            value: try .fromGrpcType($0) ?? {
+                                throw GrpcError.requiredValueMissing("credential values")
+                            }()
+                    )
+                },
+                accountThreshold: grpc.threshold.value,
+                accountEncryptedAmount: AccountEncryptedAmount.fromGrpcType(grpc.encryptedBalance),
+                accountEncryptionKey: grpc.encryptionKey.value,
+                accountIndex: grpc.index.value,
+                accountStake: try .fromGrpcType(grpc.stake),
+                accountAddress: AccountAddress(grpc.address.value)
+        )
+    }
 }
