@@ -8,11 +8,10 @@ import NIOPosix
 final class ClientTests: XCTestCase {
     let channelTarget = ConnectionTarget.host("localhost", port: 20000)
     let someBlockHash = "a21c1c18b70c64680a4eceea655ab68d164e8f1c82b8b8566388391d8da81e41"
-    let someAccountAddr = "35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh"
+    let someAccountAddress = "35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh"
 
     func testClientGetCryptographicParameters() async throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        // Make sure the group is shutdown when we're done with it.
         defer {
           try! group.syncShutdownGracefully()
         }
@@ -21,7 +20,6 @@ final class ClientTests: XCTestCase {
             transportSecurity: .plaintext,
             eventLoopGroup: group
         )
-        // Close the connection when we're done with it.
         defer {
           try! channel.close().wait()
         }
@@ -34,7 +32,6 @@ final class ClientTests: XCTestCase {
     
     func testClientGetNextAccountSequenceNumber() async throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        // Make sure the group is shutdown when we're done with it.
         defer {
           try! group.syncShutdownGracefully()
         }
@@ -43,13 +40,12 @@ final class ClientTests: XCTestCase {
             transportSecurity: .plaintext,
             eventLoopGroup: group
         )
-        // Close the connection when we're done with it.
         defer {
           try! channel.close().wait()
         }
         
         let client = Client(channel: channel)
-        let addr = try AccountAddress(base58Check: someAccountAddr)
+        let addr = try AccountAddress(base58Check: someAccountAddress)
         let res = try await client.getNextAccountSequenceNumber(of: addr)
         print(res)
     }
