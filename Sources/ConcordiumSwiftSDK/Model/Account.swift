@@ -1,16 +1,17 @@
 import Foundation
 import Base58Check
 
-fileprivate let accountAddressBase58CheckVersion: UInt8 = 1
+fileprivate let accountAddressBase58CheckVersionByte: UInt8 = 1
 
 struct AccountAddress {
-    let bytes: Data // 32 bytes (Base58Check without version byte)
+    let bytes: Data // 32 bytes
     
+    /// Construct address from the standard representation (Base58Check).
     init(base58Check: String) throws {
         let bytes = try Base58Check().decode(string: base58Check)
-        let v = bytes[0]
-        if v != accountAddressBase58CheckVersion {
-            throw GrpcError.unexpectedBase64CheckVersionByte(expected: accountAddressBase58CheckVersion, actual: v)
+        let versionByte = bytes[0]
+        if versionByte != accountAddressBase58CheckVersionByte {
+            throw GrpcError.unexpectedBase64CheckVersionByte(expected: accountAddressBase58CheckVersionByte, actual: versionByte)
         }
         self.bytes = bytes[1...] // exclude initial version byte
     }
