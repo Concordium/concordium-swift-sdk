@@ -1,3 +1,4 @@
+import Base58Check
 @testable import ConcordiumSwiftSDK
 import Foundation
 import XCTest
@@ -12,6 +13,15 @@ final class AddressTest: XCTestCase {
     }
     
     func testCannotParseInvalidAddressString() async throws {
-        XCTAssertThrowsError(try AccountAddress(base58Check: "invalid"))
+        XCTAssertThrowsError(try AccountAddress(base58Check: "invalid")) { err in
+            XCTAssertEqual(err as! Base58CheckError, Base58CheckError.invalidDecoding)
+        }
+    }
+    
+    func testCannotParseAddressStringWithInvalidVersionByte() async throws {
+        // Same address as above but with Base58Check version byte 2.
+        XCTAssertThrowsError(try AccountAddress(base58Check: "51wUd1qZ9UKhiJQwab17sb5F3XgEy6vravJ2GPEHNYjHpncAjG")) { err in
+            XCTAssertEqual(err as! GrpcError, GrpcError.unexpectedBase64CheckVersion(expected: 1, actual: 2))
+        }
     }
 }

@@ -1,5 +1,5 @@
 import Foundation
 
-enum GrpcError: Error {
-    case unexpectedBase64CheckVersionByte(expected: UInt8, actual: UInt8)
+enum GrpcError: Error, Equatable {
+    case unexpectedBase64CheckVersion(expected: UInt8, actual: UInt8)
 }
