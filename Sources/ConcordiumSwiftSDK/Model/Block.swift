@@ -46,3 +46,5 @@ enum BlockIdentifier {
         }
     }
 }
+
+typealias TransactionHash = Data // 32 bytes (SHA256)

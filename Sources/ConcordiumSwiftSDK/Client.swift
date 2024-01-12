@@ -30,4 +30,28 @@ class Client {
                 allFinal: res.allFinal
         )
     }
+
+    func getAccountInfo(of account: AccountIdentifier, at block: BlockIdentifier) async throws -> AccountInfo {
+        var req = Concordium_V2_AccountInfoRequest()
+        req.accountIdentifier = account.toGrpcType()
+        req.blockHash = block.toGrpcType()
+        let res = try await grpc.getAccountInfo(req).response.get()
+        return AccountInfo(
+            accountNonce: res.sequenceNumber.value,
+            accountAmount: res.amount.value,
+            accountReleaseSchedule: AccountReleaseSchedule.fromGrpcType(res.schedule),
+            accountCredentials: try res.creds.mapValues {
+                Versioned<AccountCredentialWithoutProofs<ArCurve, AttributeKind>>(
+                    version: 0, // same as in Rust SDK
+                    value: try .fromGrpcType($0)
+                )
+            },
+            accountThreshold: res.threshold.value,
+            accountEncryptedAmount: AccountEncryptedAmount.fromGrpcType(res.encryptedBalance),
+            accountEncryptionKey: res.encryptionKey.value,
+            accountIndex: res.index.value,
+            accountStake: try .fromGrpcType(res.stake),
+            accountAddress: AccountAddress(res.address.value)
+        )
+    }
 }
