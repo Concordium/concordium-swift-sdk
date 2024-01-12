@@ -21,7 +21,7 @@ enum BlockIdentifier {
             var b = Concordium_V2_BlockHashInput()
             b.best = Concordium_V2_Empty()
             return b
-        case .hash(let hash):
+        case let .hash(hash):
             var h = Concordium_V2_BlockHash()
             h.value = hash
             var b = Concordium_V2_BlockHashInput()

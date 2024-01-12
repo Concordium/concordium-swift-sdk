@@ -12,7 +12,7 @@ final class ClientTests: XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         // Make sure the group is shutdown when we're done with it.
         defer {
-          try! group.syncShutdownGracefully()
+            try! group.syncShutdownGracefully()
         }
         let channel = try GRPCChannelPool.with(
             target: channelTarget,
@@ -21,14 +21,13 @@ final class ClientTests: XCTestCase {
         )
         // Close the connection when we're done with it.
         defer {
-          try! channel.close().wait()
+            try! channel.close().wait()
         }
-        
+
         let client = Client(channel: channel)
         let hash = try BlockHash(fromHexString: "a21c1c18b70c64680a4eceea655ab68d164e8f1c82b8b8566388391d8da81e41")
         let res = await client.getCryptographicParameters(at: .hash(hash))
         let params = try await res.get()
         print(params)
-        
     }
 }

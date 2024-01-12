@@ -10,197 +10,195 @@ import NIO
 import NIOConcurrencyHelpers
 import SwiftProtobuf
 
-
 /// Usage: instantiate `Concordium_Health_HealthClient`, then call methods of this protocol to make API calls.
-internal protocol Concordium_Health_HealthClientProtocol: GRPCClient {
-  var serviceName: String { get }
-  var interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? { get }
+protocol Concordium_Health_HealthClientProtocol: GRPCClient {
+    var serviceName: String { get }
+    var interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? { get }
 
-  func check(
-    _ request: Concordium_Health_NodeHealthRequest,
-    callOptions: CallOptions?
-  ) -> UnaryCall<Concordium_Health_NodeHealthRequest, Concordium_Health_NodeHealthResponse>
+    func check(
+        _ request: Concordium_Health_NodeHealthRequest,
+        callOptions: CallOptions?
+    ) -> UnaryCall<Concordium_Health_NodeHealthRequest, Concordium_Health_NodeHealthResponse>
 }
 
 extension Concordium_Health_HealthClientProtocol {
-  internal var serviceName: String {
-    return "concordium.health.Health"
-  }
+    var serviceName: String {
+        return "concordium.health.Health"
+    }
 
-  /// Check the health of the node. By necessity this involves a number of
-  /// heuristics since in a distributed network we have to rely on the local
-  /// information only and we don't have authoritative data on, e.g., last
-  /// finalized block.
-  ///
-  /// In particular, a node that is not caught up to the head of the chain is not
-  /// healthy.
-  ///
-  /// If possible the client should use other queries to get a more fine-grained
-  /// understanding of the node health. However this endpoint should provide a
-  /// reasonable default and is usable in cases where an automatic check is
-  /// performed that does not allow for configuration, such as in load-balancers.
-  ///
-  /// - Parameters:
-  ///   - request: Request to send to Check.
-  ///   - callOptions: Call options.
-  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func check(
-    _ request: Concordium_Health_NodeHealthRequest,
-    callOptions: CallOptions? = nil
-  ) -> UnaryCall<Concordium_Health_NodeHealthRequest, Concordium_Health_NodeHealthResponse> {
-    return self.makeUnaryCall(
-      path: Concordium_Health_HealthClientMetadata.Methods.check.path,
-      request: request,
-      callOptions: callOptions ?? self.defaultCallOptions,
-      interceptors: self.interceptors?.makeCheckInterceptors() ?? []
-    )
-  }
+    /// Check the health of the node. By necessity this involves a number of
+    /// heuristics since in a distributed network we have to rely on the local
+    /// information only and we don't have authoritative data on, e.g., last
+    /// finalized block.
+    ///
+    /// In particular, a node that is not caught up to the head of the chain is not
+    /// healthy.
+    ///
+    /// If possible the client should use other queries to get a more fine-grained
+    /// understanding of the node health. However this endpoint should provide a
+    /// reasonable default and is usable in cases where an automatic check is
+    /// performed that does not allow for configuration, such as in load-balancers.
+    ///
+    /// - Parameters:
+    ///   - request: Request to send to Check.
+    ///   - callOptions: Call options.
+    /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+    func check(
+        _ request: Concordium_Health_NodeHealthRequest,
+        callOptions: CallOptions? = nil
+    ) -> UnaryCall<Concordium_Health_NodeHealthRequest, Concordium_Health_NodeHealthResponse> {
+        return makeUnaryCall(
+            path: Concordium_Health_HealthClientMetadata.Methods.check.path,
+            request: request,
+            callOptions: callOptions ?? defaultCallOptions,
+            interceptors: interceptors?.makeCheckInterceptors() ?? []
+        )
+    }
 }
 
 @available(*, deprecated)
 extension Concordium_Health_HealthClient: @unchecked Sendable {}
 
 @available(*, deprecated, renamed: "Concordium_Health_HealthNIOClient")
-internal final class Concordium_Health_HealthClient: Concordium_Health_HealthClientProtocol {
-  private let lock = Lock()
-  private var _defaultCallOptions: CallOptions
-  private var _interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol?
-  internal let channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions {
-    get { self.lock.withLock { return self._defaultCallOptions } }
-    set { self.lock.withLockVoid { self._defaultCallOptions = newValue } }
-  }
-  internal var interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? {
-    get { self.lock.withLock { return self._interceptors } }
-    set { self.lock.withLockVoid { self._interceptors = newValue } }
-  }
+final class Concordium_Health_HealthClient: Concordium_Health_HealthClientProtocol {
+    private let lock = Lock()
+    private var _defaultCallOptions: CallOptions
+    private var _interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol?
+    let channel: GRPCChannel
+    var defaultCallOptions: CallOptions {
+        get { lock.withLock { self._defaultCallOptions } }
+        set { lock.withLockVoid { self._defaultCallOptions = newValue } }
+    }
 
-  /// Creates a client for the concordium.health.Health service.
-  ///
-  /// - Parameters:
-  ///   - channel: `GRPCChannel` to the service host.
-  ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
-  ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
-    channel: GRPCChannel,
-    defaultCallOptions: CallOptions = CallOptions(),
-    interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? = nil
-  ) {
-    self.channel = channel
-    self._defaultCallOptions = defaultCallOptions
-    self._interceptors = interceptors
-  }
+    var interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? {
+        get { lock.withLock { self._interceptors } }
+        set { lock.withLockVoid { self._interceptors = newValue } }
+    }
+
+    /// Creates a client for the concordium.health.Health service.
+    ///
+    /// - Parameters:
+    ///   - channel: `GRPCChannel` to the service host.
+    ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
+    ///   - interceptors: A factory providing interceptors for each RPC.
+    init(
+        channel: GRPCChannel,
+        defaultCallOptions: CallOptions = CallOptions(),
+        interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? = nil
+    ) {
+        self.channel = channel
+        _defaultCallOptions = defaultCallOptions
+        _interceptors = interceptors
+    }
 }
 
-internal struct Concordium_Health_HealthNIOClient: Concordium_Health_HealthClientProtocol {
-  internal var channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol?
+struct Concordium_Health_HealthNIOClient: Concordium_Health_HealthClientProtocol {
+    var channel: GRPCChannel
+    var defaultCallOptions: CallOptions
+    var interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol?
 
-  /// Creates a client for the concordium.health.Health service.
-  ///
-  /// - Parameters:
-  ///   - channel: `GRPCChannel` to the service host.
-  ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
-  ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
-    channel: GRPCChannel,
-    defaultCallOptions: CallOptions = CallOptions(),
-    interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? = nil
-  ) {
-    self.channel = channel
-    self.defaultCallOptions = defaultCallOptions
-    self.interceptors = interceptors
-  }
-}
-
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal protocol Concordium_Health_HealthAsyncClientProtocol: GRPCClient {
-  static var serviceDescriptor: GRPCServiceDescriptor { get }
-  var interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? { get }
-
-  func makeCheckCall(
-    _ request: Concordium_Health_NodeHealthRequest,
-    callOptions: CallOptions?
-  ) -> GRPCAsyncUnaryCall<Concordium_Health_NodeHealthRequest, Concordium_Health_NodeHealthResponse>
+    /// Creates a client for the concordium.health.Health service.
+    ///
+    /// - Parameters:
+    ///   - channel: `GRPCChannel` to the service host.
+    ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
+    ///   - interceptors: A factory providing interceptors for each RPC.
+    init(
+        channel: GRPCChannel,
+        defaultCallOptions: CallOptions = CallOptions(),
+        interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? = nil
+    ) {
+        self.channel = channel
+        self.defaultCallOptions = defaultCallOptions
+        self.interceptors = interceptors
+    }
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-extension Concordium_Health_HealthAsyncClientProtocol {
-  internal static var serviceDescriptor: GRPCServiceDescriptor {
-    return Concordium_Health_HealthClientMetadata.serviceDescriptor
-  }
+protocol Concordium_Health_HealthAsyncClientProtocol: GRPCClient {
+    static var serviceDescriptor: GRPCServiceDescriptor { get }
+    var interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? { get }
 
-  internal var interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? {
-    return nil
-  }
-
-  internal func makeCheckCall(
-    _ request: Concordium_Health_NodeHealthRequest,
-    callOptions: CallOptions? = nil
-  ) -> GRPCAsyncUnaryCall<Concordium_Health_NodeHealthRequest, Concordium_Health_NodeHealthResponse> {
-    return self.makeAsyncUnaryCall(
-      path: Concordium_Health_HealthClientMetadata.Methods.check.path,
-      request: request,
-      callOptions: callOptions ?? self.defaultCallOptions,
-      interceptors: self.interceptors?.makeCheckInterceptors() ?? []
-    )
-  }
+    func makeCheckCall(
+        _ request: Concordium_Health_NodeHealthRequest,
+        callOptions: CallOptions?
+    ) -> GRPCAsyncUnaryCall<Concordium_Health_NodeHealthRequest, Concordium_Health_NodeHealthResponse>
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension Concordium_Health_HealthAsyncClientProtocol {
-  internal func check(
-    _ request: Concordium_Health_NodeHealthRequest,
-    callOptions: CallOptions? = nil
-  ) async throws -> Concordium_Health_NodeHealthResponse {
-    return try await self.performAsyncUnaryCall(
-      path: Concordium_Health_HealthClientMetadata.Methods.check.path,
-      request: request,
-      callOptions: callOptions ?? self.defaultCallOptions,
-      interceptors: self.interceptors?.makeCheckInterceptors() ?? []
-    )
-  }
+    static var serviceDescriptor: GRPCServiceDescriptor {
+        return Concordium_Health_HealthClientMetadata.serviceDescriptor
+    }
+
+    var interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? {
+        return nil
+    }
+
+    func makeCheckCall(
+        _ request: Concordium_Health_NodeHealthRequest,
+        callOptions: CallOptions? = nil
+    ) -> GRPCAsyncUnaryCall<Concordium_Health_NodeHealthRequest, Concordium_Health_NodeHealthResponse> {
+        return makeAsyncUnaryCall(
+            path: Concordium_Health_HealthClientMetadata.Methods.check.path,
+            request: request,
+            callOptions: callOptions ?? defaultCallOptions,
+            interceptors: interceptors?.makeCheckInterceptors() ?? []
+        )
+    }
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-internal struct Concordium_Health_HealthAsyncClient: Concordium_Health_HealthAsyncClientProtocol {
-  internal var channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol?
-
-  internal init(
-    channel: GRPCChannel,
-    defaultCallOptions: CallOptions = CallOptions(),
-    interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? = nil
-  ) {
-    self.channel = channel
-    self.defaultCallOptions = defaultCallOptions
-    self.interceptors = interceptors
-  }
+extension Concordium_Health_HealthAsyncClientProtocol {
+    func check(
+        _ request: Concordium_Health_NodeHealthRequest,
+        callOptions: CallOptions? = nil
+    ) async throws -> Concordium_Health_NodeHealthResponse {
+        return try await performAsyncUnaryCall(
+            path: Concordium_Health_HealthClientMetadata.Methods.check.path,
+            request: request,
+            callOptions: callOptions ?? defaultCallOptions,
+            interceptors: interceptors?.makeCheckInterceptors() ?? []
+        )
+    }
 }
 
-internal protocol Concordium_Health_HealthClientInterceptorFactoryProtocol: Sendable {
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+struct Concordium_Health_HealthAsyncClient: Concordium_Health_HealthAsyncClientProtocol {
+    var channel: GRPCChannel
+    var defaultCallOptions: CallOptions
+    var interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol?
 
-  /// - Returns: Interceptors to use when invoking 'check'.
-  func makeCheckInterceptors() -> [ClientInterceptor<Concordium_Health_NodeHealthRequest, Concordium_Health_NodeHealthResponse>]
+    init(
+        channel: GRPCChannel,
+        defaultCallOptions: CallOptions = CallOptions(),
+        interceptors: Concordium_Health_HealthClientInterceptorFactoryProtocol? = nil
+    ) {
+        self.channel = channel
+        self.defaultCallOptions = defaultCallOptions
+        self.interceptors = interceptors
+    }
 }
 
-internal enum Concordium_Health_HealthClientMetadata {
-  internal static let serviceDescriptor = GRPCServiceDescriptor(
-    name: "Health",
-    fullName: "concordium.health.Health",
-    methods: [
-      Concordium_Health_HealthClientMetadata.Methods.check,
-    ]
-  )
+protocol Concordium_Health_HealthClientInterceptorFactoryProtocol: Sendable {
+    /// - Returns: Interceptors to use when invoking 'check'.
+    func makeCheckInterceptors() -> [ClientInterceptor<Concordium_Health_NodeHealthRequest, Concordium_Health_NodeHealthResponse>]
+}
 
-  internal enum Methods {
-    internal static let check = GRPCMethodDescriptor(
-      name: "Check",
-      path: "/concordium.health.Health/Check",
-      type: GRPCCallType.unary
+enum Concordium_Health_HealthClientMetadata {
+    static let serviceDescriptor = GRPCServiceDescriptor(
+        name: "Health",
+        fullName: "concordium.health.Health",
+        methods: [
+            Concordium_Health_HealthClientMetadata.Methods.check,
+        ]
     )
-  }
-}
 
+    enum Methods {
+        static let check = GRPCMethodDescriptor(
+            name: "Check",
+            path: "/concordium.health.Health/Check",
+            type: GRPCCallType.unary
+        )
+    }
+}

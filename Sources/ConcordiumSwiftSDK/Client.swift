@@ -1,8 +1,7 @@
 import Foundation
-
 import GRPC
-import NIOPosix
 import NIOCore
+import NIOPosix
 
 class Client {
     let grpc: Concordium_V2_QueriesNIOClient
@@ -27,22 +26,22 @@ class Client {
 
     func getCryptographicParameters(at block: BlockIdentifier) async -> EventLoopFuture<CryptographicParameters> {
         return grpc
-                .getCryptographicParameters(block.toGrpcType())
-                .response
-                .map({ v in
-                    CryptographicParameters(
-                            onChainCommitmentKey: v.onChainCommitmentKey.hexadecimalString(),
-                            bulletproofGenerators: v.bulletproofGenerators.hexadecimalString(),
-                            genesisString: v.genesisString
-                    )
-                })
+            .getCryptographicParameters(block.toGrpcType())
+            .response
+            .map { v in
+                CryptographicParameters(
+                    onChainCommitmentKey: v.onChainCommitmentKey.hexadecimalString(),
+                    bulletproofGenerators: v.bulletproofGenerators.hexadecimalString(),
+                    genesisString: v.genesisString
+                )
+            }
     }
 
     func getNextAccountSequenceNumber(forAddress address: AccountAddress) -> EventLoopFuture<NextAccountSequenceNumber?> {
         var grpcAddress = Concordium_V2_AccountAddress()
         grpcAddress.value = address
-        return grpc.getNextAccountSequenceNumber(grpcAddress).response.map({ res in
+        return grpc.getNextAccountSequenceNumber(grpcAddress).response.map { res in
             NextAccountSequenceNumber(sequenceNumber: res.sequenceNumber.value, allFinal: res.allFinal)
-        })
+        }
     }
 }
