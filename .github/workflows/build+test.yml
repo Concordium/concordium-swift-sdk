@@ -1,0 +1,25 @@
+name: Build and test
+
+on:
+    push:
+        branches: main
+    pull_request:
+
+env:
+  swift_version: "5.9"
+
+jobs:
+  Format:
+    runs-on: macos-13
+
+    steps:
+    - uses: swift-actions/setup-swift@v1
+      with:
+        swift-version: "${{ env.swift_version }}"
+    - uses: actions/checkout@v4
+    - name: Build
+      run: swift build
+    - name: Check formatting
+      run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
+    #- name: Run tests
+    #  run: swift test
