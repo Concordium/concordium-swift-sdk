@@ -1,6 +1,33 @@
 {
   "pins" : [
     {
+      "identity" : "base58",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/anquii/Base58.git",
+      "state" : {
+        "revision" : "7e4a1e4e6813c750ed2f9e80a0494c608eebb2ca",
+        "version" : "1.0.1"
+      }
+    },
+    {
+      "identity" : "base58check",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/anquii/Base58Check.git",
+      "state" : {
+        "revision" : "f35a770ff7f3fd553cc44057f492c0107cc7b481",
+        "version" : "1.0.1"
+      }
+    },
+    {
+      "identity" : "bigint",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/attaswift/BigInt.git",
+      "state" : {
+        "revision" : "0ed110f7555c34ff468e72e1686e59721f2b0da6",
+        "version" : "5.3.0"
+      }
+    },
+    {
       "identity" : "grpc-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/grpc/grpc-swift.git",
