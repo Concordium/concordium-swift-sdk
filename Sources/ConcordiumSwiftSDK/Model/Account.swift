@@ -129,9 +129,7 @@ struct CredentialPublicKeys {
     static func fromGrpcType(_ grpc: Concordium_V2_CredentialPublicKeys) throws -> CredentialPublicKeys {
         try CredentialPublicKeys(
             keys: grpc.keys.mapValues {
-                try VerifyKey.fromGrpcType($0) ?? {
-                    throw GrpcError.requiredValueMissing("credential public keys")
-                }()
+                try VerifyKey.fromGrpcType($0) ?! GrpcError.requiredValueMissing("credential public keys")
             },
             threshold: grpc.threshold.value
         )
@@ -376,9 +374,7 @@ enum AccountStakingInfo {
             return try .delegated(
                 stakedAmount: d.stakedAmount.value,
                 restakeEarnings: d.restakeEarnings,
-                delegationTarget: .fromGrpcType(d.target) ?? {
-                    throw GrpcError.requiredValueMissing("delegation target")
-                }(),
+                delegationTarget: .fromGrpcType(d.target) ?! GrpcError.requiredValueMissing("delegation target"),
                 pendingChange: .fromGrpcType(d.pendingChange)
             )
         }
@@ -405,9 +401,7 @@ struct AccountInfo {
             accountCredentials: grpc.creds.mapValues {
                 try Versioned<AccountCredentialWithoutProofs<ArCurve, AttributeKind>>(
                     version: 0, // same as in Rust SDK
-                    value: .fromGrpcType($0) ?? {
-                        throw GrpcError.requiredValueMissing("credential values")
-                    }()
+                    value: .fromGrpcType($0) ?! GrpcError.requiredValueMissing("credential values")
                 )
             },
             accountThreshold: grpc.threshold.value,
