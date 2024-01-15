@@ -1,5 +1,4 @@
 import Foundation
-
 import GRPC
 import NIOCore
 import NIOPosix
@@ -15,9 +14,9 @@ class Client {
         let req = block.toGrpcType()
         let res = try await grpc.getCryptographicParameters(req).response.get()
         return CryptographicParameters(
-                onChainCommitmentKey: res.onChainCommitmentKey.hexadecimalString(),
-                bulletproofGenerators: res.bulletproofGenerators.hexadecimalString(),
-                genesisString: res.genesisString
+            onChainCommitmentKey: res.onChainCommitmentKey.hexadecimalString(),
+            bulletproofGenerators: res.bulletproofGenerators.hexadecimalString(),
+            genesisString: res.genesisString
         )
     }
 
@@ -26,8 +25,8 @@ class Client {
         req.value = address.bytes
         let res = try await grpc.getNextAccountSequenceNumber(req).response.get()
         return NextAccountSequenceNumber(
-                sequenceNumber: res.sequenceNumber.value,
-                allFinal: res.allFinal
+            sequenceNumber: res.sequenceNumber.value,
+            allFinal: res.allFinal
         )
     }
 
