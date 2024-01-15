@@ -30,7 +30,7 @@ enum AccountIdentifier {
     }
 }
 
-fileprivate let accountAddressBase58CheckVersion: UInt8 = 1
+private let accountAddressBase58CheckVersion: UInt8 = 1
 
 struct AccountAddress {
     let bytes: Data // 32 bytes
