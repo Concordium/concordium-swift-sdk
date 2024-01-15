@@ -78,11 +78,11 @@ struct Release {
 
     static func fromGrpcType(_ grpc: Concordium_V2_Release) -> Release {
         .init(
-                timestamp: dateFromUnixTimeMillis(grpc.timestamp.value),
-                amount: grpc.amount.value,
-                transactions: grpc.transactions.map {
-                    $0.value
-                }
+            timestamp: dateFromUnixTimeMillis(grpc.timestamp.value),
+            amount: grpc.amount.value,
+            transactions: grpc.transactions.map {
+                $0.value
+            }
         )
     }
 }
@@ -127,13 +127,13 @@ struct CredentialPublicKeys {
     let threshold: SignatureThreshold
 
     static func fromGrpcType(_ grpc: Concordium_V2_CredentialPublicKeys) throws -> CredentialPublicKeys {
-        CredentialPublicKeys(
-                keys: try grpc.keys.mapValues {
-                    try VerifyKey.fromGrpcType($0) ?? {
-                        throw GrpcError.requiredValueMissing("credential public keys")
-                    }()
-                },
-                threshold: grpc.threshold.value
+        try CredentialPublicKeys(
+            keys: grpc.keys.mapValues {
+                try VerifyKey.fromGrpcType($0) ?? {
+                    throw GrpcError.requiredValueMissing("credential public keys")
+                }()
+            },
+            threshold: grpc.threshold.value
         )
     }
 }
@@ -187,38 +187,38 @@ enum AccountCredentialWithoutProofs<C, A> {
         case nil:
             return nil
         case let .initial(v):
-            return .initial(
-                    InitialCredentialDeploymentValues(
-                            credAccount: try .fromGrpcType(v.keys),
-                            regId: v.credID.value,
-                            ipIdentity: v.ipID.value,
-                            policy: Policy(
-                                    validTo: .fromGrpcType(v.policy.validTo),
-                                    policyVec: v.policy.attributes
-                            )
+            return try .initial(
+                InitialCredentialDeploymentValues(
+                    credAccount: .fromGrpcType(v.keys),
+                    regId: v.credID.value,
+                    ipIdentity: v.ipID.value,
+                    policy: Policy(
+                        validTo: .fromGrpcType(v.policy.validTo),
+                        policyVec: v.policy.attributes
                     )
+                )
             )
         case let .normal(v):
-            return .normal(
-                    CredentialDeploymentValues(
-                            credKeyInfo: try .fromGrpcType(v.keys),
-                            ipIdentity: v.ipID.value,
-                            threshold: v.arThreshold.value,
-                            arData: v.arData.mapValues {
-                                $0.encIDCredPubShare
-                            }
-                    ),
-                    CredentialDeploymentCommitments(
-                            cmmPrf: v.commitments.prf.value,
-                            cmmCredCounter: v.commitments.credCounter.value,
-                            cmmMaxAccounts: v.commitments.maxAccounts.value,
-                            cmmAttributes: v.commitments.attributes.mapValues {
-                                $0.value
-                            },
-                            cmmIdCredSecSharingCoeff: v.commitments.idCredSecSharingCoeff.map {
-                                $0.value
-                            }
-                    )
+            return try .normal(
+                CredentialDeploymentValues(
+                    credKeyInfo: .fromGrpcType(v.keys),
+                    ipIdentity: v.ipID.value,
+                    threshold: v.arThreshold.value,
+                    arData: v.arData.mapValues {
+                        $0.encIDCredPubShare
+                    }
+                ),
+                CredentialDeploymentCommitments(
+                    cmmPrf: v.commitments.prf.value,
+                    cmmCredCounter: v.commitments.credCounter.value,
+                    cmmMaxAccounts: v.commitments.maxAccounts.value,
+                    cmmAttributes: v.commitments.attributes.mapValues {
+                        $0.value
+                    },
+                    cmmIdCredSecSharingCoeff: v.commitments.idCredSecSharingCoeff.map {
+                        $0.value
+                    }
+                )
             )
         }
     }
@@ -234,12 +234,12 @@ struct AccountEncryptedAmount {
 
     static func fromGrpcType(_ grpc: Concordium_V2_EncryptedBalance) -> AccountEncryptedAmount {
         AccountEncryptedAmount(
-                selfAmount: grpc.selfAmount.value,
-                startIndex: grpc.startIndex,
-                aggregatedAmount: grpc.aggregatedAmount.value,
-                incomingAmounts: grpc.incomingAmounts.map {
-                    $0.value
-                }
+            selfAmount: grpc.selfAmount.value,
+            startIndex: grpc.startIndex,
+            aggregatedAmount: grpc.aggregatedAmount.value,
+            incomingAmounts: grpc.incomingAmounts.map {
+                $0.value
+            }
         )
     }
 }
@@ -259,10 +259,10 @@ struct BakerInfo {
 
     static func fromGrpcType(_ grpc: Concordium_V2_BakerInfo) -> BakerInfo {
         BakerInfo(
-                bakerId: grpc.bakerID.value,
-                bakerElectionVerifyKey: grpc.electionKey.value,
-                bakerSignatureVerifyKey: grpc.signatureKey.value,
-                bakerAggregationVerifyKey: grpc.aggregationKey.value
+            bakerId: grpc.bakerID.value,
+            bakerElectionVerifyKey: grpc.electionKey.value,
+            bakerSignatureVerifyKey: grpc.signatureKey.value,
+            bakerAggregationVerifyKey: grpc.aggregationKey.value
         )
     }
 }
@@ -308,9 +308,9 @@ struct CommissionRates {
 
     static func fromGrpcType(_ grpc: Concordium_V2_CommissionRates) -> CommissionRates {
         CommissionRates(
-                finalization: .fromGrpcType(grpc.finalization),
-                baking: .fromGrpcType(grpc.baking),
-                transaction: .fromGrpcType(grpc.transaction)
+            finalization: .fromGrpcType(grpc.finalization),
+            baking: .fromGrpcType(grpc.baking),
+            transaction: .fromGrpcType(grpc.transaction)
         )
     }
 }
@@ -322,9 +322,9 @@ struct BakerPoolInfo {
 
     static func fromGrpcType(_ grpc: Concordium_V2_BakerPoolInfo) -> BakerPoolInfo {
         BakerPoolInfo(
-                openStatus: .fromGrpcType(grpc.openStatus),
-                metadataUrl: grpc.url,
-                commissionRates: .fromGrpcType(grpc.commissionRates)
+            openStatus: .fromGrpcType(grpc.openStatus),
+            metadataUrl: grpc.url,
+            commissionRates: .fromGrpcType(grpc.commissionRates)
         )
     }
 }
@@ -347,17 +347,17 @@ enum DelegationTarget {
 
 enum AccountStakingInfo {
     case baker(
-            stakedAmount: Amount,
-            restakeEarnings: Bool,
-            bakerInfo: BakerInfo,
-            pendingChange: StakePendingChange?,
-            poolInfo: BakerPoolInfo?
+        stakedAmount: Amount,
+        restakeEarnings: Bool,
+        bakerInfo: BakerInfo,
+        pendingChange: StakePendingChange?,
+        poolInfo: BakerPoolInfo?
     )
     case delegated(
-            stakedAmount: Amount,
-            restakeEarnings: Bool,
-            delegationTarget: DelegationTarget,
-            pendingChange: StakePendingChange?
+        stakedAmount: Amount,
+        restakeEarnings: Bool,
+        delegationTarget: DelegationTarget,
+        pendingChange: StakePendingChange?
     )
 
     static func fromGrpcType(_ grpc: Concordium_V2_AccountStakingInfo) throws -> AccountStakingInfo? {
@@ -366,20 +366,20 @@ enum AccountStakingInfo {
             return nil
         case let .baker(b):
             return .baker(
-                    stakedAmount: b.stakedAmount.value,
-                    restakeEarnings: b.restakeEarnings,
-                    bakerInfo: .fromGrpcType(b.bakerInfo),
-                    pendingChange: .fromGrpcType(b.pendingChange),
-                    poolInfo: b.hasPoolInfo ? .fromGrpcType(b.poolInfo) : nil
+                stakedAmount: b.stakedAmount.value,
+                restakeEarnings: b.restakeEarnings,
+                bakerInfo: .fromGrpcType(b.bakerInfo),
+                pendingChange: .fromGrpcType(b.pendingChange),
+                poolInfo: b.hasPoolInfo ? .fromGrpcType(b.poolInfo) : nil
             )
         case let .delegator(d):
-            return .delegated(
-                    stakedAmount: d.stakedAmount.value,
-                    restakeEarnings: d.restakeEarnings,
-                    delegationTarget: try .fromGrpcType(d.target) ?? {
-                        throw GrpcError.requiredValueMissing("delegation target")
-                    }(),
-                    pendingChange: .fromGrpcType(d.pendingChange)
+            return try .delegated(
+                stakedAmount: d.stakedAmount.value,
+                restakeEarnings: d.restakeEarnings,
+                delegationTarget: .fromGrpcType(d.target) ?? {
+                    throw GrpcError.requiredValueMissing("delegation target")
+                }(),
+                pendingChange: .fromGrpcType(d.pendingChange)
             )
         }
     }
@@ -398,24 +398,24 @@ struct AccountInfo {
     let accountAddress: AccountAddress
 
     static func fromGrpcType(_ grpc: Concordium_V2_AccountInfo) throws -> AccountInfo {
-        AccountInfo(
-                accountNonce: grpc.sequenceNumber.value,
-                accountAmount: grpc.amount.value,
-                accountReleaseSchedule: AccountReleaseSchedule.fromGrpcType(grpc.schedule),
-                accountCredentials: try grpc.creds.mapValues {
-                    Versioned<AccountCredentialWithoutProofs<ArCurve, AttributeKind>>(
-                            version: 0, // same as in Rust SDK
-                            value: try .fromGrpcType($0) ?? {
-                                throw GrpcError.requiredValueMissing("credential values")
-                            }()
-                    )
-                },
-                accountThreshold: grpc.threshold.value,
-                accountEncryptedAmount: AccountEncryptedAmount.fromGrpcType(grpc.encryptedBalance),
-                accountEncryptionKey: grpc.encryptionKey.value,
-                accountIndex: grpc.index.value,
-                accountStake: try .fromGrpcType(grpc.stake),
-                accountAddress: AccountAddress(grpc.address.value)
+        try AccountInfo(
+            accountNonce: grpc.sequenceNumber.value,
+            accountAmount: grpc.amount.value,
+            accountReleaseSchedule: AccountReleaseSchedule.fromGrpcType(grpc.schedule),
+            accountCredentials: grpc.creds.mapValues {
+                try Versioned<AccountCredentialWithoutProofs<ArCurve, AttributeKind>>(
+                    version: 0, // same as in Rust SDK
+                    value: .fromGrpcType($0) ?? {
+                        throw GrpcError.requiredValueMissing("credential values")
+                    }()
+                )
+            },
+            accountThreshold: grpc.threshold.value,
+            accountEncryptedAmount: AccountEncryptedAmount.fromGrpcType(grpc.encryptedBalance),
+            accountEncryptionKey: grpc.encryptionKey.value,
+            accountIndex: grpc.index.value,
+            accountStake: .fromGrpcType(grpc.stake),
+            accountAddress: AccountAddress(grpc.address.value)
         )
     }
 }
