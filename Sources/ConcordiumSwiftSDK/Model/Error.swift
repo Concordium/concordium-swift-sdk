@@ -10,7 +10,7 @@ infix operator ?!: NilCoalescingPrecedence
 /// ```
 /// evaluates to the result of `computeSomething()`unless that result is `nil`
 /// in which case it throws the custom error `MyError.computationFailed`.
-func ?!<T>(value: T?, error: @autoclosure () -> Error) throws -> T {
+func ?! <T>(value: T?, error: @autoclosure () -> Error) throws -> T {
     guard let value else {
         throw error()
     }

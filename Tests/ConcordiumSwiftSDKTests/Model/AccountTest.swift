@@ -4,7 +4,6 @@ import Foundation
 import XCTest
 
 final class AddressTest: XCTestCase {
-
     func testCanParseValidAddressString() async throws {
         let a = try AccountAddress(base58Check: "35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh")
         // Bytes corresponding to the decoded adderess. Computed using the Rust SDK.

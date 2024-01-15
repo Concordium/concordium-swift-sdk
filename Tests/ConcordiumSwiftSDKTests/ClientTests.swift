@@ -22,9 +22,9 @@ final class ClientTests: XCTestCase {
             try! group.syncShutdownGracefully()
         }
         let channel = try GRPCChannelPool.with(
-                target: channelTarget,
-                transportSecurity: .plaintext,
-                eventLoopGroup: group
+            target: channelTarget,
+            transportSecurity: .plaintext,
+            eventLoopGroup: group
         )
         defer {
             try! channel.close().wait()
@@ -41,9 +41,9 @@ final class ClientTests: XCTestCase {
             try! group.syncShutdownGracefully()
         }
         let channel = try GRPCChannelPool.with(
-                target: channelTarget,
-                transportSecurity: .plaintext,
-                eventLoopGroup: group
+            target: channelTarget,
+            transportSecurity: .plaintext,
+            eventLoopGroup: group
         )
         defer {
             try! channel.close().wait()
@@ -60,9 +60,9 @@ final class ClientTests: XCTestCase {
             try! group.syncShutdownGracefully()
         }
         let channel = try GRPCChannelPool.with(
-                target: channelTarget,
-                transportSecurity: .plaintext,
-                eventLoopGroup: group
+            target: channelTarget,
+            transportSecurity: .plaintext,
+            eventLoopGroup: group
         )
         defer {
             try! channel.close().wait()
