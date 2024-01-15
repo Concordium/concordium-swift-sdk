@@ -38,15 +38,15 @@ to the `dependencies` list of the appropriate `target`.
 The source code is formatted according to the default rules of [`SwiftFormat`](https://github.com/nicklockwood/SwiftFormat).
 
 The CI workflow [`Build and test`](https://github.com/Concordium/concordium-swift-sdk/blob/main/.github/workflows/build%2Btest.yml)
-checks that the code base is correct formated before PRs are merged.
+checks that the code base is correctly formated before PRs are merged.
 
 The formatter has been integrated as a [Swift Package Manger plugin](https://github.com/nicklockwood/SwiftFormat#swift-package-manager-plugin).
 It's possible to run the tool in a variety of ways (see the previous link for all options).
-An easy option is
+The easiest option is to run it on the command line via
 
 ```shell
-swift package plugin --allow-writing-to-package-directory swiftformat
+make fmt
 ```
 
-It may also be invoked directly from XCode by right-clicking on package root (i.e. `concordium-swift-sdk`) in the Project Navigator pane.
+It may also be [invoked directly from XCode](https://github.com/nicklockwood/SwiftFormat#trigger-plugin-from-xcode) by right-clicking on package root (i.e. `concordium-swift-sdk`) in the Project Navigator pane.
 The tool is then listed under "SwiftFormat" as "SwiftFormatPlugin" in the context menu for formatting the entire project.
