@@ -9,7 +9,7 @@ env:
   swift_version: "5.9"
 
 jobs:
-  build_test:
+  build_fmt_test:
     runs-on: macos-13
 
     steps:
@@ -19,6 +19,8 @@ jobs:
         swift-version: "${{ env.swift_version }}"
     - name: Check out sources
       uses: actions/checkout@v4
+    - name: Check formatting
+      run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
     - name: Build project
       run: swift build
     #- name: Run tests

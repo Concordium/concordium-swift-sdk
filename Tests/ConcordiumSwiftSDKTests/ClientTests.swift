@@ -18,7 +18,7 @@ final class ClientTests: XCTestCase {
     func testClientGetCryptographicParameters() async throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
-          try! group.syncShutdownGracefully()
+            try! group.syncShutdownGracefully()
         }
         let channel = try GRPCChannelPool.with(
             target: channelTarget,
@@ -26,18 +26,18 @@ final class ClientTests: XCTestCase {
             eventLoopGroup: group
         )
         defer {
-          try! channel.close().wait()
+            try! channel.close().wait()
         }
         let client = Client(channel: channel)
         let hash = try BlockHash(fromHexString: someBlockHash)
         let res = try await client.getCryptographicParameters(at: .hash(hash))
         print(res)
     }
-    
+
     func testClientGetNextAccountSequenceNumber() async throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
-          try! group.syncShutdownGracefully()
+            try! group.syncShutdownGracefully()
         }
         let channel = try GRPCChannelPool.with(
             target: channelTarget,
@@ -45,7 +45,7 @@ final class ClientTests: XCTestCase {
             eventLoopGroup: group
         )
         defer {
-          try! channel.close().wait()
+            try! channel.close().wait()
         }
         let client = Client(channel: channel)
         let addr = try AccountAddress(base58Check: someAccountAddress)
