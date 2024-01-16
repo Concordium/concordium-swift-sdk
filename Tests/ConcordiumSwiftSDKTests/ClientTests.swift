@@ -67,7 +67,6 @@ final class ClientTests: XCTestCase {
         defer {
             try! channel.close().wait()
         }
-        // TODO: Error when something goes wrong is completely useless ("missing field").
         let client = Client(channel: channel)
         let addr = try AccountAddress(base58Check: someAccountAddress)
         let hash = try BlockHash(fromHexString: someBlockHash)
