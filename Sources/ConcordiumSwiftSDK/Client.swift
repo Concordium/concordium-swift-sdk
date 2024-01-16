@@ -25,7 +25,7 @@ class Client {
         req.value = address.bytes
         let res = try await grpc.getNextAccountSequenceNumber(req).response.get()
         return NextAccountSequenceNumber(
-            sequenceNumber: res.sequenceNumber.value,
+            sequenceNumber: res.hasSequenceNumber ? res.sequenceNumber.value : nil,
             allFinal: res.allFinal
         )
     }
