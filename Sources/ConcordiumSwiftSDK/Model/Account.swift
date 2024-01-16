@@ -37,7 +37,7 @@ enum AccountIdentifier {
 /// Address of an account as raw bytes.
 struct AccountAddress {
     private static let base58CheckVersion: UInt8 = 1
-    
+
     let bytes: Data // 32 bytes
 
     /// Construct address directly from a 32-byte data buffer.
@@ -171,7 +171,7 @@ typealias ArIdentity = UInt32
 /// Public AKA verification key for a given scheme. Currently only ed25519 is supported.
 enum VerifyKey {
     case Ed25519VerifyKey(PublicKey)
-    
+
     static func fromGrpcType(_ grpc: Concordium_V2_AccountVerifyKey) -> VerifyKey? {
         switch grpc.key {
         case nil:
@@ -218,7 +218,7 @@ struct Policy<A> {
     let createdAt: YearMonth
     /// Revealed attributes for now. In the future we might have additional items with (Tag, Property, Proof).
     let policyVec: [AttributeTag: A]
-    
+
     static func fromGrpcType(_ grpc: Concordium_V2_Policy) -> Policy<Data> {
         Policy<Data>(
             validTo: .fromGrpcType(grpc.validTo),
@@ -492,8 +492,8 @@ struct BakerPoolInfo {
     let commissionRates: CommissionRates
 
     static func fromGrpcType(_ grpc: Concordium_V2_BakerPoolInfo) throws -> BakerPoolInfo {
-        BakerPoolInfo(
-            openStatus: try .fromGrpcType(grpc.openStatus),
+        try BakerPoolInfo(
+            openStatus: .fromGrpcType(grpc.openStatus),
             metadataUrl: grpc.url,
             commissionRates: .fromGrpcType(grpc.commissionRates)
         )
@@ -541,12 +541,12 @@ enum AccountStakingInfo {
         case nil:
             return nil
         case let .baker(b):
-            return .baker(
+            return try .baker(
                 stakedAmount: b.stakedAmount.value,
                 restakeEarnings: b.restakeEarnings,
                 bakerInfo: .fromGrpcType(b.bakerInfo),
                 pendingChange: .fromGrpcType(b.pendingChange),
-                poolInfo: b.hasPoolInfo ? try .fromGrpcType(b.poolInfo) : nil
+                poolInfo: b.hasPoolInfo ? .fromGrpcType(b.poolInfo) : nil
             )
         case let .delegator(d):
             return try .delegated(
