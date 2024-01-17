@@ -113,9 +113,7 @@ public struct Release {
         .init(
             timestamp: dateFromUnixTimeMillis(grpc.timestamp.value),
             amount: grpc.amount.value,
-            transactions: grpc.transactions.map {
-                $0.value
-            }
+            transactions: grpc.transactions.map(\.value)
         )
     }
 }
@@ -332,9 +330,7 @@ public enum AccountCredentialWithoutProofs<C, A> {
                     attributes: v.commitments.attributes.mapValues {
                         $0.value
                     },
-                    idCredSecSharingCoeff: v.commitments.idCredSecSharingCoeff.map {
-                        $0.value
-                    }
+                    idCredSecSharingCoeff: v.commitments.idCredSecSharingCoeff.map(\.value)
                 )
             )
         }
@@ -375,9 +371,7 @@ public struct AccountEncryptedAmount {
             selfAmount: grpc.selfAmount.value,
             startIndex: grpc.startIndex,
             aggregatedAmount: grpc.aggregatedAmount.value,
-            incomingAmounts: grpc.incomingAmounts.map {
-                $0.value
-            }
+            incomingAmounts: grpc.incomingAmounts.map(\.value)
         )
     }
 }
