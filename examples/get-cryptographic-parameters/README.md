@@ -1,8 +1,8 @@
 # Example: getCryptographicParameters
 
 Small example program for illustrating how to use the SDK from a consuming application.
-The library is included with the version defined as the `main` branch.
-Note that this is not a fixed reference and the cache may contain an old revision of that branch.
+The SDK is added with the version defined as the `main` branch.
+Note that this is not a fixed reference and the cache may retain old revisions of that branch.
 Real applications should always use a specific version.
 
 The program just creates a `Client` and calls the method `getCryptographicParameters` on it (of last finalized block).
