@@ -3,7 +3,7 @@ import GRPC
 import NIOCore
 import NIOPosix
 
-class Client {
+public class Client {
     let grpc: Concordium_V2_QueriesNIOClient
 
     init(channel: GRPCChannel) {

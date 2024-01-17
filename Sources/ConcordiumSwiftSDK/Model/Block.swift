@@ -1,8 +1,8 @@
 import Foundation
 
-typealias BlockHash = Data // 32 bytes
+public typealias BlockHash = Data // 32 bytes
 
-enum BlockIdentifier {
+public enum BlockIdentifier {
     case lastFinal
     case best
     case hash(BlockHash)
@@ -47,4 +47,4 @@ enum BlockIdentifier {
     }
 }
 
-typealias TransactionHash = Data // 32 bytes (SHA256)
+public typealias TransactionHash = Data // 32 bytes (SHA256)

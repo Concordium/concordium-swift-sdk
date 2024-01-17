@@ -2,7 +2,7 @@ import Base58Check
 import Foundation
 
 /// An account identifier used in queries.
-enum AccountIdentifier {
+public enum AccountIdentifier {
     /// Identify an account by an address.
     case address(AccountAddress)
     /// Identify an account by the credential registration id.
@@ -35,7 +35,7 @@ enum AccountIdentifier {
 }
 
 /// Address of an account as raw bytes.
-struct AccountAddress {
+public struct AccountAddress {
     private static let base58CheckVersion: UInt8 = 1
 
     let bytes: Data // 32 bytes
@@ -59,9 +59,9 @@ struct AccountAddress {
 /// A sequence number ordering transactions from a specific account.
 /// The initial sequence number is `1`, and a transaction with sequence number `m` must be
 /// followed by a transaction with sequence number `m+1`.
-typealias SequenceNumber = UInt64
+public typealias SequenceNumber = UInt64
 
-struct NextAccountSequenceNumber {
+public struct NextAccountSequenceNumber {
     let sequenceNumber: SequenceNumber?
     let allFinal: Bool
 }
@@ -69,39 +69,39 @@ struct NextAccountSequenceNumber {
 /// Index of the account in the account table.
 /// These are assigned sequentially in the order of creation of accounts.
 /// The first account has index 0.
-typealias AccountIndex = UInt64
+public typealias AccountIndex = UInt64
 
 /// A registration ID of a credential.
 /// This ID is generated from the user's PRF key and a sequential counter.
 /// ``CredentialRegistrationId``'s generated from the same PRF key,
 /// but different counter values cannot easily be linked together.
-typealias CredentialRegistrationId = Data // 48 bytes
+public typealias CredentialRegistrationId = Data // 48 bytes
 
 /// Amount of uCCD.
-typealias MicroCcdAmount = UInt64
+public typealias MicroCcdAmount = UInt64
 
 /// Index of the credential that is to be used.
-typealias CredentialIndex = UInt32
+public typealias CredentialIndex = UInt32
 
 /// Curve used by the anonymity revoker.
-typealias ArCurve = Data
+public typealias ArCurve = Data
 
 /// Concrete attribute values.
 /// All currently supported attributes are string values.
-typealias AttributeKind = Data
+public typealias AttributeKind = Data
 
 /// The minimum number of credentials that need to sign any transaction coming from an associated account.
-typealias AccountThreshold = UInt32
+public typealias AccountThreshold = UInt32
 
 /// An ed25519 public key.
-typealias PublicKey = Data
+public typealias PublicKey = Data
 
 func dateFromUnixTimeMillis(_ timestamp: UInt64) -> Date {
     Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000)
 }
 
 /// An individual release of a locked balance.
-struct Release {
+public struct Release {
     /// Effective time of release.
     let timestamp: Date
     /// Amount to be released.
@@ -122,7 +122,7 @@ struct Release {
 
 /// State of the account's release schedule.
 /// This is the balance of the account that is owned by the account, but cannot be used until the release point.
-struct ReleaseSchedule {
+public struct ReleaseSchedule {
     /// Total amount that is locked up in releases.
     let total: MicroCcdAmount
     /// List of timestamped releases in increasing order of timestamps.
@@ -135,13 +135,13 @@ struct ReleaseSchedule {
     }
 }
 
-struct Versioned<V> {
+public struct Versioned<V> {
     let version: UInt32
     let value: V
 }
 
 /// Index of an account key that is to be used.
-typealias KeyIndex = UInt32
+public typealias KeyIndex = UInt32
 
 /// The minimum number of signatures on a credential that need to sign any transaction coming from an associated account.
 ///
@@ -149,27 +149,27 @@ typealias KeyIndex = UInt32
 /// and each credential has one or more public keys, and its own threshold for how many of those credential's keys need to sign any valid message.
 ///
 /// See ``AccountThreshold`` for the threshold of how many credentials need to sign a valid message.
-typealias SignatureThreshold = UInt32
+public typealias SignatureThreshold = UInt32
 
 /// A succinct identifier of an identity provider on the chain.
 /// In credential deployments and other interactions with the chain, this is used to identify which identity provider is meant.
-typealias IpIdentity = UInt32
+public typealias IpIdentity = UInt32
 
 /// An abstraction of an attribute.
 /// In the ID library internals the only thing we care about attributes is that they can be encoded as field elements.
 /// The meaning of attributes is then assigned at the outer layers when the library is used.
-typealias AttributeTag = UInt32 // in Java SDK this is an enum of 14 predefined values
+public typealias AttributeTag = UInt32 // in Java SDK this is an public enum of 14 predefined values
 
 /// Revealing threshold, i.e., degree of the polynomial + 1.
 /// This value must always be at least 1.
-typealias Threshold = UInt32
+public typealias Threshold = UInt32
 
 /// Identity of the anonymity revoker on the chain.
 /// This defines their evaluation point for secret sharing, and thus it cannot be 0.
-typealias ArIdentity = UInt32
+public typealias ArIdentity = UInt32
 
 /// Public AKA verification key for a given scheme. Currently only ed25519 is supported.
-enum VerifyKey {
+public enum VerifyKey {
     case Ed25519VerifyKey(PublicKey)
 
     static func fromGrpcType(_ grpc: Concordium_V2_AccountVerifyKey) -> VerifyKey? {
@@ -184,7 +184,7 @@ enum VerifyKey {
 
 /// Public credential keys currently on the account, together with the threshold
 /// needed for a valid signature on a transaction.
-struct CredentialPublicKeys {
+public struct CredentialPublicKeys {
     let keys: [KeyIndex: VerifyKey]
     let threshold: SignatureThreshold
 
@@ -202,7 +202,7 @@ struct CredentialPublicKeys {
 /// The year is in Gregorian calendar and months are numbered from 1, i.e.,
 /// 1 is January, ..., 12 is December.
 /// Year must be a 4 digit year, i.e., between 1000 and 9999.
-struct YearMonth {
+public struct YearMonth {
     let year: UInt32
     let month: UInt32
 
@@ -218,7 +218,7 @@ struct YearMonth {
 
 /// A policy is (currently) revealed values of attributes that are part of the
 /// identity object. Policies are part of credentials.
-struct Policy<A> {
+public struct Policy<A> {
     let validTo: YearMonth
     let createdAt: YearMonth
     /// Revealed attributes.
@@ -234,7 +234,7 @@ struct Policy<A> {
 }
 
 /// Values in initial credential deployment.
-struct InitialCredentialDeploymentValues<C, A> {
+public struct InitialCredentialDeploymentValues<C, A> {
     /// Account this credential belongs to.
     let credAccount: CredentialPublicKeys
     /// Credential registration id of the credential.
@@ -247,16 +247,16 @@ struct InitialCredentialDeploymentValues<C, A> {
 
 /// Data relating to a single anonymity revoker sent by the account holder to the chain.
 /// Typically a vector of these will be sent to the chain.
-typealias ChainArData<C> = Cipher<C>
+public typealias ChainArData<C> = Cipher<C>
 
 /// Encrypted message.
-typealias Cipher<C> = C // in Rust SDK this is split into two values that each implement the "Curve" trait
+public typealias Cipher<C> = C // in Rust SDK this is split into two values that each implement the "Curve" trait
 
 /// Type of credential registration IDs.
-typealias CredId<C> = C // 48 bytes (according to Java SDK)
+public typealias CredId<C> = C // 48 bytes (according to Java SDK)
 
 /// Values (as opposed to proofs) in credential deployment.
-struct CredentialDeploymentValues<C, A> {
+public struct CredentialDeploymentValues<C, A> {
     /// Credential keys (i.e. account holder keys).
     let credKeyInfo: CredentialPublicKeys
     /// Credential registration id of the credential.
@@ -274,9 +274,9 @@ struct CredentialDeploymentValues<C, A> {
 }
 
 /// A Commitment is a group element.
-typealias PedersenCommitment<C> = C
+public typealias PedersenCommitment<C> = C
 
-struct CredentialDeploymentCommitments<C> {
+public struct CredentialDeploymentCommitments<C> {
     /// Commitment to the PRF key.
     let prf: PedersenCommitment<C>
     /// Commitment to credential counter.
@@ -296,7 +296,7 @@ struct CredentialDeploymentCommitments<C> {
 
 /// Account credential with values and commitments, but without proofs.
 /// Serialization must match the serializaiton of `AccountCredential` in Haskell.
-enum AccountCredentialWithoutProofs<C, A> {
+public enum AccountCredentialWithoutProofs<C, A> {
     case initial(InitialCredentialDeploymentValues<C, A>)
     case normal(CredentialDeploymentValues<C, A>, CredentialDeploymentCommitments<C>)
 
@@ -341,12 +341,12 @@ enum AccountCredentialWithoutProofs<C, A> {
     }
 }
 
-typealias EncryptedAmount<C> = C
+public typealias EncryptedAmount<C> = C
 
-typealias AggregatedAmount = Data // in Rust/Java SDK this is (EncryptedAmount<ArCurve>, UInt32)
+public typealias AggregatedAmount = Data // in Rust/Java SDK this is (EncryptedAmount<ArCurve>, UInt32)
 
 /// The state of the encrypted balance of an account.
-struct AccountEncryptedAmount {
+public struct AccountEncryptedAmount {
     /// Encrypted amount that is a result of this accounts' actions.
     /// In particular this list includes the aggregate of
     ///
@@ -386,27 +386,27 @@ struct AccountEncryptedAmount {
 /// This has a bit stricter requirements than the signature scheme public keys.
 /// In particular, points of small order are not allowed.
 /// This is checked during serialization.
-typealias VrfPublicKey = PublicKey
+public typealias VrfPublicKey = PublicKey
 
-typealias Ed25519PublicKey = PublicKey
+public typealias Ed25519PublicKey = PublicKey
 
 /// A Public Key is a point on the second curve of the pairing.
-typealias BlsPublicKey = PublicKey
+public typealias BlsPublicKey = PublicKey
 
 /// A public key that corresponds to ``BakerElectionSignKey``.
-typealias BakerElectionVerifyKey = VrfPublicKey
+public typealias BakerElectionVerifyKey = VrfPublicKey
 
 /// A public key that corresponds to ``BakerSignatureSignKey``.
-typealias BakerSignatureVerifyKey = Ed25519PublicKey
+public typealias BakerSignatureVerifyKey = Ed25519PublicKey
 
 /// Public key corresponding to ``BakerAggregationSignKey``.
-typealias BakerAggregationVerifyKey = BlsPublicKey
+public typealias BakerAggregationVerifyKey = BlsPublicKey
 
 /// Internal short ID of the baker/validator.
-typealias BakerId = AccountIndex
+public typealias BakerId = AccountIndex
 
 /// Information about a baker/validator.
-struct BakerInfo {
+public struct BakerInfo {
     /// Identity of the baker. This is actually the account index of the account controlling the baker.
     let bakerId: BakerId
     /// Baker's public key used to check whether they won the lottery or not.
@@ -428,7 +428,7 @@ struct BakerInfo {
 }
 
 /// Pending change in the baker's stake.
-enum StakePendingChange {
+public enum StakePendingChange {
     /// The stake is being reduced. The new stake will take affect in the given epoch.
     case reduceStake(newStake: MicroCcdAmount, effectiveTime: Date)
     /// The baker will be removed at the end of the given epoch.
@@ -447,7 +447,7 @@ enum StakePendingChange {
 }
 
 /// A fraction of an amount with a precision of 1/100000.
-struct AmountFraction {
+public struct AmountFraction {
     let partsPerHundredThousand: UInt32
 
     static func fromGrpcType(_ grpc: Concordium_V2_AmountFraction) -> AmountFraction {
@@ -456,7 +456,7 @@ struct AmountFraction {
 }
 
 /// Information about how open the pool is to new delegators.
-enum OpenStatus: Int {
+public enum OpenStatus: Int {
     /// New delegators may join the pool.
     case openForAll = 0
     /// New delegators may not join, but existing delegators are kept.
@@ -469,7 +469,7 @@ enum OpenStatus: Int {
     }
 }
 
-struct CommissionRates {
+public struct CommissionRates {
     /// Fraction of finalization rewards charged by the pool owner.
     let finalization: AmountFraction?
     /// Fraction of baking rewards charged by the pool owner.
@@ -488,7 +488,7 @@ struct CommissionRates {
 
 /// Additional information about a baking pool.
 /// This information is added with the introduction of delegation in protocol version 4.
-struct BakerPoolInfo {
+public struct BakerPoolInfo {
     /// Whether the pool allows delegators.
     let openStatus: OpenStatus
     /// The URL that links to the metadata about the pool.
@@ -506,7 +506,7 @@ struct BakerPoolInfo {
 }
 
 /// Target of delegation.
-enum DelegationTarget {
+public enum DelegationTarget {
     /// Delegate passively, i.e., to no specific baker.
     case passive
     /// Delegate to a specific baker.
@@ -524,7 +524,7 @@ enum DelegationTarget {
     }
 }
 
-enum AccountStakingInfo {
+public enum AccountStakingInfo {
     /// The account is a baker.
     case baker(
         stakedAmount: MicroCcdAmount,
@@ -565,10 +565,10 @@ enum AccountStakingInfo {
 }
 
 /// Elgamal public key.
-typealias ElgamalPublicKey = PublicKey
+public typealias ElgamalPublicKey = PublicKey
 
 /// Information about the account at a particular point in time on chain.
-struct AccountInfo {
+public struct AccountInfo {
     /// Next sequence number to be used for transactions signed from this account.
     let sequenceNumber: SequenceNumber
     /// Current (unencrypted) balance of the account.

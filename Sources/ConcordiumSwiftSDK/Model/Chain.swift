@@ -1,6 +1,6 @@
 import Foundation
 
-struct CryptographicParameters {
+public struct CryptographicParameters {
     let onChainCommitmentKey: String
     let bulletproofGenerators: String
     let genesisString: String
