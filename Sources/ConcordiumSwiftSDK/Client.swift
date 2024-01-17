@@ -20,7 +20,7 @@ public class Client {
         )
     }
 
-    func getNextAccountSequenceNumber(of address: AccountAddress) async throws -> NextAccountSequenceNumber {
+    public func getNextAccountSequenceNumber(of address: AccountAddress) async throws -> NextAccountSequenceNumber {
         var req = Concordium_V2_AccountAddress()
         req.value = address.bytes
         let res = try await grpc.getNextAccountSequenceNumber(req).response.get()
@@ -30,7 +30,7 @@ public class Client {
         )
     }
 
-    func getAccountInfo(of account: AccountIdentifier, at block: BlockIdentifier) async throws -> AccountInfo {
+    public func getAccountInfo(of account: AccountIdentifier, at block: BlockIdentifier) async throws -> AccountInfo {
         var req = Concordium_V2_AccountInfoRequest()
         req.accountIdentifier = account.toGrpcType()
         req.blockHash = block.toGrpcType()
