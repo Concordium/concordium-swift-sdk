@@ -1,6 +1,6 @@
 .PHONY: fmt
 fmt:
-	swift package plugin --allow-writing-to-package-directory swiftformat
+	swift package plugin --allow-writing-to-package-directory swiftformat ./examples
 
 .PHONY: generate-grpc
 generate-grpc:
