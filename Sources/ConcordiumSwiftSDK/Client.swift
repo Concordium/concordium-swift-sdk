@@ -3,14 +3,14 @@ import GRPC
 import NIOCore
 import NIOPosix
 
-class Client {
+public class Client {
     let grpc: Concordium_V2_QueriesNIOClient
 
-    init(channel: GRPCChannel) {
+    public init(channel: GRPCChannel) {
         grpc = Concordium_V2_QueriesNIOClient(channel: channel)
     }
 
-    func getCryptographicParameters(at block: BlockIdentifier) async throws -> CryptographicParameters {
+    public func getCryptographicParameters(at block: BlockIdentifier) async throws -> CryptographicParameters {
         let req = block.toGrpcType()
         let res = try await grpc.getCryptographicParameters(req).response.get()
         return CryptographicParameters(
@@ -20,7 +20,7 @@ class Client {
         )
     }
 
-    func getNextAccountSequenceNumber(of address: AccountAddress) async throws -> NextAccountSequenceNumber {
+    public func getNextAccountSequenceNumber(of address: AccountAddress) async throws -> NextAccountSequenceNumber {
         var req = Concordium_V2_AccountAddress()
         req.value = address.bytes
         let res = try await grpc.getNextAccountSequenceNumber(req).response.get()
@@ -30,7 +30,7 @@ class Client {
         )
     }
 
-    func getAccountInfo(of account: AccountIdentifier, at block: BlockIdentifier) async throws -> AccountInfo {
+    public func getAccountInfo(of account: AccountIdentifier, at block: BlockIdentifier) async throws -> AccountInfo {
         var req = Concordium_V2_AccountInfoRequest()
         req.accountIdentifier = account.toGrpcType()
         req.blockHash = block.toGrpcType()
