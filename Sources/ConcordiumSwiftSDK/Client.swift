@@ -25,8 +25,16 @@ class Client {
         req.value = address.bytes
         let res = try await grpc.getNextAccountSequenceNumber(req).response.get()
         return NextAccountSequenceNumber(
-            sequenceNumber: res.sequenceNumber.value,
+            sequenceNumber: res.hasSequenceNumber ? res.sequenceNumber.value : nil,
             allFinal: res.allFinal
         )
+    }
+
+    func getAccountInfo(of account: AccountIdentifier, at block: BlockIdentifier) async throws -> AccountInfo {
+        var req = Concordium_V2_AccountInfoRequest()
+        req.accountIdentifier = account.toGrpcType()
+        req.blockHash = block.toGrpcType()
+        let res = try await grpc.getAccountInfo(req).response.get()
+        return try .fromGrpcType(res)
     }
 }

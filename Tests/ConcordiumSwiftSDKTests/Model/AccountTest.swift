@@ -23,4 +23,9 @@ final class AddressTest: XCTestCase {
             XCTAssertEqual(err as! GrpcError, GrpcError.unexpectedBase64CheckVersion(expected: 1, actual: 2))
         }
     }
+
+    func testYearMonthFfiJsonString() {
+        XCTAssertEqual(YearMonth(year: 1971, month: 1).ffiJsonString, "197101")
+        XCTAssertEqual(YearMonth(year: 2000, month: 12).ffiJsonString, "200012")
+    }
 }
