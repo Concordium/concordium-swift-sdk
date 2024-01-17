@@ -209,6 +209,11 @@ struct YearMonth {
     static func fromGrpcType(_ grpc: Concordium_V2_YearMonth) -> YearMonth {
         YearMonth(year: grpc.year, month: grpc.month)
     }
+    
+    /// The string encoding (YYYYMM) used in JSON formats over FFI.
+    var ffiJsonString: String {
+        String(format: "%04d%02d", year, month)
+    }
 }
 
 /// A policy is (currently) revealed values of attributes that are part of the
@@ -216,7 +221,7 @@ struct YearMonth {
 struct Policy<A> {
     let validTo: YearMonth
     let createdAt: YearMonth
-    /// Revealed attributes for now. In the future we might have additional items with (Tag, Property, Proof).
+    /// Revealed attributes.
     let policyVec: [AttributeTag: A]
 
     static func fromGrpcType(_ grpc: Concordium_V2_Policy) -> Policy<Data> {
