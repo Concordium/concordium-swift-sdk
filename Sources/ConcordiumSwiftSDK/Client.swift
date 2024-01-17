@@ -6,7 +6,7 @@ import NIOPosix
 public class Client {
     let grpc: Concordium_V2_QueriesNIOClient
 
-    init(channel: GRPCChannel) {
+    public init(channel: GRPCChannel) {
         grpc = Concordium_V2_QueriesNIOClient(channel: channel)
     }
 

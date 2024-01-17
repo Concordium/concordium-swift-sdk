@@ -41,12 +41,12 @@ public struct AccountAddress {
     let bytes: Data // 32 bytes
 
     /// Construct address directly from a 32-byte data buffer.
-    init(_ bytes: Data) {
+    public init(_ bytes: Data) {
         self.bytes = bytes
     }
 
     /// Construct address from the standard representation (Base58Check).
-    init(base58Check: String) throws {
+    public init(base58Check: String) throws {
         var bytes = try Base58Check().decode(string: base58Check)
         let version = bytes.removeFirst()
         if version != AccountAddress.base58CheckVersion {
