@@ -10,7 +10,7 @@ class Client {
         grpc = Concordium_V2_QueriesNIOClient(channel: channel)
     }
 
-    func getCryptographicParameters(at block: BlockIdentifier) async throws -> CryptographicParameters {
+    public func getCryptographicParameters(at block: BlockIdentifier) async throws -> CryptographicParameters {
         let req = block.toGrpcType()
         let res = try await grpc.getCryptographicParameters(req).response.get()
         return CryptographicParameters(
