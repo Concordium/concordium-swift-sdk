@@ -32,7 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Concordium/concordium-swift-sdk.git",
       "state" : {
-        "revision" : "8700cc6316d24057e9e30445b31ef07c28ec992f"
+        "branch" : "main",
+        "revision" : "89c89678e905fa5bca721a83213201d5b04b3b92"
       }
     },
     {
