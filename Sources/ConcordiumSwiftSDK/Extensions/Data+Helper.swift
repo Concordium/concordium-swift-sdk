@@ -1,12 +1,12 @@
 import Foundation
 
-public enum DataError: Error {
+enum DataError: Error {
     case invalidHexString
 }
 
 // Courtesy of ChatGPT ¯\_(ツ)_/¯
 
-public extension Data {
+extension Data {
     init(fromHexString hex: String) throws {
         let length = hex.count / 2
         var data = Data(capacity: length)
@@ -22,7 +22,7 @@ public extension Data {
         self = data
     }
 
-    func hexadecimalString() -> String {
-        map { String(format: "%02hhx", $0) }.joined()
+    public func hexadecimalString() -> String {
+        return map { String(format: "%02hhx", $0) }.joined()
     }
 }

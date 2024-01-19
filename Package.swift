@@ -6,8 +6,8 @@ let package = Package(
         name: "ConcordiumSwiftSDK",
         platforms: [
             // To be kept in sync with README.
-            .iOS(.v15),
             .macOS(.v10_15),
+            .iOS(.v15),
         ],
         products: [
             .library(
