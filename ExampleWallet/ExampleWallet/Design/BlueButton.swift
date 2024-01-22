@@ -8,7 +8,7 @@ struct BlueButton: View {
         self.title = title
         self.action = action
     }
-    
+
     var body: some View {
         Button(action: action) {
             Text(title).modifier(BlueTextStyle())

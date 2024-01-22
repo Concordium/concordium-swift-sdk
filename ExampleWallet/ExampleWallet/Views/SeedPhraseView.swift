@@ -1,7 +1,4 @@
-//import BitcoinKit
 import SwiftUI
-//import ConcordiumSwiftSDK
-
 
 private let noSeedPhrase = ""
 
@@ -41,28 +38,28 @@ struct SeedPhraseView: View {
         !seedPhrase.isEmpty
     }
     /* BitcoinKit example
-    func isValidSeedPhrase() -> Bool {
-        do {
-            // Attempt to create a mnemonic object from the given seed phrase
-            let mnemonic = try Mnemonic(seed: seedPhrase)
+     func isValidSeedPhrase() -> Bool {
+         do {
+             // Attempt to create a mnemonic object from the given seed phrase
+             let mnemonic = try Mnemonic(seed: seedPhrase)
 
-            // Generate the seed from the mnemonic using BitcoinKit
-            let seed = try Mnemonic.seed(mnemonic: mnemonic)
+             // Generate the seed from the mnemonic using BitcoinKit
+             let seed = try Mnemonic.seed(mnemonic: mnemonic)
 
-            // Use BitcoinKit to validate the seed
-            let hdWallet = HDWallet(seed: seed, network: .mainnetBTC) // Adjust the network if needed
-            let privateKey = try hdWallet.privateKey(index: 0)
+             // Use BitcoinKit to validate the seed
+             let hdWallet = HDWallet(seed: seed, network: .mainnetBTC) // Adjust the network if needed
+             let privateKey = try hdWallet.privateKey(index: 0)
 
-            // If successful, the seed phrase is valid
-            print("Valid Seed Phrase: \(mnemonic.words.joined(separator: " "))")
-            return true
-        } catch {
-            // If an error occurs, the seed phrase is not valid
-            print("Invalid Seed Phrase: \(error)")
-            return false
-        }
-    }
-     */
+             // If successful, the seed phrase is valid
+             print("Valid Seed Phrase: \(mnemonic.words.joined(separator: " "))")
+             return true
+         } catch {
+             // If an error occurs, the seed phrase is not valid
+             print("Invalid Seed Phrase: \(error)")
+             return false
+         }
+     }
+      */
 }
 
 extension SeedPhraseView: SeedPhraseProvider {

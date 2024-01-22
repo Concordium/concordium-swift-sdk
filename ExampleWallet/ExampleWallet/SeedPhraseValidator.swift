@@ -10,7 +10,7 @@ struct RealSeedPhraseValidator: SeedPhraseValidator {
         do {
             try Mnemonic.validate(mnemonic: seedPhrase)
             return true
-        } catch  {
+        } catch {
             return false
         }
     }
