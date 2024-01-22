@@ -1,3 +1,4 @@
+import Base58Check
 @testable import ConcordiumSwiftSDK
 import GRPC
 import NIOPosix
@@ -50,6 +51,27 @@ final class ClientTests: XCTestCase {
         let client = Client(channel: channel)
         let addr = try AccountAddress(base58Check: someAccountAddress)
         let res = try await client.getNextAccountSequenceNumber(of: addr)
+        print(res)
+    }
+
+    func testClientGetAccountInfo() async throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+        let channel = try GRPCChannelPool.with(
+            target: channelTarget,
+            transportSecurity: .plaintext,
+            eventLoopGroup: group
+        )
+        defer {
+            try! channel.close().wait()
+        }
+        let client = Client(channel: channel)
+        let addr = try AccountAddress(base58Check: someAccountAddress)
+        let hash = try BlockHash(fromHexString: someBlockHash)
+        let account = AccountIdentifier.address(addr)
+        let res = try await client.getAccountInfo(of: account, at: .hash(hash))
         print(res)
     }
 }
