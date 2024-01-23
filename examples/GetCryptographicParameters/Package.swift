@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "concordium-swift-sdk-cli",
+    name: "GetCryptographicParameters",
     platforms: [
         .macOS(.v10_15),
     ],
@@ -12,7 +12,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "concordium-swift-sdk-cli",
+            name: "GetCryptographicParameters",
             dependencies: [
                 .product(name: "ConcordiumSwiftSDK", package: "concordium-swift-sdk"),
             ]
