@@ -1,32 +1,42 @@
+use wallet_library::wallet::get_account_signing_key_aux;
+
+// UniFFI book: https://mozilla.github.io/uniffi-rs/udl_file_spec.html
 uniffi::include_scaffolding!("lib");
 
-
-// Bindings have to be exposed in a .udl file with the same name as the corresponding .rs file, i.e. lib.udl
-// You can expose top-level functions...
-pub fn add(a: u64, b: u64) -> u64 {
-    a + b
+#[derive(Debug, thiserror::Error)]
+enum WalletCryptoError {
+    #[error("call {call} failed: {msg}")]
+    CallFailed { call: String, msg: String },
 }
 
-// ... data structs without methods ...
-pub struct Example {
-    pub items: Vec<String>,
-    pub value: Option<f64>,
+fn get_account_signing_key(seed_hex: String, net: String, identity_provider_index: u32, identity_index: u32, credential_counter: u32) -> Result<String, WalletCryptoError> {
+    get_account_signing_key_aux(seed_hex, net.as_str(), identity_provider_index, identity_index, credential_counter)
+        .map_err(|e| WalletCryptoError::CallFailed {
+            call: format!("get_account_signing_key(seed_hex, net={net}, identity_provider_index={identity_provider_index}, identity_index={identity_index}, credential_counter={credential_counter})"),
+            msg: e.to_string(),
+        })
 }
 
-// ... classes with methods ...
-pub struct Greeter {
-    name: String,
+fn getAccountPublicKey(seed_hex: String, net: String, identity_provider_index: u32, identity_index: u64, credential_counter: u32) -> String {
+    todo!()
 }
 
-impl Greeter {
-    // By convention, a method called new is exposed as a constructor
-    pub fn new(name: String) -> Self {
-        Self { name }
-    }
-
-    pub fn greet(&self) -> String {
-        format!("Hello, {}!", self.name)
-    }
+fn getIdCredSec(seed_hex: String, net: String, identity_provider_index: u32, identity_index: u32) -> String {
+    todo!()
 }
 
-// ... and much more! For more information about bindings, read the UniFFI book: https://mozilla.github.io/uniffi-rs/udl_file_spec.html
+fn getPrfKey(seed_hex: String, net: String, identity_provider_index: u32, identity_index: u32) -> String {
+    todo!()
+}
+
+fn getCredentialId(seed_hex: String, net: String, identity_provider_index: u32, identity_index: u32, credential_counter: u32, commitment_key: String) -> String {
+    todo!()
+}
+
+fn getSignatureBlindingRandomness(seed_hex: String, net: String, identity_provider_index: u32, identity_index: u32) -> String {
+    todo!()
+}
+
+fn getAttributeCommitmentRandomness(seed_hex: String, net: String, identity_provider_index: u32, identity_index: u64, credential_counter: u64, attribute: u32) -> String {
+    todo!()
+}

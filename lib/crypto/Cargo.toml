@@ -8,7 +8,9 @@ crate-type = ["staticlib", "lib"]
 name = "crypto"
 
 [dependencies]
+thiserror = "1.0.56"
 uniffi = "0.25"
+wallet_library = { path = "./concordium-base/rust-src/wallet_library" }
 
 [build-dependencies]
 uniffi = { version = "0.25", features = ["build"] }
