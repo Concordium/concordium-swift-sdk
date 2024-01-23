@@ -4,7 +4,7 @@ struct MainView: View {
     var body: some View {
         NavigationView {
             VStack {
-                getNavigationLinkTo(destination: SeedPhraseView(), withLabel: "Seed phrase view xxx")
+                getNavigationLinkTo(destination: SeedPhraseView(), withLabel: "Seed phrase view")
                 
                 BlueButton("Identity recovery view") {}
                 
