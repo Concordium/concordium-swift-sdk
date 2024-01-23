@@ -27,7 +27,6 @@ let package = Package(
             dependencies: [
                 "Base58Check",
                 "ConcordiumWalletCrypto",
-//                        .product(name: "ConcordiumWalletCrypto", package: "ConcordiumWalletCrypto"),
                 .product(name: "GRPC", package: "grpc-swift"),
                 "SwiftFormat",
             ]
