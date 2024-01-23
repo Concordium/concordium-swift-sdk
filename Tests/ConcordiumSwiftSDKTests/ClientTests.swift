@@ -29,7 +29,7 @@ final class ClientTests: XCTestCase {
         defer {
             try! channel.close().wait()
         }
-        let client = Client(channel: channel)
+        let client = GrpcNodeClient(channel: channel)
         let hash = try BlockHash(fromHexString: someBlockHash)
         let res = try await client.getCryptographicParameters(at: .hash(hash))
         print(res)
@@ -48,7 +48,7 @@ final class ClientTests: XCTestCase {
         defer {
             try! channel.close().wait()
         }
-        let client = Client(channel: channel)
+        let client = GrpcNodeClient(channel: channel)
         let addr = try AccountAddress(base58Check: someAccountAddress)
         let res = try await client.getNextAccountSequenceNumber(of: addr)
         print(res)
@@ -67,7 +67,7 @@ final class ClientTests: XCTestCase {
         defer {
             try! channel.close().wait()
         }
-        let client = Client(channel: channel)
+        let client = GrpcNodeClient(channel: channel)
         let addr = try AccountAddress(base58Check: someAccountAddress)
         let hash = try BlockHash(fromHexString: someBlockHash)
         let account = AccountIdentifier.address(addr)

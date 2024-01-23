@@ -3,7 +3,15 @@ import GRPC
 import NIOCore
 import NIOPosix
 
-public class Client {
+public protocol NodeClient {
+    func getCryptographicParameters(at block: BlockIdentifier) async throws -> CryptographicParameters
+
+    func getNextAccountSequenceNumber(of address: AccountAddress) async throws -> NextAccountSequenceNumber
+
+    func getAccountInfo(of account: AccountIdentifier, at block: BlockIdentifier) async throws -> AccountInfo
+}
+
+public class GrpcNodeClient: NodeClient {
     let grpc: Concordium_V2_QueriesClientProtocol
 
     init(_ grpc: Concordium_V2_QueriesClientProtocol) {
