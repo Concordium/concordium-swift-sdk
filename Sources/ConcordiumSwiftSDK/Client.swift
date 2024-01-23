@@ -1,3 +1,4 @@
+import ConcordiumWalletCrypto
 import Foundation
 import GRPC
 import NIOCore
@@ -8,6 +9,10 @@ public class Client {
 
     public init(channel: GRPCChannel) {
         grpc = Concordium_V2_QueriesNIOClient(channel: channel)
+    }
+
+    public static func test() -> UInt64 {
+        return add(a: 21, b: 42)
     }
 
     public func getCryptographicParameters(at block: BlockIdentifier) async throws -> CryptographicParameters {

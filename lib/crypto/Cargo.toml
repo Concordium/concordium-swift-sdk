@@ -3,8 +3,12 @@ name = "crypto"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-wallet_library = { path = "../concordium-base/rust-src/wallet_library" }
-
 [lib]
-crate_type = ["staticlib", "cdylib"]
+crate-type = ["staticlib", "lib"]
+name = "crypto"
+
+[dependencies]
+uniffi = "0.25"
+
+[build-dependencies]
+uniffi = { version = "0.25", features = ["build"] }
