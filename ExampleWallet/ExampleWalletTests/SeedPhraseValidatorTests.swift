@@ -1,7 +1,7 @@
 @testable import ExampleWallet
 import XCTest
 
-class ExampleWalletTests: XCTestCase {
+class SeedPhraseValidatorTests: XCTestCase {
     var sut: SeedPhraseValidator!
 
     override func setUp() {
@@ -14,7 +14,6 @@ class ExampleWalletTests: XCTestCase {
     }
 
     func testIsValidReturnsFalseWithInvalidSeedPhrase() {
-        let sut = RealSeedPhraseValidator()
         let invalidSeedPhrase = "flash tobacco obey genius army stove desk anchor quarter reflect chalk"
         XCTAssertFalse(sut.isValid(seedPhrase: invalidSeedPhrase))
     }

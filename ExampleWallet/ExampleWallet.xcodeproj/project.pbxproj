@@ -10,7 +10,7 @@
 		A10E85302B5574B70063B079 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10E852F2B5574B70063B079 /* MainView.swift */; };
 		A10E85322B56A6110063B079 /* SeedPhraseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10E85312B56A6110063B079 /* SeedPhraseView.swift */; };
 		A16C9F8F2B5D2CAF0009AD77 /* SeedPhraseValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16C9F8E2B5D2CAF0009AD77 /* SeedPhraseValidator.swift */; };
-		A16C9FBC2B5D370C0009AD77 /* ExampleWalletTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16C9FBB2B5D370C0009AD77 /* ExampleWalletTests.swift */; };
+		A16C9FBC2B5D370C0009AD77 /* SeedPhraseValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16C9FBB2B5D370C0009AD77 /* SeedPhraseValidatorTests.swift */; };
 		A16C9FC42B5E60D00009AD77 /* ConcordiumSwiftSDK in Frameworks */ = {isa = PBXBuildFile; productRef = A16C9FC32B5E60D00009AD77 /* ConcordiumSwiftSDK */; };
 		A17E071D2B57E8DE00F7BFFC /* IssueIdentityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17E071C2B57E8DE00F7BFFC /* IssueIdentityView.swift */; };
 		A17E07202B57EE8E00F7BFFC /* BlueButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17E071F2B57EE8E00F7BFFC /* BlueButton.swift */; };
@@ -37,7 +37,7 @@
 		A10E85312B56A6110063B079 /* SeedPhraseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedPhraseView.swift; sourceTree = "<group>"; };
 		A16C9F8E2B5D2CAF0009AD77 /* SeedPhraseValidator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeedPhraseValidator.swift; sourceTree = "<group>"; };
 		A16C9FB92B5D370C0009AD77 /* ExampleWalletTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ExampleWalletTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A16C9FBB2B5D370C0009AD77 /* ExampleWalletTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleWalletTests.swift; sourceTree = "<group>"; };
+		A16C9FBB2B5D370C0009AD77 /* SeedPhraseValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedPhraseValidatorTests.swift; sourceTree = "<group>"; };
 		A17E071C2B57E8DE00F7BFFC /* IssueIdentityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IssueIdentityView.swift; sourceTree = "<group>"; };
 		A17E071F2B57EE8E00F7BFFC /* BlueButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlueButton.swift; sourceTree = "<group>"; };
 		A17E07212B57F12400F7BFFC /* BlueTextStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlueTextStyle.swift; sourceTree = "<group>"; };
@@ -82,7 +82,7 @@
 		A16C9FBA2B5D370C0009AD77 /* ExampleWalletTests */ = {
 			isa = PBXGroup;
 			children = (
-				A16C9FBB2B5D370C0009AD77 /* ExampleWalletTests.swift */,
+				A16C9FBB2B5D370C0009AD77 /* SeedPhraseValidatorTests.swift */,
 			);
 			path = ExampleWalletTests;
 			sourceTree = "<group>";
@@ -206,7 +206,6 @@
 			);
 			mainGroup = A1CD79CB2B556FD200F1CAA5;
 			packageReferences = (
-				A1A6B39C2B5A879000EC1313 /* XCRemoteSwiftPackageReference "BitcoinKit" */,
 				A1A6B39F2B5A893100EC1313 /* XCRemoteSwiftPackageReference "MnemonicSwift" */,
 				A16C9FC22B5E60D00009AD77 /* XCLocalSwiftPackageReference ".." */,
 			);
@@ -244,7 +243,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A16C9FBC2B5D370C0009AD77 /* ExampleWalletTests.swift in Sources */,
+				A16C9FBC2B5D370C0009AD77 /* SeedPhraseValidatorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -531,14 +530,6 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		A1A6B39C2B5A879000EC1313 /* XCRemoteSwiftPackageReference "BitcoinKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/yenom/BitcoinKit";
-			requirement = {
-				branch = master;
-				kind = branch;
-			};
-		};
 		A1A6B39F2B5A893100EC1313 /* XCRemoteSwiftPackageReference "MnemonicSwift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Electric-Coin-Company/MnemonicSwift.git";

@@ -28,51 +28,6 @@
       }
     },
     {
-      "identity" : "bitcoinkit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/yenom/BitcoinKit",
-      "state" : {
-        "branch" : "master",
-        "revision" : "74bd7642dfb3f6af6baf242c7bb084af6ee3ae1b"
-      }
-    },
-    {
-      "identity" : "bits",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/bits.git",
-      "state" : {
-        "revision" : "03079476b04139a8b744ad96f975176df5ae12bc",
-        "version" : "1.1.1"
-      }
-    },
-    {
-      "identity" : "copenssl",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor-community/copenssl.git",
-      "state" : {
-        "revision" : "a347e9ec038b134aecf42e0c21f2deb9035adf3f",
-        "version" : "1.0.0-rc.1"
-      }
-    },
-    {
-      "identity" : "core",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/core.git",
-      "state" : {
-        "revision" : "aa15871311b497a24a7f0e96b1ae6865dd600818",
-        "version" : "2.2.1"
-      }
-    },
-    {
-      "identity" : "debugging",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/debugging.git",
-      "state" : {
-        "revision" : "fc5a27d6eb236141dc24e5f14eedaa2e035ae7b3",
-        "version" : "1.1.1"
-      }
-    },
-    {
       "identity" : "grpc-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/grpc/grpc-swift.git",
@@ -88,24 +43,6 @@
       "state" : {
         "revision" : "716a2c32ac2bbd8a1499ac834077df42b75edc85",
         "version" : "2.2.4"
-      }
-    },
-    {
-      "identity" : "random",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor-community/random.git",
-      "state" : {
-        "revision" : "d7c4397d125caba795d14d956efacfe2a27a63d0",
-        "version" : "1.2.0"
-      }
-    },
-    {
-      "identity" : "secp256k1.swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Boilertalk/secp256k1.swift",
-      "state" : {
-        "revision" : "cd187c632fb812fd93711a9f7e644adb7e5f97f0",
-        "version" : "0.1.7"
       }
     },
     {
