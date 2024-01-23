@@ -4,10 +4,14 @@ import NIOCore
 import NIOPosix
 
 public class Client {
-    let grpc: Concordium_V2_QueriesNIOClient
+    let grpc: Concordium_V2_QueriesClientProtocol
 
-    public init(channel: GRPCChannel) {
-        grpc = Concordium_V2_QueriesNIOClient(channel: channel)
+    init(_ grpc: Concordium_V2_QueriesClientProtocol) {
+        self.grpc = grpc
+    }
+
+    public convenience init(channel: GRPCChannel) {
+        self.init(Concordium_V2_QueriesNIOClient(channel: channel))
     }
 
     public func getCryptographicParameters(at block: BlockIdentifier) async throws -> CryptographicParameters {
