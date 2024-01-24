@@ -94,6 +94,7 @@ public typealias AttributeKind = Data
 public typealias AccountThreshold = UInt32
 
 /// An ed25519 public key.
+// TODO: Should this be replaced by CryptoKit's Curve25519.Signing.PublicKey? (or should the alias be removed altogether)
 public typealias PublicKey = Data
 
 func dateFromUnixTimeMillis(_ timestamp: UInt64) -> Date {
