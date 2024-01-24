@@ -11,7 +11,6 @@
 		A10E85322B56A6110063B079 /* SeedPhraseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10E85312B56A6110063B079 /* SeedPhraseView.swift */; };
 		A16C9F8F2B5D2CAF0009AD77 /* SeedPhraseValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16C9F8E2B5D2CAF0009AD77 /* SeedPhraseValidator.swift */; };
 		A16C9FBC2B5D370C0009AD77 /* SeedPhraseValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16C9FBB2B5D370C0009AD77 /* SeedPhraseValidatorTests.swift */; };
-		CD0E4E142B6116CA00E62FF1 /* ConcordiumSwiftSdk in Frameworks */ = {isa = PBXBuildFile; productRef = CD0E4E132B6116CA00E62FF1 /* ConcordiumSwiftSdk */; };
 		A17E071D2B57E8DE00F7BFFC /* IssueIdentityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17E071C2B57E8DE00F7BFFC /* IssueIdentityView.swift */; };
 		A17E07202B57EE8E00F7BFFC /* BlueButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17E071F2B57EE8E00F7BFFC /* BlueButton.swift */; };
 		A17E07222B57F12400F7BFFC /* BlueTextStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17E07212B57F12400F7BFFC /* BlueTextStyle.swift */; };
@@ -20,6 +19,7 @@
 		A1CD79D82B556FD200F1CAA5 /* ExampleWalletApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CD79D72B556FD200F1CAA5 /* ExampleWalletApp.swift */; };
 		A1CD79DC2B556FD300F1CAA5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1CD79DB2B556FD300F1CAA5 /* Assets.xcassets */; };
 		A1CD79DF2B556FD300F1CAA5 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1CD79DE2B556FD300F1CAA5 /* Preview Assets.xcassets */; };
+		CD0E4E142B6116CA00E62FF1 /* ConcordiumSwiftSdk in Frameworks */ = {isa = PBXBuildFile; productRef = CD0E4E132B6116CA00E62FF1 /* ConcordiumSwiftSdk */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -541,14 +541,14 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		CD0E4E132B6116CA00E62FF1 /* ConcordiumSwiftSdk */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = ConcordiumSwiftSdk;
-		};
 		A1A6B3A02B5A893100EC1313 /* MnemonicSwift */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A1A6B39F2B5A893100EC1313 /* XCRemoteSwiftPackageReference "MnemonicSwift" */;
 			productName = MnemonicSwift;
+		};
+		CD0E4E132B6116CA00E62FF1 /* ConcordiumSwiftSdk */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ConcordiumSwiftSdk;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
