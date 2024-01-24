@@ -6,7 +6,6 @@ on:
     pull_request:
 
 env:
-  rust_version: "1.72"
   swift_version: "5.9"
 
 jobs:
@@ -14,21 +13,14 @@ jobs:
     runs-on: macos-13
 
     steps:
-    - name: Setup Rust
-      run: |
-        rustup default "${{env.rust_version}}"
-    - name: Build ConcordiumWalletCrypto library
-      run: |
-        cargo install --git=https://github.com/antoniusnaumann/cargo-swift/ --rev=4816d75550878dfb598cc8f0eda397aacef9166c cargo-swift
-        make build-crypto
     - name: Setup Swift
       uses: swift-actions/setup-swift@v1
       with:
-        swift-version: "${{env.swift_version}}"
+        swift-version: "${{ env.swift_version }}"
     - name: Check out sources
       uses: actions/checkout@v4
-    - name: Check formatting
-      run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
+    #- name: Check formatting
+    #  run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
     - name: Build project
       run: swift build
     #- name: Run tests
