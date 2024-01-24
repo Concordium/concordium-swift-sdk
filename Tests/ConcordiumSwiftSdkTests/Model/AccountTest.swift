@@ -1,5 +1,5 @@
 import Base58Check
-@testable import ConcordiumSwiftSDK
+@testable import ConcordiumSwiftSdk
 import Foundation
 import XCTest
 

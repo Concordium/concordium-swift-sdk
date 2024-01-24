@@ -1,5 +1,5 @@
 import Base58Check
-@testable import ConcordiumSwiftSDK
+@testable import ConcordiumSwiftSdk
 import GRPC
 import NIOPosix
 import XCTest
@@ -11,7 +11,7 @@ import XCTest
 /// forward requests for localhost:20000 to [IP]:[port]:
 ///
 ///     socat TCP-LISTEN:20000,fork TCP:[IP]:[port]
-final class ClientTests: XCTestCase {
+final class GrpcNodeClientTests: XCTestCase {
     let channelTarget = ConnectionTarget.host("localhost", port: 20000)
     let someBlockHash = "a21c1c18b70c64680a4eceea655ab68d164e8f1c82b8b8566388391d8da81e41"
     let someAccountAddress = "35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh"
@@ -29,7 +29,7 @@ final class ClientTests: XCTestCase {
         defer {
             try! channel.close().wait()
         }
-        let client = Client(channel: channel)
+        let client = ConcordiumNodeGrpcClient(channel: channel)
         let hash = try BlockHash(fromHexString: someBlockHash)
         let res = try await client.getCryptographicParameters(at: .hash(hash))
         print(res)
@@ -48,7 +48,7 @@ final class ClientTests: XCTestCase {
         defer {
             try! channel.close().wait()
         }
-        let client = Client(channel: channel)
+        let client = ConcordiumNodeGrpcClient(channel: channel)
         let addr = try AccountAddress(base58Check: someAccountAddress)
         let res = try await client.getNextAccountSequenceNumber(of: addr)
         print(res)
@@ -67,7 +67,7 @@ final class ClientTests: XCTestCase {
         defer {
             try! channel.close().wait()
         }
-        let client = Client(channel: channel)
+        let client = ConcordiumNodeGrpcClient(channel: channel)
         let addr = try AccountAddress(base58Check: someAccountAddress)
         let hash = try BlockHash(fromHexString: someBlockHash)
         let account = AccountIdentifier.address(addr)

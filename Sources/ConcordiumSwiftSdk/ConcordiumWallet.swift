@@ -2,16 +2,16 @@ import Foundation
 
 import ConcordiumWalletCrypto
 
-enum Network: String {
+enum ConcordiumNetwork: String {
     case mainnet = "Mainnet"
     case testnet = "Testnet"
 }
 
-class Wallet {
+class ConcordiumWallet {
     let seedHex: String
-    let network: Network
+    let network: ConcordiumNetwork
 
-    init(seedHex: String, network: Network) {
+    init(seedHex: String, network: ConcordiumNetwork) {
         self.seedHex = seedHex
         self.network = network
     }

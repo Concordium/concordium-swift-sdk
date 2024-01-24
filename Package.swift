@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "ConcordiumSwiftSDK",
+    name: "ConcordiumSwiftSdk",
     platforms: [
         // To be kept in sync with README.
         .iOS(.v15),
@@ -11,8 +11,8 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "ConcordiumSwiftSDK",
-            targets: ["ConcordiumSwiftSDK"]
+            name: "ConcordiumSwiftSdk",
+            targets: ["ConcordiumSwiftSdk"]
         ),
     ],
     dependencies: [
@@ -23,7 +23,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "ConcordiumSwiftSDK",
+            name: "ConcordiumSwiftSdk",
             dependencies: [
                 "Base58Check",
                 "ConcordiumWalletCrypto",
@@ -32,9 +32,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "ConcordiumSwiftSDKTests",
+            name: "ConcordiumSwiftSdkTests",
             dependencies: [
-                "ConcordiumSwiftSDK",
+                "ConcordiumSwiftSdk",
             ]
         ),
     ]
