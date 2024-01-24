@@ -1,1 +1,1 @@
---exclude ./Sources/ConcordiumSwiftSDK/Generated
+--exclude ./Sources/ConcordiumSwiftSdk/Generated
