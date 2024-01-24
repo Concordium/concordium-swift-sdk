@@ -11,7 +11,7 @@ public protocol ConcordiumNodeClient {
     func getAccountInfo(of account: AccountIdentifier, at block: BlockIdentifier) async throws -> AccountInfo
 }
 
-public class ConcordiumNodeGrpcClient: NodeClient {
+public class ConcordiumNodeGrpcClient: ConcordiumNodeClient {
     let grpc: Concordium_V2_QueriesClientProtocol
 
     init(_ grpc: Concordium_V2_QueriesClientProtocol) {
