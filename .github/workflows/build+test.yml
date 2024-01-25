@@ -6,6 +6,7 @@ on:
     pull_request:
 
 env:
+  rust_version: "1.72"
   swift_version: "5.9"
 
 jobs:
@@ -16,11 +17,17 @@ jobs:
     - name: Setup Swift
       uses: swift-actions/setup-swift@v1
       with:
-        swift-version: "${{ env.swift_version }}"
+        swift-version: "${{env.swift_version}}"
+    - name: Setup Rust
+      run: |
+        rustup default "${{env.rust_version}}"
+        cargo install cargo-swift
     - name: Check out sources
       uses: actions/checkout@v4
-    #- name: Check formatting
-    #  run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
+    - name: Build rust bindings
+      run: make build-crypto
+    - name: Check formatting
+      run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
     - name: Build project
       run: swift build
     #- name: Run tests
