@@ -1,0 +1,27 @@
+[Error]
+enum ConcordiumWalletCryptoError {
+    "CallFailed"
+};
+
+namespace crypto {
+    [Throws=ConcordiumWalletCryptoError]
+    string get_account_signing_key(string seed_hex, string network, u32 identity_provider_index, u32 identity_index, u32 credential_counter);
+    [Throws=ConcordiumWalletCryptoError]
+    string get_account_public_key(string seed_hex, string network, u32 identity_provider_index, u32 identity_index, u32 credential_counter);
+    [Throws=ConcordiumWalletCryptoError]
+    string get_id_cred_sec(string seed_hex, string network, u32 identity_provider_index, u32 identity_index);
+    [Throws=ConcordiumWalletCryptoError]
+    string get_prf_key(string seed_hex, string network, u32 identity_provider_index, u32 identity_index);
+    [Throws=ConcordiumWalletCryptoError]
+    string get_credential_id(string seed_hex, string network, u32 identity_provider_index, u32 identity_index, u8 credential_counter, string commitment_key);
+    [Throws=ConcordiumWalletCryptoError]
+    string get_signature_blinding_randomness(string seed_hex, string network, u32 identity_provider_index, u32 identity_index);
+    [Throws=ConcordiumWalletCryptoError]
+    string get_attribute_commitment_randomness(string seed_hex, string network, u32 identity_provider_index, u32 identity_index, u32 credential_counter, u8 attribute);
+    [Throws=ConcordiumWalletCryptoError]
+    string get_verifiable_credential_signing_key(string seed_hex, string network, u64 issuer_index, u64 issuer_subindex, u32 verifiable_credential_index);
+    [Throws=ConcordiumWalletCryptoError]
+    string get_verifiable_credential_public_key(string seed_hex, string network, u64 issuer_index, u64 issuer_subindex, u32 verifiable_credential_index);
+    [Throws=ConcordiumWalletCryptoError]
+    string get_verifiable_credential_backup_encryption_key(string seed_hex, string network);
+};
