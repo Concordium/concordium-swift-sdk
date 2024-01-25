@@ -29,6 +29,23 @@ struct BlockOption: ParsableArguments {
     }
 }
 
+struct AccountOption: ParsableArguments {
+    @Argument(help: "Address of the account to inspect.")
+    var accountAddress: String
+
+    var address: AccountAddress {
+        get throws {
+            try AccountAddress(base58Check: accountAddress)
+        }
+    }
+
+    var identifier: AccountIdentifier {
+        get throws {
+            try .address(address)
+        }
+    }
+}
+
 @main
 struct GrpcCli: AsyncParsableCommand {
     @OptionGroup
@@ -42,7 +59,7 @@ struct GrpcCli: AsyncParsableCommand {
 
     struct CryptographicParameters: AsyncParsableCommand {
         static var configuration = CommandConfiguration(
-            abstract: "Output the cryptographic parameters of the chain."
+            abstract: "Display the cryptographic parameters of the chain."
         )
 
         @OptionGroup
@@ -63,25 +80,28 @@ struct GrpcCli: AsyncParsableCommand {
 
     struct Account: AsyncParsableCommand {
         static var configuration = CommandConfiguration(
-            abstract: "Subcommands related to a specific account.",
+            abstract: "Subcommands related to a particular account.",
             subcommands: [NextSequenceNumber.self, Info.self]
         )
 
+        @OptionGroup
+        var account: AccountOption
+
         struct NextSequenceNumber: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
-                abstract: "Output the next sequence number of the provided account."
+                abstract: "Display the next sequence number of the provided account."
             )
 
             @OptionGroup
             var root: GrpcCli
 
-            @Argument(help: "Address of the account to inspect.")
-            var accountAddress: String
+            @OptionGroup
+            var account: Account
 
             func run() async throws {
                 let res = try await withClient(target: root.options.target) {
                     try await $0.getNextAccountSequenceNumber(
-                        of: AccountAddress(base58Check: accountAddress)
+                        of: account.account.address
                     )
                 }
                 print(res)
@@ -90,7 +110,7 @@ struct GrpcCli: AsyncParsableCommand {
 
         struct Info: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
-                abstract: "Output info of the provided account."
+                abstract: "Display info of the provided account."
             )
 
             @OptionGroup
@@ -99,13 +119,13 @@ struct GrpcCli: AsyncParsableCommand {
             @OptionGroup
             var block: BlockOption
 
-            @Argument(help: "Address of the account to inspect.")
-            var accountAddress: String
+            @OptionGroup
+            var account: Account
 
             func run() async throws {
                 let res = try await withClient(target: root.options.target) {
                     try await $0.getAccountInfo(
-                        of: .address(AccountAddress(base58Check: accountAddress)),
+                        of: account.account.identifier,
                         at: block.block
                     )
                 }

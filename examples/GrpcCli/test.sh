@@ -2,12 +2,16 @@
 
 # Script that exercises all the commands of the CLI.
 # Used to be executed as SDK "unit" tests.
+# If the build or the execution of any of the test/sample commands fail,
+# the script will exit immediately with a non-zero status code.
+# However, the output needs to be inspected manually to assert correctness
+# as no such checks are performed by the script itself.
 
 set -eux
 
 # Location of the gRPC interface of a Concordium Node running on mainnet.
 #
-# Override via environment variables or use the following command to 
+# Override via environment variables or use the following command to
 # forward traffic for the default target (localhost:20000) to <HOST>:<PORT>:
 #
 #   socat TCP-LISTEN:20000,fork TCP:[IP]:[port]
@@ -27,6 +31,6 @@ cli_path="${dir_path}/GrpcCli"
 # Execute "tests".
 "${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters
 "${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters --block-hash="${some_block_hash}"
-"${cli_path}" --host="${host}" --port="${port}" account next-sequence-number "${some_account_address}"
-"${cli_path}" --host="${host}" --port="${port}" account info "${some_account_address}"
-"${cli_path}" --host="${host}" --port="${port}" account info "${some_account_address}" --block-hash="${some_block_hash}"
+"${cli_path}" --host="${host}" --port="${port}" account "${some_account_address}" next-sequence-number
+"${cli_path}" --host="${host}" --port="${port}" account "${some_account_address}" info
+"${cli_path}" --host="${host}" --port="${port}" account "${some_account_address}" info --block-hash="${some_block_hash}"
