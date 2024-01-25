@@ -3,9 +3,13 @@
 **STATUS: EARLY DEVELOPMENT**
 
 An SDK for applications written in the [Swift Programming Language](https://www.swift.org/) to
-interact with the Concordium Blockchain.
+interact with the [Concordium Blockchain](https://concordium.com).
 
 The main purpose of the SDK is to facilitate development of mobile wallet apps for iOS devices.
+
+Once the project is ready for production, it will replace the existing
+[`ConcordiumWalletCrypto`](https://github.com/Concordium/concordium-wallet-crypto-swift) library
+which is currently used in the [iOS reference wallet](https://github.com/Concordium/concordium-reference-wallet-ios/).
 
 ### Supported platforms
 
@@ -14,24 +18,53 @@ The main purpose of the SDK is to facilitate development of mobile wallet apps f
 
 ## Usage
 
-*No tags have been added to "publish" a build yet. The following is unverified and is only going to work once v1.0 has been published.*
+*No tags have been added to "publish" a build yet. The following is only going to work once v1.0 has been published.
+To use it in the current, unfinished state, replace `"1.0"` with `"main"`.*
 
-The SDK is available as a SwiftPM package hosted on GitHub as this repository.
+The SDK is available as a [SwiftPM package](https://developer.apple.com/documentation/xcode/swift-packages)
+hosted on GitHub as this repository.
 To include it as a dependency, add the following 
 
 ```swift
-.package(url: "https://github.com/Concordium/concordium-swift-sdk.git", from: "1.0"),
+.package(url: "https://github.com/Concordium/concordium-swift-sdk.git", from: "1.0")
 ```
 
 and adding
 
 ```swift
-.product(name: "ConcordiumSwiftSDK", package: "concordium-swift-sdk"),
+.product(name: "ConcordiumSwiftSDK", package: "concordium-swift-sdk")
 ```
 
 to the `dependencies` list of the appropriate `target`.
 
 ## Development
+
+### Build Rust bindings
+
+The Rust bindings are located in `./lib/crypto` and built using [`cargo-swift`](https://github.com/antoniusnaumann/cargo-swift/)
+into a [XCFramework](https://developer.apple.com/documentation/xcode/distributing-binary-frameworks-as-swift-packages).
+The SDK pulls in this framework from a local path.
+
+Building is only a matter of installing `cargo-swift` and invoking a Make target:
+
+```shell
+cargo install cargo-swift
+make build-crypto
+```
+
+This will place the target framework at `./lib/crypto/ConcordiumWalletCrypto`.
+
+### Build and test SDK
+
+With the Rust bindings in place, the SDK is built and tests executed using `swift test`.
+It's not necessary to build the project in order to use it in other projects:
+Just declare a dependency as explained in [usage](#usage).
+The SDK will get compiled as part of the build process of the executable.
+
+TODO: This means that we'll either have to add steps in `Package.swift` for having the binaries built automatically (if possible)
+or push them to some specific location
+(like we did with [`concordium-wallet-crypto-swift`](https://github.com/Concordium/concordium-wallet-crypto-swift)).
+This could be a GitHub release/package or something.
 
 ### Source code formatting
 
