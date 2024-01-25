@@ -41,9 +41,14 @@ to the `dependencies` list of the appropriate `target`.
 
 ### Build Rust bindings
 
-The Rust bindings are located in `./lib/crypto` and built using [`cargo-swift`](https://github.com/antoniusnaumann/cargo-swift/)
+Concordium specific cryptographic functions are implemented in Rust and shared between all kinds of Concordium products.
+This SDK includes a thin wrapper for providing bindings to the Rust library
+[`wallet_library`](https://github.com/Concordium/concordium-base/tree/main/rust-src/wallet_library)
+which exposes functions specifically relevant for wallets.
+
+These bindings are located in `./lib/crypto` and built using [`cargo-swift`](https://github.com/antoniusnaumann/cargo-swift/)
 into a [XCFramework](https://developer.apple.com/documentation/xcode/distributing-binary-frameworks-as-swift-packages).
-The SDK pulls in this framework from a local path.
+The SDK pulls in this framework from a local path, so the bindings have to built manually before the SDK can be used.
 
 Building is only a matter of installing `cargo-swift` and invoking a Make target:
 
@@ -61,10 +66,10 @@ It's not necessary to build the project in order to use it in other projects:
 Just declare a dependency as explained in [usage](#usage).
 The SDK will get compiled as part of the build process of the executable.
 
-TODO: This means that we'll either have to add steps in `Package.swift` for having the binaries built automatically (if possible)
+TODO: This means that we'll either have to add steps in `Package.swift` for automatically building the binaries (if possible)
 or push them to some specific location
 (like we did with [`concordium-wallet-crypto-swift`](https://github.com/Concordium/concordium-wallet-crypto-swift)).
-This could be a GitHub release/package or something.
+This could be a GitHub release/package or S3.
 
 ### Source code formatting
 
@@ -73,7 +78,8 @@ The source code is formatted according to the default rules of [`SwiftFormat`](h
 The CI workflow [`Build and test`](https://github.com/Concordium/concordium-swift-sdk/blob/main/.github/workflows/build%2Btest.yml)
 checks that the code base is correctly formated before PRs are merged.
 
-The formatter has been integrated as a [Swift Package Manger plugin](https://github.com/nicklockwood/SwiftFormat#swift-package-manager-plugin).
+The formatter has been integrated as a
+[Swift Package Manger plugin](https://github.com/nicklockwood/SwiftFormat#swift-package-manager-plugin).
 It's possible to run the tool in a variety of ways (see the previous link for all options).
 The easiest option is to run it on the command line via
 
@@ -81,5 +87,6 @@ The easiest option is to run it on the command line via
 make fmt
 ```
 
-It may also be [invoked directly from XCode](https://github.com/nicklockwood/SwiftFormat#trigger-plugin-from-xcode) by right-clicking on package root (i.e. `concordium-swift-sdk`) in the Project Navigator pane.
+It may also be [invoked directly from XCode](https://github.com/nicklockwood/SwiftFormat#trigger-plugin-from-xcode)
+by right-clicking on package root (i.e. `concordium-swift-sdk`) in the Project Navigator pane.
 The tool is then listed under "SwiftFormat" as "SwiftFormatPlugin" in the context menu for formatting the entire project.
