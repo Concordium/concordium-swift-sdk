@@ -21,8 +21,8 @@ jobs:
     - name: Setup Rust
       run: |
         rustup default "${{env.rust_version}}"
+        rustup toolchain install x86_64-apple-darwin aarch64-apple-darwin
         cargo install cargo-swift
-        rustup toolchain install aarch64-apple-darwin
     - name: Check out sources
       uses: actions/checkout@v4
       with:
