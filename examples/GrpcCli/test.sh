@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
 
 # Script that exercises all the commands of the CLI.
-# Used to be executed as SDK "unit" tests.
 # If the build or the execution of any of the test/sample commands fail,
-# the script will exit immediately with a non-zero status code.
-# However, the output needs to be inspected manually to assert correctness
+# then the script will exit immediately with a non-zero status code.
+# However, even if the script completed successfully,
+# the output still needs to be inspected manually to assert correctness
 # as no such checks are performed by the script itself.
 
 set -eux

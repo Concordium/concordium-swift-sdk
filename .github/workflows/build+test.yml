@@ -34,5 +34,5 @@ jobs:
       run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
     - name: Build project
       run: swift build
-    #- name: Run tests
-    #  run: swift test
+    - name: Run tests
+      run: swift test
