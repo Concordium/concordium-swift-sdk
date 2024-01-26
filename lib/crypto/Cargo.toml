@@ -8,9 +8,13 @@ crate-type = ["staticlib", "lib"]
 name = "crypto"
 
 [dependencies]
-thiserror = "1.0.56"
-uniffi = "0.25"
+thiserror = "1"
+uniffi = { version = "0.25", features = ["cli"] }
 wallet_library = { path = "./concordium-base/rust-src/wallet_library" }
 
 [build-dependencies]
 uniffi = { version = "0.25", features = ["build"] }
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"

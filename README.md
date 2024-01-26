@@ -46,18 +46,17 @@ This SDK includes a thin wrapper for providing bindings to the Rust library
 [`wallet_library`](https://github.com/Concordium/concordium-base/tree/main/rust-src/wallet_library)
 which exposes functions specifically relevant for wallets.
 
-These bindings are located in `./lib/crypto` and built using [`cargo-swift`](https://github.com/antoniusnaumann/cargo-swift/)
-into a [XCFramework](https://developer.apple.com/documentation/xcode/distributing-binary-frameworks-as-swift-packages).
+These bindings are located in `./lib/crypto` and compiled into an
+[XCFramework](https://developer.apple.com/documentation/xcode/distributing-binary-frameworks-as-swift-packages).
 The SDK pulls in this framework from a local path, so the bindings have to built manually before the SDK can be used.
 
-Building is only a matter of installing `cargo-swift` and invoking a Make target:
+Building is only a matter of installing `cargo-swift` and invoking the Make target
 
 ```shell
-cargo install cargo-swift
 make build-crypto
 ```
 
-This will place the target framework at `./lib/crypto/ConcordiumWalletCrypto`.
+This will place the target framework in `./lib/crypto/ConcordiumWalletCrypto`.
 
 ### Build and test SDK
 
