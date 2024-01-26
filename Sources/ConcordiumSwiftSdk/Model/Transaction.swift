@@ -2,6 +2,17 @@ import Foundation
 
 struct AccountTransaction {
 
+    // From Android AccountActivity - client.sendTransaction:
+    /*
+    .sender(sender)
+    .receiver(receiver)
+    .amount(amount)
+    .nonce(AccountNonce.from(nonce))
+    .expiry(expiry)
+    .signer(signer)
+     */
+     // Simple transfer: sendTransfer(senderAddress: String, receiverAddress: String, microCCDAmount: Long, privateKey: ED25519SecretKey)
+
     // TODO(RHA): Figure out what to do with/about the signature
     /*
     var signature: Concordium_V2_AccountTransactionSignature {
@@ -26,6 +37,11 @@ struct AccountTransaction {
     var header: AccountTransactionHeader
 
     var payload: AccountTransactionPayload
+
+    func toGrpcType() -> Concordium_V2_AccountTransaction {
+        var result = Concordium_V2_AccountTransaction()
+        result.header
+    }
 }
 
 /// Energy is used to count exact execution cost.
@@ -35,15 +51,12 @@ typealias Energy = UInt64
 /// Transaction time specified as seconds since unix epoch.
 typealias TransactionTime = UInt64
 
-/// Amount of CCD to send.
-typealias Amount = UInt64
-
 /// A memo which can be included as part of a transfer. Max size is 256 bytes.
 typealias Memo = Data
 
 /// The payload for an account transaction.
 enum AccountTransactionPayload {
-    case transfer(Amount)
+    case transfer(MicroCcdAmount)
     case transferWithMemo(TransferWithMemoPayload)
 }
 
@@ -63,6 +76,24 @@ struct AccountTransactionHeader {
 
     /// Latest time the transaction can included in a block.
     var expiry: TransactionTime?
+
+    func toGrpcType() -> Concordium_V2_AccountTransactionHeader {
+        var grpcSender = Concordium_V2_AccountAddress()
+        grpcSender.value = sender.bytes
+
+        var grpcSequenceNumber = Concordium_V2_SequenceNumber()
+        grpcSequenceNumber.value = sequenceNumber
+
+        var grpcEnergy = Concordium_V2_Energy()
+        grpcEnergy.value = energyAmount
+
+        var result = Concordium_V2_AccountTransactionHeader()
+        result.sender = grpcSender
+        result.sequenceNumber = grpcSequenceNumber
+        result.energyAmount = grpcEnergy
+
+        return result
+    }
 }
 
 struct TransferWithMemoPayload {

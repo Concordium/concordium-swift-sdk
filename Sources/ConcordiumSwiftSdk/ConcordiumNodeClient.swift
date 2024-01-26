@@ -49,4 +49,12 @@ public class ConcordiumNodeGrpcClient: ConcordiumNodeClient {
         let res = try await grpc.getAccountInfo(req).response.get()
         return try .fromGrpcType(res)
     }
+
+    public func sendSimpleTransfer(from transferAddress: String, to receiverAddress: String, : sendTransfer(senderAddress: String, receiverAddress: String, microCCDAmount: Long, privateKey: ED25519SecretKey))
+
+    public func sendAccountTransaction(_ accountTransaction: AccountTransaction) async throws -> TransactionHash {
+        SendBlockItemRequest req = ClientV2MapperExtensions.to(accountTransaction);
+        var req = Concordium_V2_SendBlockItemRequest()
+        return try await grpc.sendBlockItem(<#T##request: Concordium_V2_SendBlockItemRequest##ConcordiumSwiftSdk.Concordium_V2_SendBlockItemRequest#>).response.get().value
+    }
 }
