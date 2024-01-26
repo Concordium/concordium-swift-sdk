@@ -50,7 +50,9 @@ public class ConcordiumNodeGrpcClient: ConcordiumNodeClient {
         return try .fromGrpcType(res)
     }
 
-    public func sendSimpleTransfer(from transferAddress: String, to receiverAddress: String, : sendTransfer(senderAddress: String, receiverAddress: String, microCCDAmount: Long, privateKey: ED25519SecretKey))
+    public func sendSimpleTransfer(from transferAddress: String, to receiverAddress: String, microCcdAmount: MicroCcdAmount, privateKey: Curve25519.Signing.PrivateKey) -> TransactionHash {
+
+    }
 
     public func sendAccountTransaction(_ accountTransaction: AccountTransaction) async throws -> TransactionHash {
         SendBlockItemRequest req = ClientV2MapperExtensions.to(accountTransaction);
