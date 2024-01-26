@@ -55,7 +55,7 @@ public class ConcordiumNodeGrpcClient: ConcordiumNodeClient {
     }
 
     public func sendAccountTransaction(_ accountTransaction: AccountTransaction) async throws -> TransactionHash {
-        SendBlockItemRequest req = ClientV2MapperExtensions.to(accountTransaction);
+        // SendBlockItemRequest req = ClientV2MapperExtensions.to(accountTransaction);
         var req = Concordium_V2_SendBlockItemRequest()
         return try await grpc.sendBlockItem(<#T##request: Concordium_V2_SendBlockItemRequest##ConcordiumSwiftSdk.Concordium_V2_SendBlockItemRequest#>).response.get().value
     }
