@@ -94,6 +94,7 @@ public typealias AttributeKind = Data
 public typealias AccountThreshold = UInt32
 
 /// An ed25519 public key.
+// TODO: Should we use Curve25519.Signing.PublicKey here instead (or maybe even skip the typealias altogether)?
 public typealias PublicKey = Data
 
 func dateFromUnixTimeMillis(_ timestamp: UInt64) -> Date {
