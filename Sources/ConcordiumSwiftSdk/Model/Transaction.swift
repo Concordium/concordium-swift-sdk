@@ -2,17 +2,6 @@ import Foundation
 
 public struct AccountTransaction {
 
-    // From Android AccountActivity - client.sendTransaction:
-    /*
-    .sender(sender)
-    .receiver(receiver)
-    .amount(amount)
-    .nonce(AccountNonce.from(nonce))
-    .expiry(expiry)
-    .signer(signer)
-     */
-    // Simple transfer: sendTransfer(senderAddress: String, receiverAddress: String, microCCDAmount: Long, privateKey: ED25519SecretKey)
-
     // TODO(RHA): Figure out what to do with/about the signature
     /*
     var signature: Concordium_V2_AccountTransactionSignature {
@@ -22,15 +11,6 @@ public struct AccountTransaction {
         set {
             _signature = newValue
         }
-    }
-    /// Returns true if `signature` has been explicitly set.
-    var hasSignature: Bool {
-        return self._signature != nil
-    }
-
-    /// Clears the value of `signature`. Subsequent reads from it will return its default value.
-    mutating func clearSignature() {
-        self._signature = nil
     }
      */
 
@@ -57,13 +37,22 @@ public typealias TransactionTime = UInt64
 public typealias Memo = Data
 
 /// The payload for an account transaction.
+// TODO(RHA): How many different payloads should we support?
 enum AccountTransactionPayload {
     case transfer(MicroCcdAmount)
-    case transferWithMemo(TransferWithMemoPayload)
+    // case transferWithMemo(TransferWithMemoPayload) ...
 
     func toGrpcType() -> Concordium_V2_AccountTransactionPayload {
         var result = Concordium_V2_AccountTransactionPayload()
-        // TODO(RHA): Continue here
+
+        switch self {
+        case .transfer(let microCcdAmount):
+            var transferPayload = Concordium_V2_TransferPayload()
+            var amount = Concordium_V2_Amount()
+            amount.value = microCcdAmount
+            transferPayload.amount = amount
+        }
+
         return result
     }
 }
@@ -93,7 +82,7 @@ public struct AccountTransactionHeader {
         grpcSequenceNumber.value = sequenceNumber
 
         var grpcEnergy = Concordium_V2_Energy()
-        grpcEnergy.value = energyAmount ?? 0 // TODO(RHA): What is the energy amount?
+        grpcEnergy.value = energyAmount ?? TransactionTypeCost.transferBaseCost.value
 
         var result = Concordium_V2_AccountTransactionHeader()
         result.sender = grpcSender
@@ -103,49 +92,6 @@ public struct AccountTransactionHeader {
         return result
     }
 }
-
-public struct TransferWithMemoPayload {
-
-    /// Amount of CCD to send.
-    var amount: MicroCcdAmount
-
-    /// Receiver address.
-    var receiver: AccountAddress
-
-    /// Memo to include with the transfer.
-    var memo: Memo
-}
-
-/*
-enum TransactionTypeCost {
-    case configureBaker
-    case configureBakerWithProofs
-    case configureDelegation
-    case encryptedTransfer
-    case transferToEncrypted
-    case transferToPublic
-    case encryptedTransferWithMemo
-    case transferWithMemo
-    case registerData
-    case transferBaseCost
-
-    var value: Energy {
-        switch self {
-        case .configureBaker: return 300
-        case .configureBakerWithProofs: return 4050
-        case .configureDelegation: return 500
-        case .encryptedTransfer: return 27000
-        case .transferToEncrypted: return 600
-        case .transferToPublic: return 14850
-        case .encryptedTransferWithMemo: return 27000
-        case .transferWithMemo: return 300
-        case .registerData: return 300
-        case .transferBaseCost: return 300
-        }
-    }
-}
-
- */
 
 final class TransactionTypeCost {
     static let configureBaker = TransactionTypeCost(value: 300)
