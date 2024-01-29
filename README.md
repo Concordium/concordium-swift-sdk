@@ -50,7 +50,7 @@ These bindings are located in `./lib/crypto` and compiled into an
 [XCFramework](https://developer.apple.com/documentation/xcode/distributing-binary-frameworks-as-swift-packages).
 The SDK pulls in this framework from a local path, so the bindings have to built manually before the SDK can be used.
 
-Building is only a matter of installing `cargo-swift` and invoking the Make target
+Building is only a matter of invoking the Make target
 
 ```shell
 make build-crypto
