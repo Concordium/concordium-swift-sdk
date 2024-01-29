@@ -1,3 +1,4 @@
+import ConcordiumWalletCrypto
 import CryptoKit
 import Foundation
 import GRPC

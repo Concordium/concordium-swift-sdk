@@ -3,18 +3,20 @@
 import PackageDescription
 
 let package = Package(
-    name: "GetCryptographicParameters",
+    name: "GrpcCli",
     platforms: [
         .macOS(.v10_15),
     ],
     dependencies: [
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.2.0"),
         .package(url: "https://github.com/Concordium/concordium-swift-sdk.git", branch: "main"),
     ],
     targets: [
         .executableTarget(
-            name: "GetCryptographicParameters",
+            name: "GrpcCli",
             dependencies: [
-                .product(name: "ConcordiumSwiftSDK", package: "concordium-swift-sdk"),
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                .product(name: "ConcordiumSwiftSdk", package: "concordium-swift-sdk"),
             ]
         ),
     ]
