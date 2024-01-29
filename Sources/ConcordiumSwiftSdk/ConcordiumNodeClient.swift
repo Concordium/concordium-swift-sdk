@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import GRPC
 import NIOCore
@@ -25,21 +26,14 @@ public class ConcordiumNodeGrpcClient: ConcordiumNodeClient {
     public func getCryptographicParameters(at block: BlockIdentifier) async throws -> CryptographicParameters {
         let req = block.toGrpcType()
         let res = try await grpc.getCryptographicParameters(req).response.get()
-        return CryptographicParameters(
-            onChainCommitmentKey: res.onChainCommitmentKey.hexadecimalString(),
-            bulletproofGenerators: res.bulletproofGenerators.hexadecimalString(),
-            genesisString: res.genesisString
-        )
+        return .fromGrpcType(res)
     }
 
     public func getNextAccountSequenceNumber(of address: AccountAddress) async throws -> NextAccountSequenceNumber {
         var req = Concordium_V2_AccountAddress()
         req.value = address.bytes
         let res = try await grpc.getNextAccountSequenceNumber(req).response.get()
-        return NextAccountSequenceNumber(
-            sequenceNumber: res.hasSequenceNumber ? res.sequenceNumber.value : nil,
-            allFinal: res.allFinal
-        )
+        return .fromGrpcType(res)
     }
 
     public func getAccountInfo(of account: AccountIdentifier, at block: BlockIdentifier) async throws -> AccountInfo {
@@ -50,13 +44,17 @@ public class ConcordiumNodeGrpcClient: ConcordiumNodeClient {
         return try .fromGrpcType(res)
     }
 
-    public func sendSimpleTransfer(from transferAddress: String, to receiverAddress: String, microCcdAmount: MicroCcdAmount, privateKey: Curve25519.Signing.PrivateKey) -> TransactionHash {
+    public func sendSimpleTransfer(from sender: AccountAddress, to receiver: AccountAddress, microCcdAmount: MicroCcdAmount, sequenceNumber: SequenceNumber, privateKey: Curve25519.Signing.PrivateKey) async throws -> TransactionHash {
+        let fiveMinutesLaterMs = UInt64(Calendar.current.date(byAdding: .minute, value: 5, to: Date())!.timeIntervalSince1970 * 1000)
+        let header = AccountTransactionHeader(sender: sender, sequenceNumber: sequenceNumber, energyAmount: TransactionTypeCost.transferBaseCost.value, expiry: fiveMinutesLaterMs)
+        let payload = AccountTransactionPayload.transfer(microCcdAmount)
 
+        return try await sendAccountTransaction(AccountTransaction(header: header, payload: payload))
     }
 
     public func sendAccountTransaction(_ accountTransaction: AccountTransaction) async throws -> TransactionHash {
-        // SendBlockItemRequest req = ClientV2MapperExtensions.to(accountTransaction);
         var req = Concordium_V2_SendBlockItemRequest()
-        return try await grpc.sendBlockItem(<#T##request: Concordium_V2_SendBlockItemRequest##ConcordiumSwiftSdk.Concordium_V2_SendBlockItemRequest#>).response.get().value
+        let res = try await grpc.sendBlockItem(req).response.get()
+        return res.value
     }
 }

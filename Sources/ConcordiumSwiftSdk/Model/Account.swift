@@ -64,6 +64,13 @@ public typealias SequenceNumber = UInt64
 public struct NextAccountSequenceNumber {
     let sequenceNumber: SequenceNumber?
     let allFinal: Bool
+
+    static func fromGrpcType(_ grpc: Concordium_V2_NextAccountSequenceNumber) -> NextAccountSequenceNumber {
+        NextAccountSequenceNumber(
+                sequenceNumber: grpc.hasSequenceNumber ? grpc.sequenceNumber.value : nil,
+                allFinal: grpc.allFinal
+        )
+    }
 }
 
 /// Index of the account in the account table.
