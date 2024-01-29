@@ -1,4 +1,4 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.6
 
 import PackageDescription
 
@@ -14,11 +14,11 @@ let package = Package(
             targets: ["ConcordiumWalletCrypto"]
         ),
     ],
-    dependencies: [],
     targets: [
-        // TODO: Generate using build plugin.
-        .binaryTarget(name: "RustFramework", path: "./RustFramework.xcframework"),
-        // TODO: Generate using build plugin.
+        .binaryTarget(
+            name: "RustFramework",
+            path: "./RustFramework.xcframework"
+        ),
         .target(
             name: "ConcordiumWalletCrypto",
             dependencies: [
