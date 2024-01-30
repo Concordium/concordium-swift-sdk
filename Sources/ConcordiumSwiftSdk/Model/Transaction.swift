@@ -49,24 +49,6 @@ enum AccountTransactionPayload {
     }
 }
 
-public struct AccountTransactionSignature {
-    var privateKey: Curve25519.Signing.PrivateKey
-    var data: Signature
-
-    func toGrpcType() throws -> Concordium_V2_AccountTransactionSignature {
-        // TODO(RHA): What data is it that should be signed?
-        let signature = try Curve25519.Signing.ECDSASignature(data: data).signed(with: privateKey)
-        let signedData = try signature.serializedRepresentation()
-
-        var singleSignature = Concordium_V2_Signature()
-        singleSignature.value = signedData
-        var signatureMap = Concordium_V2_AccountSignatureMap()
-        signatureMap.signatures = [0: singleSignature]
-        var transactionSignature = Concordium_V2_AccountTransactionSignature()
-        transactionSignature.signatures = [0: signatureMap]
-    }
-}
-
 /// Header of an account transaction that contains basic data to check whether
 /// the sender and the transaction are valid. The header is shared by all transaction types.
 // TODO(RHA): Check required vs. optional fields - not just here, but on data in general
@@ -121,3 +103,37 @@ final class TransactionTypeCost {
         self.value = value
     }
 }
+
+public typealias CredentialIndex = Uint8
+public typealias KeyIndex = Uint8
+
+public struct AccountTransactionSignature {
+    var privateKey: Curve25519.Signing.PrivateKey
+    var data: Signature
+
+    var signers = [CredentialIndex: [KeyIndex: Curve25519.Signing.PrivateKey]]()
+
+    /// Sign the data and convert it to the appropriate Grpc type
+    // TODO(RHA): See TransactionSigner in Java SDK
+    func toGrpcType() throws -> Concordium_V2_AccountTransactionSignature {
+        var result = Concordium_V2_AccountTransactionSignature();
+        for credentialIndex in signers.keys {
+            var signatureMap = Concordium_V2_AccountSignatureMap()
+            for keyIndex in keys.keys {
+                let privateKey = keys[keyIndex]
+
+                // TODO(RHA): Figure out the rust thing: Serialize transaction into bytes (using Rust), hash it, and then sign it.
+                let signature = try Curve25519.Signing.ECDSASignature(data: data).signed(with: privateKey)
+                let signedData = try signature.serializedRepresentation()
+
+                var singleSignature = Concordium_V2_Signature()
+                singleSignature.value = signedData
+
+                signatureMap[keyIndex] = singleSignature
+            }
+            result[credentialIndex] = signatureMap
+        }
+        return result
+    }
+}
+
