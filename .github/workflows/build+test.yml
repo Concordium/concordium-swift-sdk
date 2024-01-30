@@ -21,14 +21,13 @@ jobs:
     - name: Setup Rust
       run: |
         rustup default "${{env.rust_version}}"
-        rustup target install aarch64-apple-darwin x86_64-apple-darwin
-        cargo install cargo-swift
+        rustup target install aarch64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-darwin x86_64-apple-ios
     - name: Check out sources
       uses: actions/checkout@v4
       with:
         submodules: recursive
-    - name: Build rust bindings (macOS only)
-      run: cargo swift package --name=ConcordiumWalletCrypto --platforms=macos --release
+    - name: Build rust bindings
+      run: ./build.sh
       working-directory: ./lib/crypto
     - name: Check formatting
       run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
