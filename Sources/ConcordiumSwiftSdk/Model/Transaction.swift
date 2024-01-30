@@ -83,25 +83,6 @@ public struct AccountTransactionHeader {
     }
 }
 
-final class TransactionTypeCost {
-    static let configureBaker = TransactionTypeCost(value: 300)
-    static let configureBakerWithProofs = TransactionTypeCost(value: 4050)
-    static let configureDelegation = TransactionTypeCost(value: 500)
-    static let encryptedTransfer = TransactionTypeCost(value: 27000)
-    static let transferToEncrypted = TransactionTypeCost(value: 600)
-    static let transferToPublic = TransactionTypeCost(value: 14850)
-    static let encryptedTransferWithMemo = TransactionTypeCost(value: 27000)
-    static let transferWithMemo = TransactionTypeCost(value: 300)
-    static let registerData = TransactionTypeCost(value: 300)
-    static let transferBaseCost = TransactionTypeCost(value: 300)
-
-    let value: UInt64
-
-    private init(value: UInt64) {
-        self.value = value
-    }
-}
-
 public typealias CredentialIndex = Uint8
 public typealias KeyIndex = Uint8
 
@@ -135,3 +116,50 @@ public struct AccountTransactionSignature {
     }
 }
 
+final class TransactionTypeCost {
+    static let configureBaker = TransactionTypeCost(value: 300)
+    static let configureBakerWithProofs = TransactionTypeCost(value: 4050)
+    static let configureDelegation = TransactionTypeCost(value: 500)
+    static let encryptedTransfer = TransactionTypeCost(value: 27000)
+    static let transferToEncrypted = TransactionTypeCost(value: 600)
+    static let transferToPublic = TransactionTypeCost(value: 14850)
+    static let encryptedTransferWithMemo = TransactionTypeCost(value: 27000)
+    static let transferWithMemo = TransactionTypeCost(value: 300)
+    static let registerData = TransactionTypeCost(value: 300)
+    static let transferBaseCost = TransactionTypeCost(value: 300)
+
+    let value: UInt64
+
+    private init(value: UInt64) {
+        self.value = value
+    }
+}
+
+public final class EnergyCost {
+    static let constantA = 100
+    static let constantB = 1
+
+    /// Account address (32 bytes), nonce (8 bytes), energy (8 bytes), payload size (4 bytes), expiry (8 bytes);
+    static let accountTransactionHeaderSize = 32 + 8 + 8 + 4 + 8
+
+    /// Calculates the energy cost for a transaction.
+    ///
+    /// The energy cost is determined by the formula: A * signatureCount + B * size + C_t,
+    /// where A and B are constants, and C_t is a transaction-specific cost.
+    ///
+    /// - Parameters:
+    ///   - signatureCount: Number of signatures for the transaction.
+    ///   - payloadSize: Size of the payload in bytes.
+    ///   - transactionSpecificCost: A transaction-specific cost.
+    ///
+    /// - Returns: The energy cost for the transaction.
+    static func calculate(
+            signatureCount: BigInt,
+            payloadSize: BigInt,
+            transactionSpecificCost: BigInt
+    ) -> UInt64 {
+        constantA * signatureCount +
+                constantB * (accountTransactionHeaderSize + payloadSize) +
+                transactionSpecificCost
+    }
+}
