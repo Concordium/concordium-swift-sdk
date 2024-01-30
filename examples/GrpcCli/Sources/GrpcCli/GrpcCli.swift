@@ -52,14 +52,14 @@ struct GrpcCli: AsyncParsableCommand {
     var options: GrpcOptions
 
     static var configuration = CommandConfiguration(
-        abstract: "A CLI for demonstrating and testing use of the gRPC client of the SDK.",
-        version: "1.0.0",
-        subcommands: [CryptographicParameters.self, Account.self]
+            abstract: "A CLI for demonstrating and testing use of the gRPC client of the SDK.",
+            version: "1.0.0",
+            subcommands: [CryptographicParameters.self, Account.self]
     )
 
     struct CryptographicParameters: AsyncParsableCommand {
         static var configuration = CommandConfiguration(
-            abstract: "Display the cryptographic parameters of the chain."
+                abstract: "Display the cryptographic parameters of the chain."
         )
 
         @OptionGroup
@@ -71,7 +71,7 @@ struct GrpcCli: AsyncParsableCommand {
         func run() async throws {
             let res = try await withClient(target: root.options.target) {
                 try await $0.getCryptographicParameters(
-                    at: block.block
+                        at: block.block
                 )
             }
             print(res)
@@ -80,8 +80,8 @@ struct GrpcCli: AsyncParsableCommand {
 
     struct Account: AsyncParsableCommand {
         static var configuration = CommandConfiguration(
-            abstract: "Subcommands related to a particular account.",
-            subcommands: [NextSequenceNumber.self, Info.self]
+                abstract: "Subcommands related to a particular account.",
+                subcommands: [NextSequenceNumber.self, Info.self]
         )
 
         @OptionGroup
@@ -89,7 +89,7 @@ struct GrpcCli: AsyncParsableCommand {
 
         struct NextSequenceNumber: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
-                abstract: "Display the next sequence number of the provided account."
+                    abstract: "Display the next sequence number of the provided account."
             )
 
             @OptionGroup
@@ -101,7 +101,7 @@ struct GrpcCli: AsyncParsableCommand {
             func run() async throws {
                 let res = try await withClient(target: root.options.target) {
                     try await $0.getNextAccountSequenceNumber(
-                        of: account.account.address
+                            of: account.account.address
                     )
                 }
                 print(res)
@@ -110,7 +110,7 @@ struct GrpcCli: AsyncParsableCommand {
 
         struct Info: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
-                abstract: "Display info of the provided account."
+                    abstract: "Display info of the provided account."
             )
 
             @OptionGroup
@@ -125,9 +125,39 @@ struct GrpcCli: AsyncParsableCommand {
             func run() async throws {
                 let res = try await withClient(target: root.options.target) {
                     try await $0.getAccountInfo(
-                        of: account.account.identifier,
-                        at: block.block
+                            of: account.account.identifier,
+                            at: block.block
                     )
+                }
+                print(res)
+            }
+        }
+
+        struct Transer: AsyncParsableCommand {
+            static var configuration = CommandConfiguration(
+                    abstract: "Transfer amount between accounts."
+            )
+
+            @OptionGroup
+            var root: GrpcCli
+
+            @OptionGroup
+            var sender: Account
+
+            @OptionGroup
+            var receiver: Account
+
+            @OptionGroup
+            var amount: MicroCcdAmount
+
+            func run() async throws {
+                let res = try await withClient(target: root.options.target) {
+                    let sequenceNumber = try await $0.getNextAccountSequenceNumber(
+                            of: sender.account.address
+                    )
+                    try await $0.sendSimpleTransfer(from: sender.account.address, to: receiver.account.address, microCcdAmount: amount, sequenceNumber: SequenceNumber, privateKey: Curve25519.Signing.PrivateKey.getNextAccountSequenceNumber(
+                            of: sender.account.address
+                    ))
                 }
                 print(res)
             }
@@ -141,9 +171,9 @@ func withClient<T>(target: ConnectionTarget, _ cmd: (ConcordiumNodeClient) async
         try! group.syncShutdownGracefully()
     }
     let channel = try GRPCChannelPool.with(
-        target: target,
-        transportSecurity: .plaintext,
-        eventLoopGroup: group
+            target: target,
+            transportSecurity: .plaintext,
+            eventLoopGroup: group
     )
     defer {
         try! channel.close().wait()
