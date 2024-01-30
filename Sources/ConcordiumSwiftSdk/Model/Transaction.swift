@@ -28,11 +28,9 @@ public typealias TransactionTime = UInt64
 /// A memo which can be included as part of a transfer. Max size is 256 bytes.
 public typealias Memo = Data
 
-/// The payload for an account transaction.
-// TODO(RHA): How many different payloads should we support?
+/// The payload for an account transaction (only transfer is supported for now)
 enum AccountTransactionPayload {
     case transfer(MicroCcdAmount)
-    // case transferWithMemo(TransferWithMemoPayload) ...
 
     func toGrpcType() -> Concordium_V2_AccountTransactionPayload {
         var result = Concordium_V2_AccountTransactionPayload()
