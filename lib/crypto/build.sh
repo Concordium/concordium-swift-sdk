@@ -14,7 +14,7 @@ cargo build --target=aarch64-apple-darwin --release
 lipo \
   ./target/x86_64-apple-darwin/release/libcrypto.a \
   ./target/aarch64-apple-darwin/release/libcrypto.a \
-  -create -output=./target/universal-macos/release/libcrypto.a
+  -create -output ./target/universal-macos/release/libcrypto.a
 
 # Compile for iOS.
 cargo build --target=aarch64-apple-ios --release
@@ -25,14 +25,14 @@ cargo build --target=aarch64-apple-ios-sim --release
 lipo \
   ./target/x86_64-apple-ios/release/libcrypto.a \
   ./target/aarch64-apple-ios-sim/release/libcrypto.a \
-  -create -output=./target/universal-ios/release/libcrypto.a
+  -create -output ./target/universal-ios/release/libcrypto.a
 
 # Build binary framework.
 xcodebuild -create-xcframework \
-  -library=./target/aarch64-apple-ios/release/libcrypto.a -headers=./generated \
-  -library=./target/universal-ios/release/libcrypto.a -headers=./generated \
-  -library=./target/universal-macos/release/libcrypto.a -headers=./generated \
-  -output=./ConcordiumWalletCrypto/RustFramework.xcframework
+  -library ./target/aarch64-apple-ios/release/libcrypto.a -headers ./generated \
+  -library ./target/universal-ios/release/libcrypto.a -headers ./generated \
+  -library ./target/universal-macos/release/libcrypto.a -headers ./generated \
+  -output ./ConcordiumWalletCrypto/RustFramework.xcframework
 
 # Clean up.
 rm -rf ./generated
