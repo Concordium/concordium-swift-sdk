@@ -2,26 +2,18 @@ import Foundation
 
 public struct AccountTransaction {
 
-    // TODO(RHA): Figure out what to do with/about the signature
-    /*
-    var signature: Concordium_V2_AccountTransactionSignature {
-        get {
-            return _signature ?? Concordium_V2_AccountTransactionSignature()
-        }
-        set {
-            _signature = newValue
-        }
-    }
-     */
-
     var header: AccountTransactionHeader
 
     var payload: AccountTransactionPayload
 
-    func toGrpcType() -> Concordium_V2_AccountTransaction {
+    var signature: AccountTransactionSignature
+
+    func toGrpcType() throws -> Concordium_V2_AccountTransaction {
         var result = Concordium_V2_AccountTransaction()
         result.header = header.toGrpcType()
         result.payload = payload.toGrpcType()
+        result.signature = try signature.toGrpcType()
+
         return result
     }
 }
@@ -54,6 +46,24 @@ enum AccountTransactionPayload {
         }
 
         return result
+    }
+}
+
+public struct AccountTransactionSignature {
+    var privateKey: Curve25519.Signing.PrivateKey
+    var data: Signature
+
+    func toGrpcType() throws -> Concordium_V2_AccountTransactionSignature {
+        // TODO(RHA): What data is it that should be signed?
+        let signature = try Curve25519.Signing.ECDSASignature(data: data).signed(with: privateKey)
+        let signedData = try signature.serializedRepresentation()
+
+        var singleSignature = Concordium_V2_Signature()
+        singleSignature.value = signedData
+        var signatureMap = Concordium_V2_AccountSignatureMap()
+        signatureMap.signatures = [0: singleSignature]
+        var transactionSignature = Concordium_V2_AccountTransactionSignature()
+        transactionSignature.signatures = [0: signatureMap]
     }
 }
 

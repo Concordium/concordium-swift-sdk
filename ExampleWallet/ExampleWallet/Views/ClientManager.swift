@@ -1,4 +1,4 @@
-import ConcordiumSwiftSDK
+import ConcordiumSwiftSdk
 import Foundation
 
 import GRPC
@@ -28,12 +28,12 @@ class ClientManager {
         )
     }
 
-    func getClient() throws -> YourGRPCServiceClient {
+    func getClient() throws -> ConcordiumNodeGrpcClient {
         guard let channel = channel else {
             throw GRPCClientError.notInitialized
         }
 
-        return YourGRPCServiceClient(channel: channel)
+        return ConcordiumNodeGrpcClient(channel: channel)
     }
 
     func shutdown() throws {
