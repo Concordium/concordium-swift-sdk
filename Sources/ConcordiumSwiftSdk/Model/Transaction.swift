@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 public struct AccountTransaction {
@@ -83,12 +84,9 @@ public struct AccountTransactionHeader {
     }
 }
 
-public typealias CredentialIndex = Uint8
-public typealias KeyIndex = Uint8
-
 public struct AccountTransactionSignature {
     var privateKey: Curve25519.Signing.PrivateKey
-    var data: Signature
+    var data: Data
 
     var signers = [CredentialIndex: [KeyIndex: Curve25519.Signing.PrivateKey]]()
 
@@ -96,21 +94,14 @@ public struct AccountTransactionSignature {
     // TODO(RHA): See TransactionSigner in Java SDK
     func toGrpcType() throws -> Concordium_V2_AccountTransactionSignature {
         var result = Concordium_V2_AccountTransactionSignature();
-        for credentialIndex in signers.keys {
+        for (credentialIndex, keyIndices) in signers {
             var signatureMap = Concordium_V2_AccountSignatureMap()
-            for keyIndex in keys.keys {
-                let privateKey = keys[keyIndex]
-
-                // TODO(RHA): Figure out the rust thing: Serialize transaction into bytes (using Rust), hash it, and then sign it.
-                let signature = try Curve25519.Signing.ECDSASignature(data: data).signed(with: privateKey)
-                let signedData = try signature.serializedRepresentation()
-
+            for (keyIndex, privateKey) in keyIndices {
                 var singleSignature = Concordium_V2_Signature()
-                singleSignature.value = signedData
-
-                signatureMap[keyIndex] = singleSignature
+                singleSignature.value = try privateKey.signature(for: data)
+                signatureMap.signatures[keyIndex] = singleSignature
             }
-            result[credentialIndex] = signatureMap
+            result.signatures[credentialIndex] = signatureMap
         }
         return result
     }
@@ -136,11 +127,11 @@ final class TransactionTypeCost {
 }
 
 public final class EnergyCost {
-    static let constantA = 100
-    static let constantB = 1
+    static let constantA: UInt64 = 100
+    static let constantB: UInt64 = 1
 
     /// Account address (32 bytes), nonce (8 bytes), energy (8 bytes), payload size (4 bytes), expiry (8 bytes);
-    static let accountTransactionHeaderSize = 32 + 8 + 8 + 4 + 8
+    static let accountTransactionHeaderSize: UInt64 = 32 + 8 + 8 + 4 + 8
 
     /// Calculates the energy cost for a transaction.
     ///
@@ -154,9 +145,9 @@ public final class EnergyCost {
     ///
     /// - Returns: The energy cost for the transaction.
     static func calculate(
-            signatureCount: BigInt,
-            payloadSize: BigInt,
-            transactionSpecificCost: BigInt
+            signatureCount: UInt64,
+            payloadSize: UInt64,
+            transactionSpecificCost: UInt64
     ) -> UInt64 {
         constantA * signatureCount +
                 constantB * (accountTransactionHeaderSize + payloadSize) +

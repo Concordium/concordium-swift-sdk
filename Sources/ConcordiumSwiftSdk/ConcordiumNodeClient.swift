@@ -45,11 +45,15 @@ public class ConcordiumNodeGrpcClient: ConcordiumNodeClient {
         return try .fromGrpcType(res)
     }
 
+    // TODO(RHA): Continue here
+    /*
+    
     public func sendSimpleTransfer(from sender: AccountAddress, to receiver: AccountAddress, microCcdAmount: MicroCcdAmount, sequenceNumber: SequenceNumber, privateKey: Curve25519.Signing.PrivateKey) async throws -> TransactionHash {
         let fiveMinutesLaterMs = UInt64(Calendar.current.date(byAdding: .minute, value: 5, to: Date())!.timeIntervalSince1970 * 1000)
         // TODO(RHA): How was it that we determined the appropriate energy amount?
         let header = AccountTransactionHeader(sender: sender, sequenceNumber: sequenceNumber, energyAmount: TransactionTypeCost.transferBaseCost.value, expiry: fiveMinutesLaterMs)
         let payload = AccountTransactionPayload.transfer(microCcdAmount)
+        let signature = AccountTransactionSignature(privateKey: <#T##Curve25519.Signing.PrivateKey##Curve25519.Signing.PrivateKey#>.rawRepresentation("hej"), data: "hej")
 
         return try await sendAccountTransaction(AccountTransaction(header: header, payload: payload))
     }
@@ -60,4 +64,5 @@ public class ConcordiumNodeGrpcClient: ConcordiumNodeClient {
         let res = try await grpc.sendBlockItem(req).response.get()
         return res.value
     }
+     */
 }
