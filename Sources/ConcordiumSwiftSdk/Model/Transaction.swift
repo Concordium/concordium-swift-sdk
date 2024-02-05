@@ -37,15 +37,18 @@ public typealias Memo = Data
 
 /// The payload for an account transaction (only transfer is supported for now).
 public enum AccountTransactionPayload {
-    case transfer(MicroCcdAmount)
+    case transfer(amount: MicroCcdAmount, receiver: AccountAddress)
 
     func toGrpcType() -> Concordium_V2_AccountTransactionPayload {
         switch self {
-        case let .transfer(microCcdAmount):
+        case let .transfer(amount, receiver):
             var a = Concordium_V2_Amount()
-            a.value = microCcdAmount
+            a.value = amount
+            var r = Concordium_V2_AccountAddress()
+            r.value = receiver.bytes
             var p = Concordium_V2_TransferPayload()
             p.amount = a
+            p.receiver = r
             var t = Concordium_V2_AccountTransactionPayload()
             t.transfer = p
             return t

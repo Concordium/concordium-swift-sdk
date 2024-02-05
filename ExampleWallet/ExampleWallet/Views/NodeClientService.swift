@@ -4,8 +4,8 @@ import Foundation
 import GRPC
 import NIO
 
-class ClientManager {
-    static let shared = ClientManager()
+class NodeClientService {
+    static let instance = NodeClientService()
 
     private var channel: GRPCChannel?
     private let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)

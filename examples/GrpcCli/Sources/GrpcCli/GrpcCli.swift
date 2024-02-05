@@ -133,9 +133,9 @@ struct GrpcCli: AsyncParsableCommand {
             }
         }
 
-        struct Transer: AsyncParsableCommand {
+        struct Transfer: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
-                abstract: "Transfer amount between accounts."
+                abstract: "Transfer CCDs from one account on another."
             )
 
             @OptionGroup
@@ -151,13 +151,17 @@ struct GrpcCli: AsyncParsableCommand {
             var amount: MicroCcdAmount
 
             func run() async throws {
-                let res = try await withClient(target: root.options.target) {
-                    let sequenceNumber = try await $0.getNextAccountSequenceNumber(
+                let res = try await withClient(target: root.options.target) { client in
+                    let sequenceNumber = try await client.getNextAccountSequenceNumber(
                         of: sender.account.address
                     )
-                    try await $0.sendSimpleTransfer(from: sender.account.address, to: receiver.account.address, microCcdAmount: amount, sequenceNumber: SequenceNumber, privateKey: Curve25519.Signing.PrivateKey.getNextAccountSequenceNumber(
-                        of: sender.account.address
-                    ))
+                    try await $0.sendSimpleTransfer(
+                        from: sender.account.address,
+                        to: receiver.account.address,
+                        microCcdAmount: amount,
+                        sequenceNumber: sequenceNumber,
+                        keys: [:] // TODO: !!
+                    )
                 }
                 print(res)
             }
