@@ -30,7 +30,7 @@ jobs:
       run: ./build.sh
       working-directory: ./lib/crypto
     - name: Check formatting
-      run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
+      run: swift package plugin --allow-writing-to-package-directory swiftformat ./examples ./ExampleWallet --lint
     - name: Build project
       run: swift build
     - name: Run tests
