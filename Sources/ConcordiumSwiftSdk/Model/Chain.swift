@@ -7,9 +7,9 @@ public struct CryptographicParameters {
 
     static func fromGrpcType(_ grpc: Concordium_V2_CryptographicParameters) -> CryptographicParameters {
         CryptographicParameters(
-                onChainCommitmentKey: grpc.onChainCommitmentKey.hexadecimalString(),
-                bulletproofGenerators: grpc.bulletproofGenerators.hexadecimalString(),
-                genesisString: grpc.genesisString
+            onChainCommitmentKey: grpc.onChainCommitmentKey.hexadecimalString(),
+            bulletproofGenerators: grpc.bulletproofGenerators.hexadecimalString(),
+            genesisString: grpc.genesisString
         )
     }
 }
