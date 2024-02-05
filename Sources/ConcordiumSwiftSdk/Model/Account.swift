@@ -62,13 +62,13 @@ public struct AccountAddress {
 public typealias SequenceNumber = UInt64
 
 public struct NextAccountSequenceNumber {
-    let sequenceNumber: SequenceNumber?
+    let sequenceNumber: SequenceNumber
     let allFinal: Bool
 
     static func fromGrpcType(_ grpc: Concordium_V2_NextAccountSequenceNumber) -> NextAccountSequenceNumber {
         NextAccountSequenceNumber(
-                sequenceNumber: grpc.hasSequenceNumber ? grpc.sequenceNumber.value : nil,
-                allFinal: grpc.allFinal
+            sequenceNumber: grpc.sequenceNumber.value,
+            allFinal: grpc.allFinal
         )
     }
 }

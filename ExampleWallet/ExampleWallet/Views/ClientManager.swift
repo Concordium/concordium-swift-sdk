@@ -29,7 +29,7 @@ class ClientManager {
     }
 
     func getClient() throws -> ConcordiumNodeGrpcClient {
-        guard let channel = channel else {
+        guard let channel else {
             throw GRPCClientError.notInitialized
         }
 

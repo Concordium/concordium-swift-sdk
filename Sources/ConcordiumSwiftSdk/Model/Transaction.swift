@@ -2,20 +2,26 @@ import CryptoKit
 import Foundation
 
 public struct AccountTransaction {
-
     var header: AccountTransactionHeader
-
     var payload: AccountTransactionPayload
-
-    var signature: AccountTransactionSignature
+    var signatures: [CredentialIndex: [KeyIndex: Data]]
 
     func toGrpcType() throws -> Concordium_V2_AccountTransaction {
-        var result = Concordium_V2_AccountTransaction()
-        result.header = header.toGrpcType()
-        result.payload = payload.toGrpcType()
-        result.signature = try signature.toGrpcType()
-
-        return result
+        var s = Concordium_V2_AccountTransactionSignature()
+        s.signatures = signatures.mapValues {
+            var m = Concordium_V2_AccountSignatureMap()
+            m.signatures = $0.mapValues {
+                var s = Concordium_V2_Signature()
+                s.value = $0
+                return s
+            }
+            return m
+        }
+        var t = Concordium_V2_AccountTransaction()
+        t.header = header.toGrpcType()
+        t.payload = payload.toGrpcType()
+        t.signature = s
+        return t
     }
 }
 
@@ -29,30 +35,27 @@ public typealias TransactionTime = UInt64
 /// A memo which can be included as part of a transfer. Max size is 256 bytes.
 public typealias Memo = Data
 
-/// The payload for an account transaction (only transfer is supported for now)
-enum AccountTransactionPayload {
+/// The payload for an account transaction (only transfer is supported for now).
+public enum AccountTransactionPayload {
     case transfer(MicroCcdAmount)
 
     func toGrpcType() -> Concordium_V2_AccountTransactionPayload {
-        var result = Concordium_V2_AccountTransactionPayload()
-
         switch self {
-        case .transfer(let microCcdAmount):
-            var transferPayload = Concordium_V2_TransferPayload()
-            var amount = Concordium_V2_Amount()
-            amount.value = microCcdAmount
-            transferPayload.amount = amount
+        case let .transfer(microCcdAmount):
+            var a = Concordium_V2_Amount()
+            a.value = microCcdAmount
+            var p = Concordium_V2_TransferPayload()
+            p.amount = a
+            var t = Concordium_V2_AccountTransactionPayload()
+            t.transfer = p
+            return t
         }
-
-        return result
     }
 }
 
 /// Header of an account transaction that contains basic data to check whether
 /// the sender and the transaction are valid. The header is shared by all transaction types.
-// TODO(RHA): Check required vs. optional fields - not just here, but on data in general
 public struct AccountTransactionHeader {
-
     /// Sender of the transaction.
     var sender: AccountAddress
 
@@ -60,54 +63,27 @@ public struct AccountTransactionHeader {
     var sequenceNumber: SequenceNumber
 
     /// Maximum amount of energy the transaction can take to execute.
-    var energyAmount: Energy?
+    var maxEnergy: Energy
 
     /// Latest time the transaction can included in a block.
     var expiry: TransactionTime?
 
     func toGrpcType() -> Concordium_V2_AccountTransactionHeader {
-        var grpcSender = Concordium_V2_AccountAddress()
-        grpcSender.value = sender.bytes
-
-        var grpcSequenceNumber = Concordium_V2_SequenceNumber()
-        grpcSequenceNumber.value = sequenceNumber
-
-        var grpcEnergy = Concordium_V2_Energy()
-        grpcEnergy.value = energyAmount ?? TransactionTypeCost.transferBaseCost.value
-
-        var result = Concordium_V2_AccountTransactionHeader()
-        result.sender = grpcSender
-        result.sequenceNumber = grpcSequenceNumber
-        result.energyAmount = grpcEnergy
-
-        return result
+        var s = Concordium_V2_AccountAddress()
+        s.value = sender.bytes
+        var n = Concordium_V2_SequenceNumber()
+        n.value = sequenceNumber
+        var e = Concordium_V2_Energy()
+        e.value = maxEnergy
+        var h = Concordium_V2_AccountTransactionHeader()
+        h.sender = s
+        h.sequenceNumber = n
+        h.energyAmount = e
+        return h
     }
 }
 
-public struct AccountTransactionSignature {
-    var privateKey: Curve25519.Signing.PrivateKey
-    var data: Data
-
-    var signers = [CredentialIndex: [KeyIndex: Curve25519.Signing.PrivateKey]]()
-
-    /// Sign the data and convert it to the appropriate Grpc type
-    // TODO(RHA): See TransactionSigner in Java SDK
-    func toGrpcType() throws -> Concordium_V2_AccountTransactionSignature {
-        var result = Concordium_V2_AccountTransactionSignature();
-        for (credentialIndex, keyIndices) in signers {
-            var signatureMap = Concordium_V2_AccountSignatureMap()
-            for (keyIndex, privateKey) in keyIndices {
-                var singleSignature = Concordium_V2_Signature()
-                singleSignature.value = try privateKey.signature(for: data)
-                signatureMap.signatures[keyIndex] = singleSignature
-            }
-            result.signatures[credentialIndex] = signatureMap
-        }
-        return result
-    }
-}
-
-final class TransactionTypeCost {
+public struct TransactionTypeCost {
     static let configureBaker = TransactionTypeCost(value: 300)
     static let configureBakerWithProofs = TransactionTypeCost(value: 4050)
     static let configureDelegation = TransactionTypeCost(value: 500)
@@ -119,14 +95,11 @@ final class TransactionTypeCost {
     static let registerData = TransactionTypeCost(value: 300)
     static let transferBaseCost = TransactionTypeCost(value: 300)
 
-    let value: UInt64
-
-    private init(value: UInt64) {
-        self.value = value
-    }
+    var value: UInt64
 }
 
-public final class EnergyCost {
+// TODO[mo]: Looks like something that should be a simple function.
+public struct EnergyCost {
     static let constantA: UInt64 = 100
     static let constantB: UInt64 = 1
 
@@ -144,13 +117,13 @@ public final class EnergyCost {
     ///   - transactionSpecificCost: A transaction-specific cost.
     ///
     /// - Returns: The energy cost for the transaction.
-    static func calculate(
-            signatureCount: UInt64,
-            payloadSize: UInt64,
-            transactionSpecificCost: UInt64
+    public func calculate(
+        signatureCount: UInt64,
+        payloadSize: UInt64,
+        transactionSpecificCost: UInt64
     ) -> UInt64 {
         constantA * signatureCount +
-                constantB * (accountTransactionHeaderSize + payloadSize) +
-                transactionSpecificCost
+            constantB * (accountTransactionHeaderSize + payloadSize) +
+            transactionSpecificCost
     }
 }
