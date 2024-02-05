@@ -38,7 +38,7 @@ public enum AccountIdentifier {
 public struct AccountAddress {
     private static let base58CheckVersion: UInt8 = 1
 
-    let bytes: Data // 32 bytes
+    var bytes: Data // 32 bytes
 
     /// Construct address directly from a 32-byte data buffer.
     public init(_ bytes: Data) {
@@ -62,8 +62,8 @@ public struct AccountAddress {
 public typealias SequenceNumber = UInt64
 
 public struct NextAccountSequenceNumber {
-    let sequenceNumber: SequenceNumber?
-    let allFinal: Bool
+    var sequenceNumber: SequenceNumber?
+    var allFinal: Bool
 }
 
 /// Index of the account in the account table.
@@ -103,11 +103,11 @@ func dateFromUnixTimeMillis(_ timestamp: UInt64) -> Date {
 /// An individual release of a locked balance.
 public struct Release {
     /// Effective time of release.
-    let timestamp: Date
+    var timestamp: Date
     /// Amount to be released.
-    let amount: MicroCcdAmount
+    var amount: MicroCcdAmount
     /// List of transaction hashes that contribute a balance to this release.
-    let transactions: [TransactionHash]
+    var transactions: [TransactionHash]
 
     static func fromGrpcType(_ grpc: Concordium_V2_Release) -> Release {
         .init(
@@ -122,9 +122,9 @@ public struct Release {
 /// This is the balance of the account that is owned by the account, but cannot be used until the release point.
 public struct ReleaseSchedule {
     /// Total amount that is locked up in releases.
-    let total: MicroCcdAmount
+    var total: MicroCcdAmount
     /// List of timestamped releases in increasing order of timestamps.
-    let schedule: [Release]
+    var schedule: [Release]
 
     static func fromGrpcType(_ grpc: Concordium_V2_ReleaseSchedule) -> ReleaseSchedule {
         .init(total: grpc.total.value, schedule: grpc.schedules.map {
@@ -134,8 +134,8 @@ public struct ReleaseSchedule {
 }
 
 public struct Versioned<V> {
-    let version: UInt32
-    let value: V
+    var version: UInt32
+    var value: V
 }
 
 /// Index of an account key that is to be used.
@@ -183,8 +183,8 @@ public enum VerifyKey {
 /// Public credential keys currently on the account, together with the threshold
 /// needed for a valid signature on a transaction.
 public struct CredentialPublicKeys {
-    let keys: [KeyIndex: VerifyKey]
-    let threshold: SignatureThreshold
+    var keys: [KeyIndex: VerifyKey]
+    var threshold: SignatureThreshold
 
     static func fromGrpcType(_ grpc: Concordium_V2_CredentialPublicKeys) throws -> CredentialPublicKeys {
         try CredentialPublicKeys(
@@ -201,8 +201,8 @@ public struct CredentialPublicKeys {
 /// 1 is January, ..., 12 is December.
 /// Year must be a 4 digit year, i.e., between 1000 and 9999.
 public struct YearMonth {
-    let year: UInt32
-    let month: UInt32
+    var year: UInt32
+    var month: UInt32
 
     static func fromGrpcType(_ grpc: Concordium_V2_YearMonth) -> YearMonth {
         YearMonth(year: grpc.year, month: grpc.month)
@@ -217,10 +217,10 @@ public struct YearMonth {
 /// A policy is (currently) revealed values of attributes that are part of the
 /// identity object. Policies are part of credentials.
 public struct Policy<A> {
-    let validTo: YearMonth
-    let createdAt: YearMonth
+    var validTo: YearMonth
+    var createdAt: YearMonth
     /// Revealed attributes.
-    let policyVec: [AttributeTag: A]
+    var policyVec: [AttributeTag: A]
 
     static func fromGrpcType(_ grpc: Concordium_V2_Policy) -> Policy<Data> {
         Policy<Data>(
@@ -234,13 +234,13 @@ public struct Policy<A> {
 /// Values in initial credential deployment.
 public struct InitialCredentialDeploymentValues<C, A> {
     /// Account this credential belongs to.
-    let credAccount: CredentialPublicKeys
+    var credAccount: CredentialPublicKeys
     /// Credential registration id of the credential.
-    let regId: C
+    var regId: C
     /// Identity of the identity provider who signed the identity object from which this credential is derived.
-    let ipIdentity: IpIdentity
+    var ipIdentity: IpIdentity
     /// Policy of this credential object.
-    let policy: Policy<A>
+    var policy: Policy<A>
 }
 
 /// Data relating to a single anonymity revoker sent by the account holder to the chain.
@@ -256,19 +256,19 @@ public typealias CredId<C> = C // 48 bytes (according to Java SDK)
 /// Values (as opposed to proofs) in credential deployment.
 public struct CredentialDeploymentValues<C, A> {
     /// Credential keys (i.e. account holder keys).
-    let credKeyInfo: CredentialPublicKeys
+    var credKeyInfo: CredentialPublicKeys
     /// Credential registration id of the credential.
-    let credId: CredId<C>
+    var credId: CredId<C>
     /// Identity of the identity provider who signed the identity object from which this credential is derived.
-    let ipIdentity: IpIdentity
+    var ipIdentity: IpIdentity
     /// Anonymity revocation threshold. Must be <= length of ar_data.
-    let threshold: Threshold
+    var threshold: Threshold
     /// Anonymity revocation data. List of anonymity revokers which can revoke identity.
     /// NB: The order is important since it is the same order as that signed by the identity provider,
     ///  and permuting the list will invalidate the signature from the identity provider.
-    let arData: [ArIdentity: ChainArData<C>]
+    var arData: [ArIdentity: ChainArData<C>]
     /// Policy of this credential object.
-    let policy: Policy<A>
+    var policy: Policy<A>
 }
 
 /// A Commitment is a group element.
@@ -276,20 +276,20 @@ public typealias PedersenCommitment<C> = C
 
 public struct CredentialDeploymentCommitments<C> {
     /// Commitment to the PRF key.
-    let prf: PedersenCommitment<C>
+    var prf: PedersenCommitment<C>
     /// Commitment to credential counter.
-    let credCounter: PedersenCommitment<C>
+    var credCounter: PedersenCommitment<C>
     /// Commitment to the max account number.
-    let maxAccounts: PedersenCommitment<C>
+    var maxAccounts: PedersenCommitment<C>
     /// List of commitments to the attributes that are not revealed.
     /// For the purposes of checking signatures,
     /// the commitments to those that are revealed as part of the policy are going to be computed by the verifier.
-    let attributes: [AttributeTag: PedersenCommitment<C>]
+    var attributes: [AttributeTag: PedersenCommitment<C>]
     /// Commitments to the coefficients of the polynomial
     /// used to share `id_cred_sec`
     /// `S + b1 X + b2 X^2...`
     /// where `S` is `id_cred_sec`.
-    let idCredSecSharingCoeff: [PedersenCommitment<C>]
+    var idCredSecSharingCoeff: [PedersenCommitment<C>]
 }
 
 /// Account credential with values and commitments, but without proofs.
@@ -351,20 +351,20 @@ public struct AccountEncryptedAmount {
     /// - encrypted amounts that are transferred from public balance
     ///
     /// When a transfer is made all of these must always be used.
-    let selfAmount: EncryptedAmount<ArCurve>
+    var selfAmount: EncryptedAmount<ArCurve>
     /// Starting index for incoming encrypted amounts.
     /// If an aggregated amount is present then this index is associated with such an amount
     /// and the list of incoming encrypted amounts starts at the index `start_index + 1`.
-    let startIndex: UInt64
+    var startIndex: UInt64
     /// If not nil, the amount that has resulted from aggregating other amounts
     /// and the number of aggregated amounts (must be at least 2 if present).
-    let aggregatedAmount: AggregatedAmount?
+    var aggregatedAmount: AggregatedAmount?
     /// Amounts starting at `start_index` (or at `start_index + 1` if there is
     /// an aggregated amount present).
     /// They are assumed to be numbered sequentially.
     /// The length of this list is bounded by the maximum number of incoming amounts on the accounts, which is currently 32.
     /// After that aggregation kicks in.
-    let incomingAmounts: [EncryptedAmount<ArCurve>]
+    var incomingAmounts: [EncryptedAmount<ArCurve>]
 
     static func fromGrpcType(_ grpc: Concordium_V2_EncryptedBalance) -> AccountEncryptedAmount {
         AccountEncryptedAmount(
@@ -402,14 +402,14 @@ public typealias BakerId = AccountIndex
 /// Information about a baker/validator.
 public struct BakerInfo {
     /// Identity of the baker. This is actually the account index of the account controlling the baker.
-    let bakerId: BakerId
+    var bakerId: BakerId
     /// Baker's public key used to check whether they won the lottery or not.
-    let bakerElectionVerifyKey: BakerElectionVerifyKey
+    var bakerElectionVerifyKey: BakerElectionVerifyKey
     /// Baker's public key used to check that they are indeed the ones who produced the block.
-    let bakerSignatureVerifyKey: BakerSignatureVerifyKey
+    var bakerSignatureVerifyKey: BakerSignatureVerifyKey
     /// Baker's public key used to check signatures on finalization records.
     /// This is only used if the baker has sufficient stake to participate in finalization.
-    let bakerAggregationVerifyKey: BakerAggregationVerifyKey
+    var bakerAggregationVerifyKey: BakerAggregationVerifyKey
 
     static func fromGrpcType(_ grpc: Concordium_V2_BakerInfo) -> BakerInfo {
         BakerInfo(
@@ -442,7 +442,7 @@ public enum StakePendingChange {
 
 /// A fraction of an amount with a precision of 1/100000.
 public struct AmountFraction {
-    let partsPerHundredThousand: UInt32
+    var partsPerHundredThousand: UInt32
 
     static func fromGrpcType(_ grpc: Concordium_V2_AmountFraction) -> AmountFraction {
         AmountFraction(partsPerHundredThousand: grpc.partsPerHundredThousand)
@@ -465,11 +465,11 @@ public enum OpenStatus: Int {
 
 public struct CommissionRates {
     /// Fraction of finalization rewards charged by the pool owner.
-    let finalization: AmountFraction?
+    var finalization: AmountFraction?
     /// Fraction of baking rewards charged by the pool owner.
-    let baking: AmountFraction?
+    var baking: AmountFraction?
     /// Fraction of transaction rewards charged by the pool owner.
-    let transaction: AmountFraction?
+    var transaction: AmountFraction?
 
     static func fromGrpcType(_ grpc: Concordium_V2_CommissionRates) -> CommissionRates {
         CommissionRates(
@@ -484,11 +484,11 @@ public struct CommissionRates {
 /// This information is added with the introduction of delegation in protocol version 4.
 public struct BakerPoolInfo {
     /// Whether the pool allows delegators.
-    let openStatus: OpenStatus
+    var openStatus: OpenStatus
     /// The URL that links to the metadata about the pool.
-    let metadataUrl: String
+    var metadataUrl: String
     /// The commission rates charged by the pool owner.
-    let commissionRates: CommissionRates
+    var commissionRates: CommissionRates
 
     static func fromGrpcType(_ grpc: Concordium_V2_BakerPoolInfo) throws -> BakerPoolInfo {
         try BakerPoolInfo(
@@ -564,35 +564,35 @@ public typealias ElgamalPublicKey = PublicKey
 /// Information about the account at a particular point in time on chain.
 public struct AccountInfo {
     /// Next sequence number to be used for transactions signed from this account.
-    let sequenceNumber: SequenceNumber
+    var sequenceNumber: SequenceNumber
     /// Current (unencrypted) balance of the account.
-    let amount: MicroCcdAmount
+    var amount: MicroCcdAmount
     /// Release schedule for any locked up amount. This could be an empty release schedule.
-    let releaseSchedule: ReleaseSchedule
+    var releaseSchedule: ReleaseSchedule
     /// Map of all currently active credentials on the account.
     /// This includes public keys that can sign for the given credentials,
     /// as well as any revealed attributes.
     /// This map always contains a credential with index 0.
-    let credentials: [CredentialIndex: Versioned<AccountCredentialWithoutProofs<ArCurve, AttributeKind>>]
+    var credentials: [CredentialIndex: Versioned<AccountCredentialWithoutProofs<ArCurve, AttributeKind>>]
     /// Lower bound on how many credentials must sign any given transaction from this account.
-    let threshold: AccountThreshold
+    var threshold: AccountThreshold
     /// The encrypted balance of the account.
-    let encryptedAmount: AccountEncryptedAmount
+    var encryptedAmount: AccountEncryptedAmount
     /// The public key for sending encrypted balances to the account.
-    let encryptionKey: ElgamalPublicKey
+    var encryptionKey: ElgamalPublicKey
     /// Internal index of the account.
     /// Accounts on the chain get sequential indices.
     /// These should generally not be used outside of the chain.
     /// The account address is meant to be used to refer to accounts,
     /// however the account index serves the role of the baker ID if the account is a baker.
     /// Hence it is exposed here as well.
-    let index: AccountIndex
+    var index: AccountIndex
     /// Present if the account is a baker or delegator.
     /// In that case it is the information about the baker or delegator.
-    let stake: AccountStakingInfo?
+    var stake: AccountStakingInfo?
     /// Canonical address of the account.
     /// This is derived from the first credential that created the account.
-    let address: AccountAddress
+    var address: AccountAddress
 
     static func fromGrpcType(_ grpc: Concordium_V2_AccountInfo) throws -> AccountInfo {
         try AccountInfo(

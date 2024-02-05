@@ -1,7 +1,7 @@
 import Foundation
 
 public struct CryptographicParameters {
-    let onChainCommitmentKey: String
-    let bulletproofGenerators: String
-    let genesisString: String
+    var onChainCommitmentKey: String
+    var bulletproofGenerators: String
+    var genesisString: String
 }
