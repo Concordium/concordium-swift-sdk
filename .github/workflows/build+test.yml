@@ -6,7 +6,6 @@ on:
     pull_request:
 
 env:
-  rust_version: "1.72"
   swift_version: "5.9"
 
 jobs:
@@ -18,17 +17,8 @@ jobs:
       uses: swift-actions/setup-swift@v1
       with:
         swift-version: "${{env.swift_version}}"
-    - name: Setup Rust
-      run: |
-        rustup default "${{env.rust_version}}"
-        rustup target install aarch64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-darwin x86_64-apple-ios
     - name: Check out sources
       uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: Build rust bindings
-      run: ./build.sh
-      working-directory: ./lib/crypto
     - name: Check formatting
       run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
     - name: Build project
