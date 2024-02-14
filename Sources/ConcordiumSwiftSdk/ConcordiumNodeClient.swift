@@ -31,7 +31,7 @@ public class ConcordiumNodeGrpcClient: ConcordiumNodeClient {
 
     public func getNextAccountSequenceNumber(of address: AccountAddress) async throws -> NextAccountSequenceNumber {
         var req = Concordium_V2_AccountAddress()
-        req.value = address.bytes
+        req.value = address.data
         let res = try await grpc.getNextAccountSequenceNumber(req).response.get()
         return .fromGrpcType(res)
     }

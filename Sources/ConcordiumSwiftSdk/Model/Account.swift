@@ -14,7 +14,7 @@ public enum AccountIdentifier {
         switch self {
         case let .address(addr):
             var a = Concordium_V2_AccountAddress()
-            a.value = addr.bytes
+            a.value = addr.data
             var i = Concordium_V2_AccountIdentifierInput()
             i.address = a
             return i
@@ -38,21 +38,27 @@ public enum AccountIdentifier {
 public struct AccountAddress {
     private static let base58CheckVersion: UInt8 = 1
 
-    let bytes: Data // 32 bytes
+    let data: Data // 32 bytes
+
+    var base58Check: String {
+        var versionedData = Data([AccountAddress.base58CheckVersion])
+        versionedData.append(data)
+        return Base58Check().encode(data: versionedData)
+    }
 
     /// Construct address directly from a 32-byte data buffer.
-    public init(_ bytes: Data) {
-        self.bytes = bytes
+    public init(_ data: Data) {
+        self.data = data
     }
 
     /// Construct address from the standard representation (Base58Check).
     public init(base58Check: String) throws {
-        var bytes = try Base58Check().decode(string: base58Check)
-        let version = bytes.removeFirst()
+        var data = try Base58Check().decode(string: base58Check)
+        let version = data.removeFirst()
         if version != AccountAddress.base58CheckVersion {
             throw GrpcError.unexpectedBase64CheckVersion(expected: AccountAddress.base58CheckVersion, actual: version)
         }
-        self.bytes = bytes // excludes initial version byte
+        self.data = data // excludes initial version byte
     }
 }
 

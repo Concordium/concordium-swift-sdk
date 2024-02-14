@@ -9,7 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.2.0"),
-        .package(url: "https://github.com/Concordium/concordium-swift-sdk.git", branch: "CBW-1565-send_account_transaction"), // TODO: Revert before merging!
+        .package(path: "../.."), // TODO: Revert before merging!
     ],
     targets: [
         .executableTarget(
