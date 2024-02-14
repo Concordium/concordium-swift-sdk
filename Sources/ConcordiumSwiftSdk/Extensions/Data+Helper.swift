@@ -7,7 +7,7 @@ public enum DataError: Error {
 // Courtesy of ChatGPT ¯\_(ツ)_/¯
 
 public extension Data {
-    init(fromHexString hex: String) throws {
+    init(hex: String) throws {
         let length = hex.count / 2
         var data = Data(capacity: length)
 
@@ -22,7 +22,7 @@ public extension Data {
         self = data
     }
 
-    func hexadecimalString() -> String {
+    var hex: String {
         map { String(format: "%02hhx", $0) }.joined()
     }
 }

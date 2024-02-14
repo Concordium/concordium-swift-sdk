@@ -132,6 +132,40 @@ struct GrpcCli: AsyncParsableCommand {
                 print(res)
             }
         }
+
+        struct Transfer: AsyncParsableCommand {
+            static var configuration = CommandConfiguration(
+                abstract: "Transfer CCDs from one account on another."
+            )
+
+            @OptionGroup
+            var root: GrpcCli
+
+            @OptionGroup
+            var sender: Account
+
+            @OptionGroup
+            var receiver: Account
+
+            @OptionGroup
+            var amount: MicroCcdAmount
+
+            func run() async throws {
+                let res = try await withClient(target: root.options.target) { client in
+                    let sequenceNumber = try await client.getNextAccountSequenceNumber(
+                        of: sender.account.address
+                    )
+                    try await $0.sendSimpleTransfer(
+                        from: sender.account.address,
+                        to: receiver.account.address,
+                        microCcdAmount: amount,
+                        sequenceNumber: sequenceNumber,
+                        keys: [:] // TODO: !!
+                    )
+                }
+                print(res)
+            }
+        }
     }
 }
 
