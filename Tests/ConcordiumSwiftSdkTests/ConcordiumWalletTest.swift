@@ -18,31 +18,27 @@ final class ConcordiumWalletTest: XCTestCase {
             commitmentKey: TESTNET_COMMITMENT_KEY
         )
 
-        let transaction = AccountTransaction.simpleTransfer(
-            from: account1,
-            to: account2.address,
-            amount: 1_000_000,
-            sequenceNumber: 0,
-            expiry: 9_999_999_999
-        )
-        let serialized = try transaction.serialize()
-        XCTAssertEqual(serialized.data.hex, "ee17ee6886c47df6f62b7dd34c24c5ee193f92f4a10671113210ccc938e80e43000000000000000000000000000001f50000002900000002540be3ff03c38725b05818ad8a23d120e4f362d5e90bf790bb502415a16f0d79cc51bc962200000000000f4240")
+        // Construct transaction.
+        let transaction = AccountTransaction(sender: account1.address, payload: .transfer(amount: 1_000_000, receiver: account2.address))
+        let preparedTransaction = transaction.prepare(sequenceNumber: 0, expiry: 9_999_999_999, signatureCount: 1)
 
-        // TODO: Verify hash.
+        // Serialize transaction and compute hash.
+        let serializedTransaction = preparedTransaction.serialize()
+        XCTAssertEqual(serializedTransaction.data.hex, "ee17ee6886c47df6f62b7dd34c24c5ee193f92f4a10671113210ccc938e80e43000000000000000000000000000001f50000002900000002540be3ff03c38725b05818ad8a23d120e4f362d5e90bf790bb502415a16f0d79cc51bc962200000000000f4240")
+        let transactionHash = serializedTransaction.hash
+        XCTAssertEqual(transactionHash.hex, "56cb3bbb655c2aae88406e14ff4e77bce01d6a921bf0628e25abbeb665255864")
 
-        let signatures = try wallet.sign(serialized.hash, with: account1)
-
+        // Sign transaction hash and verify signature against public key of first (and only) credential on account 1.
+        let signatures = try wallet.sign(transactionHash, with: account1)
         XCTAssertEqual(signatures.count, 1)
         let signaturesCred0 = signatures[0]!
         XCTAssertEqual(signaturesCred0.count, 1)
         let signature = signaturesCred0[0]!
-
-        // Verify signature against public key of first (and only) credential on account 1.
         let account1PublicKey = try Curve25519.Signing.PublicKey(
             rawRepresentation: Data(
                 hex: wallet.seed.getPublicKey(of: account1.credentials[0])
             )
         )
-        XCTAssertTrue(account1PublicKey.isValidSignature(signature, for: serialized.hash))
+        XCTAssertTrue(account1PublicKey.isValidSignature(signature, for: transactionHash))
     }
 }

@@ -13,6 +13,8 @@ public enum ConcordiumNetwork: String {
     case testnet = "Testnet"
 }
 
+// TODO: Define 'SignerProtocol'?
+
 public protocol ConcordiumWalletProtocol {
     func sign(_ message: Data, with account: ConcordiumAccount) throws -> [CredentialIndex: [KeyIndex: Data]]
 }
