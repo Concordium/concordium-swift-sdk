@@ -2,52 +2,52 @@ import ConcordiumWalletCrypto
 import CryptoKit
 import Foundation
 
-public enum ConcordiumWalletError: Error {
+public enum WalletError: Error {
     case mismatchingKeys
     case noCredentials
     case credentialCounterOutOfRange
 }
 
-public enum ConcordiumNetwork: String {
+public enum Network: String {
     case mainnet = "Mainnet"
     case testnet = "Testnet"
 }
 
 // TODO: Define 'SignerProtocol'?
 
-public protocol ConcordiumWalletProtocol {
-    func sign(_ message: Data, with account: ConcordiumAccount) throws -> [CredentialIndex: [KeyIndex: Data]]
+public protocol WalletProtocol {
+    func sign(_ message: Data, with account: Account) throws -> [CredentialIndex: [KeyIndex: Data]]
 }
 
-public struct ConcordiumCredential {
+public struct Credential {
     var identityProviderIndex: UInt32
     var identityIndex: UInt32
     var credentialCounter: UInt8
 }
 
 // TODO: Should be generic over credential type?
-public struct ConcordiumAccount {
+public struct Account {
     var address: AccountAddress
-    var credentials: [ConcordiumCredential]
+    var credentials: [Credential]
 }
 
-public class ConcordiumHdWallet: ConcordiumWalletProtocol {
-    let seed: ConcordiumWalletSeed
+public class SeedBasedWallet: WalletProtocol {
+    let seed: WalletSeed
 
-    public init(seed: ConcordiumWalletSeed) {
+    public init(seed: WalletSeed) {
         self.seed = seed
     }
 
-    public func generateAccount(credentials: [ConcordiumCredential], commitmentKey: String) throws -> ConcordiumAccount {
+    public func generateAccount(credentials: [Credential], commitmentKey: String) throws -> Account {
         guard let firstCred = credentials.first else {
-            throw ConcordiumWalletError.noCredentials
+            throw WalletError.noCredentials
         }
         let firstCredId = try seed.getCredentialId(of: firstCred, commitmentKey: commitmentKey)
         let addr = try SHA256.hash(data: Data(hex: firstCredId))
-        return ConcordiumAccount(address: .init(Data(addr)), credentials: credentials)
+        return Account(address: .init(Data(addr)), credentials: credentials)
     }
 
-    public func sign(_ message: Data, with account: ConcordiumAccount) throws -> [CredentialIndex: [KeyIndex: Data]] {
+    public func sign(_ message: Data, with account: Account) throws -> [CredentialIndex: [KeyIndex: Data]] {
         try Dictionary(uniqueKeysWithValues:
             account.credentials.enumerated().map { idx, cred in
                 try (CredentialIndex(idx), sign(message, with: cred))
@@ -55,33 +55,33 @@ public class ConcordiumHdWallet: ConcordiumWalletProtocol {
         )
     }
 
-    public func sign(_ message: Data, with credential: ConcordiumCredential) throws -> [KeyIndex: Data] {
+    public func sign(_ message: Data, with credential: Credential) throws -> [KeyIndex: Data] {
         try [0: getCredentialKey(of: credential).signature(for: message)]
     }
 
-    private func getCredentialKey(of credential: ConcordiumCredential) throws -> Curve25519.Signing.PrivateKey {
+    private func getCredentialKey(of credential: Credential) throws -> Curve25519.Signing.PrivateKey {
         let signingKey = try seed.getSigningKey(of: credential)
         let publicKey = try seed.getPublicKey(of: credential)
         let sk = try Curve25519.Signing.PrivateKey(rawRepresentation: Data(hex: signingKey))
         let pk = try Curve25519.Signing.PublicKey(rawRepresentation: Data(hex: publicKey))
         guard sk.publicKey.rawRepresentation == pk.rawRepresentation else {
-            throw ConcordiumWalletError.mismatchingKeys
+            throw WalletError.mismatchingKeys
         }
         return sk
     }
 }
 
 /// Class for deriving cryptographic values related to credentials.
-public class ConcordiumWalletSeed {
+public class WalletSeed {
     let hex: String
-    let network: ConcordiumNetwork
+    let network: Network
 
-    public init(hex: String, network: ConcordiumNetwork) {
+    public init(hex: String, network: Network) {
         self.hex = hex
         self.network = network
     }
 
-    func getSigningKey(of credential: ConcordiumCredential) throws -> String {
+    func getSigningKey(of credential: Credential) throws -> String {
         try ConcordiumWalletCrypto.getAccountSigningKey(
             seedHex: hex,
             network: network.rawValue,
@@ -91,7 +91,7 @@ public class ConcordiumWalletSeed {
         )
     }
 
-    func getPublicKey(of credential: ConcordiumCredential) throws -> String {
+    func getPublicKey(of credential: Credential) throws -> String {
         try ConcordiumWalletCrypto.getAccountPublicKey(
             seedHex: hex,
             network: network.rawValue,
@@ -101,7 +101,7 @@ public class ConcordiumWalletSeed {
         )
     }
 
-    func getCredentialId(of credential: ConcordiumCredential, commitmentKey: String) throws -> String {
+    func getCredentialId(of credential: Credential, commitmentKey: String) throws -> String {
         try ConcordiumWalletCrypto.getCredentialId(
             seedHex: hex,
             network: network.rawValue,
@@ -139,7 +139,7 @@ public class ConcordiumWalletSeed {
         )
     }
 
-    func getAttributeCommitmentRandomness(of credential: ConcordiumCredential, attribute: UInt8) throws -> String {
+    func getAttributeCommitmentRandomness(of credential: Credential, attribute: UInt8) throws -> String {
         try ConcordiumWalletCrypto.getAttributeCommitmentRandomness(
             seedHex: hex,
             network: network.rawValue,

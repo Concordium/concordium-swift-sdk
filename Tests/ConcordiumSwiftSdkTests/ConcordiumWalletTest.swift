@@ -7,14 +7,14 @@ final class ConcordiumWalletTest: XCTestCase {
     let TESTNET_COMMITMENT_KEY = "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac"
 
     func testSimpleTransfer() throws {
-        let seed = ConcordiumWalletSeed(hex: TEST_SEED, network: .testnet)
-        let wallet = ConcordiumHdWallet(seed: seed)
+        let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
+        let wallet = SeedBasedWallet(seed: seed)
         let account1 = try wallet.generateAccount(
-            credentials: [ConcordiumCredential(identityProviderIndex: 0, identityIndex: 0, credentialCounter: 0)],
+            credentials: [Credential(identityProviderIndex: 0, identityIndex: 0, credentialCounter: 0)],
             commitmentKey: TESTNET_COMMITMENT_KEY
         )
         let account2 = try wallet.generateAccount(
-            credentials: [ConcordiumCredential(identityProviderIndex: 0, identityIndex: 0, credentialCounter: 1)],
+            credentials: [Credential(identityProviderIndex: 0, identityIndex: 0, credentialCounter: 1)],
             commitmentKey: TESTNET_COMMITMENT_KEY
         )
 

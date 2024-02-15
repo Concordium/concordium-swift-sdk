@@ -169,7 +169,7 @@ struct GrpcCli: AsyncParsableCommand {
     }
 }
 
-func withClient<T>(target: ConnectionTarget, _ cmd: (ConcordiumNodeClient) async throws -> T) async throws -> T {
+func withClient<T>(target: ConnectionTarget, _ cmd: (NodeClientProtocol) async throws -> T) async throws -> T {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
         try! group.syncShutdownGracefully()
