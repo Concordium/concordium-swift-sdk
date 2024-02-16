@@ -9,6 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.2.0"),
+        .package(url: "https://github.com/Electric-Coin-Company/MnemonicSwift", from: "2.2.4"),
         .package(path: "../.."), // TODO: Revert before merging!
     ],
     targets: [
@@ -17,6 +18,7 @@ let package = Package(
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "ConcordiumSwiftSdk", package: "concordium-swift-sdk"),
+                "MnemonicSwift",
             ]
         ),
     ]

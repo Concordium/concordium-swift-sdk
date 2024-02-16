@@ -38,9 +38,9 @@ public enum AccountIdentifier {
 public struct AccountAddress {
     private static let base58CheckVersion: UInt8 = 1
 
-    let data: Data // 32 bytes
+    public var data: Data // 32 bytes
 
-    var base58Check: String {
+    public var base58Check: String {
         var versionedData = Data([AccountAddress.base58CheckVersion])
         versionedData.append(data)
         return Base58Check().encode(data: versionedData)
@@ -68,8 +68,8 @@ public struct AccountAddress {
 public typealias SequenceNumber = UInt64
 
 public struct NextAccountSequenceNumber {
-    let sequenceNumber: SequenceNumber
-    let allFinal: Bool
+    public let sequenceNumber: SequenceNumber
+    public let allFinal: Bool
 
     static func fromGrpcType(_ grpc: Concordium_V2_NextAccountSequenceNumber) -> NextAccountSequenceNumber {
         NextAccountSequenceNumber(

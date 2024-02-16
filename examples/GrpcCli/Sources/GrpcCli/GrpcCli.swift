@@ -1,6 +1,7 @@
 import ArgumentParser
 import ConcordiumSwiftSdk
 import GRPC
+import MnemonicSwift
 import NIOPosix
 
 struct GrpcOptions: ParsableArguments {
@@ -22,7 +23,7 @@ struct BlockOption: ParsableArguments {
     var block: BlockIdentifier {
         get throws {
             if let blockHash {
-                return try .hash(BlockHash(fromHexString: blockHash))
+                return try .hash(BlockHash(hex: blockHash))
             }
             return .lastFinal
         }
@@ -30,7 +31,7 @@ struct BlockOption: ParsableArguments {
 }
 
 struct AccountOption: ParsableArguments {
-    @Argument(help: "Address of the account to inspect.")
+    @Argument(help: "Address of the account to interact with.")
     var accountAddress: String
 
     var address: AccountAddress {
@@ -54,7 +55,7 @@ struct GrpcCli: AsyncParsableCommand {
     static var configuration = CommandConfiguration(
         abstract: "A CLI for demonstrating and testing use of the gRPC client of the SDK.",
         version: "1.0.0",
-        subcommands: [CryptographicParameters.self, Account.self]
+        subcommands: [CryptographicParameters.self, Account.self, Wallet.self]
     )
 
     struct CryptographicParameters: AsyncParsableCommand {
@@ -63,15 +64,15 @@ struct GrpcCli: AsyncParsableCommand {
         )
 
         @OptionGroup
-        var root: GrpcCli
+        var grpc: GrpcCli
 
         @OptionGroup
         var block: BlockOption
 
         func run() async throws {
-            let res = try await withClient(target: root.options.target) {
-                try await $0.getCryptographicParameters(
-                    at: block.block
+            let res = try await withClient(target: grpc.options.target) {
+                try await $0.cryptographicParameters(
+                    block: block.block
                 )
             }
             print(res)
@@ -93,15 +94,15 @@ struct GrpcCli: AsyncParsableCommand {
             )
 
             @OptionGroup
-            var root: GrpcCli
+            var grpc: GrpcCli
 
             @OptionGroup
             var account: Account
 
             func run() async throws {
-                let res = try await withClient(target: root.options.target) {
-                    try await $0.getNextAccountSequenceNumber(
-                        of: account.account.address
+                let res = try await withClient(target: grpc.options.target) {
+                    try await $0.nextAccountSequenceNumber(
+                        address: account.account.address
                     )
                 }
                 print(res)
@@ -114,7 +115,7 @@ struct GrpcCli: AsyncParsableCommand {
             )
 
             @OptionGroup
-            var root: GrpcCli
+            var grpc: GrpcCli
 
             @OptionGroup
             var block: BlockOption
@@ -123,53 +124,105 @@ struct GrpcCli: AsyncParsableCommand {
             var account: Account
 
             func run() async throws {
-                let res = try await withClient(target: root.options.target) {
-                    try await $0.getAccountInfo(
-                        of: account.account.identifier,
-                        at: block.block
-                    )
-                }
-                print(res)
-            }
-        }
-
-        struct Transfer: AsyncParsableCommand {
-            static var configuration = CommandConfiguration(
-                abstract: "Transfer CCDs from one account on another."
-            )
-
-            @OptionGroup
-            var root: GrpcCli
-
-            @OptionGroup
-            var sender: Account
-
-            @OptionGroup
-            var receiver: Account
-
-            @OptionGroup
-            var amount: MicroCcdAmount
-
-            func run() async throws {
-                let res = try await withClient(target: root.options.target) { client in
-                    let sequenceNumber = try await client.getNextAccountSequenceNumber(
-                        of: sender.account.address
-                    )
-                    try await $0.sendSimpleTransfer(
-                        from: sender.account.address,
-                        to: receiver.account.address,
-                        microCcdAmount: amount,
-                        sequenceNumber: sequenceNumber,
-                        keys: [:] // TODO: !!
+                let res = try await withClient(target: grpc.options.target) {
+                    try await $0.info(
+                        account: account.account.identifier,
+                        block: block.block
                     )
                 }
                 print(res)
             }
         }
     }
+
+    struct Wallet: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Subcommands related to wallet activities.",
+            subcommands: [Transfer.self]
+        )
+
+        @Option(help: "Seed phrase")
+        var seedPhrase: String
+
+        @Option(help: "Index of IP that issued identity")
+        var identityProviderIndex: UInt32
+
+        @Option(help: "Index of identity issued by IP")
+        var identityIndex: UInt32
+
+        @Option(help: "Index of credential derived from identity used to generate the account")
+        var credentialCounter: UInt8
+
+        @Option(help: "Commitment key for the given network")
+        var commitmentKey: String
+
+        struct Transfer: AsyncParsableCommand {
+            static var configuration = CommandConfiguration(
+                abstract: "Transfer CCDs to another account."
+            )
+
+            @OptionGroup
+            var grpc: GrpcCli
+
+            @OptionGroup
+            var wallet: Wallet
+
+            @OptionGroup
+            var receiver: AccountOption
+
+            @Option(help: "Amount of uCCD to send")
+            var amount: MicroCcdAmount
+
+            @Option(help: "Timestamp in Unix time of transaction expiry")
+            var expiry: TransactionTime = 9_999_999_999
+
+            func run() async throws {
+                // Derive account.
+                let seedHex = try Mnemonic.deterministicSeedString(from: wallet.seedPhrase)
+                print("Resolved seed hex '\(seedHex)'.")
+                let seed = WalletSeed(hex: seedHex, network: .testnet)
+                let seedWallet = SeedBasedWallet(seed: seed)
+                let account = try seedWallet.generateAccount(
+                    credentials: [
+                        IdentityCredential(
+                            identity: Identity(providerIndex: wallet.identityProviderIndex, index: wallet.identityIndex),
+                            counter: wallet.credentialCounter
+                        ),
+                    ],
+                    commitmentKey: wallet.commitmentKey
+                )
+
+                print("Resolved address \(account.address.base58Check) from credential \(wallet.credentialCounter) of identity \(wallet.identityProviderIndex):\(wallet.identityIndex).")
+                print("Attempting to send \(amount) uCCD from account '\(account.address.base58Check)' to '\(receiver.accountAddress)'.")
+
+                // Construct and send transaction.
+                let hash = try await withClient(target: grpc.options.target) { client in
+                    print("Resolving next sequence number of sender account.")
+                    let next = try await client.nextAccountSequenceNumber(address: account.address)
+                    print("Preparing transaction.")
+                    let tx = try AccountTransaction(
+                        sender: account.address,
+                        payload: .transfer(amount: amount, receiver: receiver.address)
+                    ).prepare(
+                        sequenceNumber: next.sequenceNumber,
+                        expiry: expiry,
+                        signatureCount: 1
+                    )
+                    print("Signing transaction.")
+                    let hash = tx.serialize().hash
+                    let signatures = try seedWallet.sign(hash, with: account)
+                    let signed = SignedAccountTransaction(transaction: tx, signatures: signatures)
+                    print("Sending transaction.")
+                    // TODO: Why does the hash returned here differ from the one we signed??
+                    return try await client.send(transaction: signed)
+                }
+                print("Transaction with hash '\(hash.hex)' successfully submitted.")
+            }
+        }
+    }
 }
 
-func withClient<T>(target: ConnectionTarget, _ cmd: (ConcordiumNodeClient) async throws -> T) async throws -> T {
+func withClient<T>(target: ConnectionTarget, _ cmd: (NodeClientProtocol) async throws -> T) async throws -> T {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
         try! group.syncShutdownGracefully()
@@ -182,6 +235,6 @@ func withClient<T>(target: ConnectionTarget, _ cmd: (ConcordiumNodeClient) async
     defer {
         try! channel.close().wait()
     }
-    let client = ConcordiumNodeGrpcClient(channel: channel)
+    let client = GrpcNodeClient(channel: channel)
     return try await cmd(client)
 }
