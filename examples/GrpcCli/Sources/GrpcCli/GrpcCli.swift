@@ -208,18 +208,22 @@ struct GrpcCli: AsyncParsableCommand {
                         expiry: expiry,
                         signatureCount: 1
                     )
-                    print("Signing transaction.")
-                    let hash = tx.serialize().hash
-                    let signatures = try seedWallet.sign(hash, with: account)
-                    let signed = SignedAccountTransaction(transaction: tx, signatures: signatures)
-                    print("Sending transaction.")
-                    // TODO: Why does the hash returned here differ from the one we signed??
-                    return try await client.send(transaction: signed)
+                    return try await signAndSend(transaction: tx, account: account, wallet: seedWallet, client: client)
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
             }
         }
     }
+}
+
+func signAndSend(transaction: PreparedAccountTransaction, account: Account, wallet: WalletProtocol, client: NodeClientProtocol) async throws -> TransactionHash {
+    print("Signing transaction.")
+    let hash = transaction.serialize().hash
+    let signatures = try wallet.sign(hash, with: account)
+    let signed = SignedAccountTransaction(transaction: transaction, signatures: signatures)
+    print("Sending transaction.")
+    // Note that the hash returned from here includes the signatures and therefore differs from the one we signed above.
+    return try await client.send(transaction: signed)
 }
 
 func withClient<T>(target: ConnectionTarget, _ cmd: (NodeClientProtocol) async throws -> T) async throws -> T {
