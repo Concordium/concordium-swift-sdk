@@ -14,7 +14,8 @@ public enum Network: String {
 }
 
 public protocol WalletProtocol {
-    func sign(_ message: Data, with account: Account) throws -> [CredentialIndex: [KeyIndex: Data]]
+    associatedtype Credential
+    func sign(_ message: Data, with account: Account<Credential>) throws -> [CredentialIndex: [KeyIndex: Data]]
 }
 
 public struct Identity {
@@ -57,24 +58,26 @@ public struct VerifiableCredential {
     }
 }
 
-public struct Account {
+public struct Account<Credential> {
     public var address: AccountAddress
-    public var credentials: [IdentityCredential]
+    public var credentials: [Credential]
 
-    public init(address: AccountAddress, credentials: [IdentityCredential]) {
+    public init(address: AccountAddress, credentials: [Credential]) {
         self.address = address
         self.credentials = credentials
     }
 }
 
 public class SeedBasedWallet: WalletProtocol {
+    public typealias Credential = IdentityCredential
+
     let seed: WalletSeed
 
     public init(seed: WalletSeed) {
         self.seed = seed
     }
 
-    public func generateAccount(credentials: [IdentityCredential], commitmentKey: String) throws -> Account {
+    public func generateAccount(credentials: [Credential], commitmentKey: String) throws -> Account<IdentityCredential> {
         guard let firstCred = credentials.first else {
             throw WalletError.noCredentials
         }
@@ -83,7 +86,7 @@ public class SeedBasedWallet: WalletProtocol {
         return Account(address: .init(Data(addr)), credentials: credentials)
     }
 
-    public func sign(_ message: Data, with account: Account) throws -> [CredentialIndex: [KeyIndex: Data]] {
+    public func sign(_ message: Data, with account: Account<Credential>) throws -> [CredentialIndex: [KeyIndex: Data]] {
         try Dictionary(
             uniqueKeysWithValues: account.credentials.enumerated().map { idx, cred in
                 try (CredentialIndex(idx), sign(message, with: cred))
@@ -91,7 +94,7 @@ public class SeedBasedWallet: WalletProtocol {
         )
     }
 
-    public func sign(_ message: Data, with credential: IdentityCredential) throws -> [KeyIndex: Data] {
+    public func sign(_ message: Data, with credential: Credential) throws -> [KeyIndex: Data] {
         let keyHex = try seed.signingKey(of: credential)
         let key = try Curve25519.Signing.PrivateKey(rawRepresentation: Data(hex: keyHex))
         return try [0: key.signature(for: message)]
