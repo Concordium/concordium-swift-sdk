@@ -28,6 +28,15 @@
       }
     },
     {
+      "identity" : "concordium-wallet-crypto-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Concordium/concordium-wallet-crypto-swift.git",
+      "state" : {
+        "revision" : "7453b929c819fc926f8d805955988777467c879e",
+        "version" : "1.0.0"
+      }
+    },
+    {
       "identity" : "grpc-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/grpc/grpc-swift.git",

@@ -1,9 +1,9 @@
 import Foundation
 
 public struct CryptographicParameters {
-    let onChainCommitmentKey: String
-    let bulletproofGenerators: String
-    let genesisString: String
+    public var onChainCommitmentKey: String
+    public var bulletproofGenerators: String
+    public var genesisString: String
 
     static func fromGrpcType(_ grpc: Concordium_V2_CryptographicParameters) -> CryptographicParameters {
         CryptographicParameters(
