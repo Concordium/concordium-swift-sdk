@@ -8,14 +8,12 @@ final class WalletTest: XCTestCase {
 
     func testSimpleTransfer() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
-        let wallet = SeedBasedAccountGenerator(seed: seed)
+        let wallet = SeedBasedAccountGenerator(seed: seed, commitmentKey: TESTNET_COMMITMENT_KEY)
         let account1 = try wallet.generateAccount(
-            credentials: [SeedBasedAccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0)],
-            commitmentKey: TESTNET_COMMITMENT_KEY
+            credentials: [AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0)]
         )
         let account2 = try wallet.generateAccount(
-            credentials: [SeedBasedAccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 1)],
-            commitmentKey: TESTNET_COMMITMENT_KEY
+            credentials: [AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 1)]
         )
 
         // Construct transaction.
@@ -28,15 +26,15 @@ final class WalletTest: XCTestCase {
         let transactionHash = serializedTransaction.hash
         XCTAssertEqual(transactionHash.hex, "56cb3bbb655c2aae88406e14ff4e77bce01d6a921bf0628e25abbeb665255864")
 
-        // Sign transaction hash and verify signature against public key of first (and only) credential on account 1.
-        let signatures = try wallet.sign(transactionHash, with: account1)
+        // Sign transaction hash and verify signature against public key of the credential used to generate account 1.
+        let signatures = try account1.keys.sign(transactionHash)
         XCTAssertEqual(signatures.count, 1)
         let signaturesCred0 = signatures[0]!
         XCTAssertEqual(signaturesCred0.count, 1)
         let signature = signaturesCred0[0]!
         let account1PublicKey = try Curve25519.Signing.PublicKey(
             rawRepresentation: Data(
-                hex: wallet.seed.publicKey(of: account1.credentials[0])
+                hex: wallet.seed.publicKey(of: AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0))
             )
         )
         XCTAssertTrue(account1PublicKey.isValidSignature(signature, for: transactionHash))
