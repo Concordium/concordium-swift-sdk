@@ -8,13 +8,13 @@ final class WalletTest: XCTestCase {
 
     func testSimpleTransfer() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
-        let wallet = SeedBasedWallet(seed: seed)
+        let wallet = SeedBasedAccountGenerator(seed: seed)
         let account1 = try wallet.generateAccount(
-            credentials: [IdentityCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0)],
+            credentials: [SeedBasedAccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0)],
             commitmentKey: TESTNET_COMMITMENT_KEY
         )
         let account2 = try wallet.generateAccount(
-            credentials: [IdentityCredential(identity: Identity(providerIndex: 0, index: 0), counter: 1)],
+            credentials: [SeedBasedAccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 1)],
             commitmentKey: TESTNET_COMMITMENT_KEY
         )
 
