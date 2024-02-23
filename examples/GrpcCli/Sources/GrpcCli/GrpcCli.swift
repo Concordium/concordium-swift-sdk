@@ -31,9 +31,19 @@ struct BlockOption: ParsableArguments {
     }
 }
 
-struct AccountOption: ParsableArguments {
+struct AccountOption: ParsableArguments, ExpressibleByArgument {
     @Argument(help: "Address of the account to interact with.")
     var accountAddress: String
+
+    /// Initializer for implementing ``ParsableArguments`` which allows the type to be used as `@OptionGroup` fields.
+    init() {
+        accountAddress = ""
+    }
+
+    /// Initializer for implementing ``ExpressibleByArgument`` which allows the type to be used for `@Option` fields.
+    init?(argument: String) {
+        accountAddress = argument
+    }
 
     var address: AccountAddress {
         get throws {
@@ -142,20 +152,20 @@ struct GrpcCli: AsyncParsableCommand {
             subcommands: [Transfer.self]
         )
 
-        @Option(help: "Seed phrase")
+        @Option(help: "Seed phrase.")
         var seedPhrase: String
 
-        @Option(help: "Index of IP that issued identity")
+        @Option(help: "Commitment key for the relevant network.")
+        var commitmentKey: String
+
+        @Option(help: "Index of IP that issued identity.")
         var identityProviderIndex: UInt32
 
-        @Option(help: "Index of identity issued by IP")
+        @Option(help: "Index of identity issued by IP.")
         var identityIndex: UInt32
 
-        @Option(help: "Index of credential derived from identity used to generate the account")
+        @Option(help: "Index of credential derived from identity used to generate the account.")
         var credentialCounter: UInt8
-
-        @Option(help: "Commitment key for the given network")
-        var commitmentKey: String
 
         struct Transfer: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
@@ -168,21 +178,23 @@ struct GrpcCli: AsyncParsableCommand {
             @OptionGroup
             var walletCli: Wallet
 
-            @OptionGroup
+            @Option(help: "Address of receiving account.")
             var receiver: AccountOption
 
-            @Option(help: "Amount of uCCD to send")
+            @Option(help: "Amount of uCCD to send.")
             var amount: MicroCcdAmount
 
-            @Option(help: "Timestamp in Unix time of transaction expiry")
+            @Option(help: "Timestamp in Unix time of transaction expiry.")
             var expiry: TransactionTime = 9_999_999_999
 
             func run() async throws {
                 // Derive account and put it into wallet.
                 let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
                 print("Resolved seed hex '\(seedHex)'.")
-                let seed = WalletSeed(hex: seedHex, network: .testnet)
-                let gen = SeedBasedAccountGenerator(seed: seed, commitmentKey: walletCli.commitmentKey)
+                let gen = SeedBasedAccountGenerator(
+                    seed: WalletSeed(hex: seedHex, network: .testnet),
+                    commitmentKey: walletCli.commitmentKey
+                )
                 let account = try gen.generateAccount(
                     credentials: [
                         AccountCredential(
@@ -191,29 +203,22 @@ struct GrpcCli: AsyncParsableCommand {
                         ),
                     ]
                 )
-                let wallet = SimpleWallet()
-                wallet.insert(account: account)
-
                 print("Resolved address \(account.address.base58Check) from credential \(walletCli.credentialCounter) of identity \(walletCli.identityProviderIndex):\(walletCli.identityIndex).")
-                print("Attempting to send \(amount) uCCD from account '\(account.address.base58Check)' to '\(receiver.accountAddress)'.")
+
+                let accountStore = SimpleAccountStore()
+                accountStore.insert(account)
+                let wallet = ConcordiumSwiftSdk.Wallet(accountStore: accountStore)
 
                 // Construct and send transaction.
                 let hash = try await withClient(target: grpcCli.options.target) { client in
-                    print("Resolving next sequence number of sender account.")
-                    let next = try await client.nextAccountSequenceNumber(address: account.address)
-                    print("Preparing transaction.")
-                    let tx = try AccountTransaction(
+                    try await transfer(
+                        wallet: wallet,
+                        client: client,
                         sender: account.address,
-                        payload: .transfer(amount: amount, receiver: receiver.address)
-                    ).prepare(
-                        sequenceNumber: next.sequenceNumber,
-                        expiry: expiry,
-                        signatureCount: account.keys.count
+                        receiver: AccountAddress(base58Check: receiver.accountAddress),
+                        amount: amount,
+                        expiry: expiry
                     )
-                    print("Signing transaction.")
-                    let stx = try wallet.sign(transaction: tx)
-                    print("Sending transaction.")
-                    return try await client.send(transaction: stx)
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
             }
@@ -229,7 +234,7 @@ struct GrpcCli: AsyncParsableCommand {
         @Option
         var exportFile: String
 
-        @OptionGroup
+        @Option(help: "Address of account to interact with.")
         var account: AccountOption
 
         struct Transfer: AsyncParsableCommand {
@@ -243,7 +248,7 @@ struct GrpcCli: AsyncParsableCommand {
             @OptionGroup
             var walletCli: LegacyWallet
 
-            @OptionGroup
+            @Option(help: "Address of receiving account.")
             var receiver: AccountOption
 
             @Option(help: "Amount of uCCD to send")
@@ -256,38 +261,42 @@ struct GrpcCli: AsyncParsableCommand {
                 // Load account from Legacy Wallet export.
                 let exportContents = try Data(contentsOf: URL(fileURLWithPath: walletCli.exportFile))
                 let export = try JSONDecoder().decode(LegacyWalletExportJson.self, from: exportContents)
-                let wallet = try export.toWallet()
+                let accountStore = try SimpleAccountStore(export.toAccounts())
 
-                let senderAddress = try walletCli.account.address
-                let receiverAddress = try receiver.address
-                print("Attempting to send \(amount) uCCD from account '\(senderAddress.base58Check)' to '\(receiverAddress.base58Check)'.")
-                guard let senderAccount = wallet.lookup(address: senderAddress) else {
-                    print("Export doesn't include account '\(senderAddress.base58Check)'.")
-                    return
-                }
+                let wallet = ConcordiumSwiftSdk.Wallet(accountStore: accountStore)
 
                 // Construct and send transaction.
                 let hash = try await withClient(target: grpcCli.options.target) { client in
-                    print("Resolving next sequence number of sender account.")
-                    let next = try await client.nextAccountSequenceNumber(address: senderAddress)
-                    print("Preparing transaction.")
-                    let tx = AccountTransaction(
-                        sender: senderAddress,
-                        payload: .transfer(amount: amount, receiver: receiverAddress)
-                    ).prepare(
-                        sequenceNumber: next.sequenceNumber,
-                        expiry: expiry,
-                        signatureCount: senderAccount.keys.count
+                    try await transfer(
+                        wallet: wallet,
+                        client: client,
+                        sender: walletCli.account.address,
+                        receiver: receiver.address,
+                        amount: amount,
+                        expiry: expiry
                     )
-                    print("Signing transaction.")
-                    let stx = try wallet.sign(transaction: tx)
-                    print("Sending transaction.")
-                    return try await client.send(transaction: stx)
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
             }
         }
     }
+}
+
+func transfer(wallet: Wallet, client: NodeClientProtocol, sender: AccountAddress, receiver: AccountAddress, amount: MicroCcdAmount, expiry: TransactionTime) async throws -> TransactionHash {
+    print("Attempting to send \(amount) uCCD from account '\(sender.base58Check)' to '\(receiver.base58Check)'...")
+    print("Resolving next sequence number of sender account.")
+    let next = try await client.nextAccountSequenceNumber(address: sender)
+    print("Preparing and signing transaction.")
+    let tx = try wallet.prepareAndSign(
+        transaction: AccountTransaction(
+            sender: sender,
+            payload: .transfer(amount: amount, receiver: receiver)
+        ),
+        sequenceNumber: next.sequenceNumber,
+        expiry: expiry
+    )
+    print("Sending transaction.")
+    return try await client.send(transaction: tx)
 }
 
 func withClient<T>(target: ConnectionTarget, _ cmd: (NodeClientProtocol) async throws -> T) async throws -> T {

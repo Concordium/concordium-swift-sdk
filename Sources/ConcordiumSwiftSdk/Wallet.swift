@@ -5,39 +5,54 @@ public enum WalletError: Error {
     case accountNotFound
 }
 
-public protocol WalletProtocol {
-    func lookup(address: AccountAddress) -> WalletAccount?
-}
+public class Wallet {
+    public let accountStore: AccountStoreProtocol
 
-public extension WalletProtocol {
-    func sign(transaction: PreparedAccountTransaction) throws -> SignedAccountTransaction {
-        guard let account = lookup(address: transaction.header.sender) else {
+    public init(accountStore: AccountStoreProtocol) {
+        self.accountStore = accountStore
+    }
+
+    public func prepareAndSign(transaction: AccountTransaction, sequenceNumber: SequenceNumber, expiry: TransactionTime) throws -> SignedAccountTransaction {
+        guard let account = try accountStore.lookup(address: transaction.sender) else {
             throw WalletError.accountNotFound
         }
-        // Note that this isn't the final hash returned by 'client.send' because that one includes the signatures.
-        let hash = transaction.serialize().hash
-        let signatures = try account.keys.sign(hash)
-        return SignedAccountTransaction(transaction: transaction, signatures: signatures)
+        let preparedTransaction = transaction.prepare(
+            sequenceNumber: sequenceNumber,
+            expiry: expiry,
+            signatureCount: account.keys.count
+        )
+        return try account.keys.sign(transaction: preparedTransaction)
+    }
+
+    public func sign(transaction: PreparedAccountTransaction) throws -> SignedAccountTransaction {
+        guard let account = try accountStore.lookup(address: transaction.header.sender) else {
+            throw WalletError.accountNotFound
+        }
+        return try account.keys.sign(transaction: transaction)
     }
 }
 
-public class SimpleWallet: WalletProtocol {
-    private var accounts: [AccountAddress: WalletAccount]
+public protocol AccountStoreProtocol {
+    func lookup(address: AccountAddress) throws -> WalletAccount?
+}
 
-    public init(accounts: [AccountAddress: WalletAccount] = [:]) {
-        self.accounts = accounts
+public class SimpleAccountStore: AccountStoreProtocol {
+    private var dictionary: [AccountAddress: WalletAccount] = [:]
+
+    public init(_ accounts: [WalletAccount] = []) {
+        accounts.forEach(insert)
     }
 
-    public func insert(account: WalletAccount) {
-        accounts[account.address] = account
+    public func insert(_ account: WalletAccount) {
+        dictionary[account.address] = account
     }
 
     public func remove(address: AccountAddress) {
-        accounts[address] = nil
+        dictionary[address] = nil
     }
 
     public func lookup(address: AccountAddress) -> WalletAccount? {
-        accounts[address]
+        dictionary[address]
     }
 }
 
@@ -68,5 +83,11 @@ public class AccountKeys {
                 try $0.signature(for: message)
             }
         }
+    }
+
+    public func sign(transaction: PreparedAccountTransaction) throws -> SignedAccountTransaction {
+        let hash = transaction.serialize().hash
+        let signatures = try sign(hash)
+        return SignedAccountTransaction(transaction: transaction, signatures: signatures)
     }
 }
