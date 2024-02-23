@@ -8,11 +8,11 @@ final class WalletTest: XCTestCase {
 
     func testSimpleTransfer() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
-        let wallet = DeterministicAccountGenerator(seed: seed, commitmentKey: TESTNET_COMMITMENT_KEY)
-        let account1 = try wallet.generateAccount(
+        let gen = DeterministicAccountGenerator(seed: seed, commitmentKey: TESTNET_COMMITMENT_KEY)
+        let account1 = try gen.generateAccount(
             credentials: [AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0)]
         )
-        let account2 = try wallet.generateAccount(
+        let account2 = try gen.generateAccount(
             credentials: [AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 1)]
         )
 
@@ -34,7 +34,7 @@ final class WalletTest: XCTestCase {
         let signature = signaturesCred0[0]!
         let account1PublicKey = try Curve25519.Signing.PublicKey(
             rawRepresentation: Data(
-                hex: wallet.seed.publicKey(of: AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0))
+                hex: seed.publicKey(of: AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0))
             )
         )
         XCTAssertTrue(account1PublicKey.isValidSignature(signature, for: transactionHash))
