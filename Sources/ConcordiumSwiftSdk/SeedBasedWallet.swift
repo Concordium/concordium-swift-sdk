@@ -52,8 +52,8 @@ public struct VerifiableCredential {
 }
 
 public class SeedBasedAccountGenerator {
-    let seed: WalletSeed
-    let commitmentKey: String
+    private let seed: WalletSeed
+    public let commitmentKey: String
 
     public init(seed: WalletSeed, commitmentKey: String) {
         self.seed = seed
@@ -92,8 +92,8 @@ public class SeedBasedAccountGenerator {
 
 /// Class for deriving cryptographic values related to credentials.
 public class WalletSeed {
-    let hex: String
-    let network: Network
+    private let hex: String
+    private let network: Network
 
     public init(hex: String, network: Network) {
         self.hex = hex

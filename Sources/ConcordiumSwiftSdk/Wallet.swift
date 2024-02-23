@@ -6,46 +6,39 @@ public enum WalletError: Error {
 }
 
 public class Wallet {
-    private let accountStore: AccountStoreProtocol
+    private let accounts: AccountRepositoryProtocol
 
-    public init(accountStore: AccountStoreProtocol) {
-        self.accountStore = accountStore
+    public init(accounts: AccountRepositoryProtocol) {
+        self.accounts = accounts
     }
 
-    public func sign(_ message: Data, using address: AccountAddress) throws -> SignedAccountTransaction {
-        guard let account = try accountStore.lookup(address) else {
+    public func withAccount<T>(of address: AccountAddress, _ f: (WalletAccount) throws -> T) throws -> T {
+        guard let account = try accounts.lookup(address) else {
             throw WalletError.accountNotFound
         }
-        return try account.keys.sign(message)
+        return try f(account)
     }
 
-    public func sign(preparedTransaction _: PreparedAccountTransaction) throws -> SignedAccountTransaction {
-        guard let account = try accountStore.lookup(transaction.header.sender) else {
-            throw WalletError.accountNotFound
+    public func sign(_ message: Data, with account: AccountAddress) throws -> Signatures {
+        try withAccount(of: account) {
+            try $0.keys.sign(message)
         }
-        return try account.keys.sign(transaction: transaction)
     }
 
     public func sign(_ transaction: AccountTransaction, sequenceNumber: SequenceNumber, expiry: TransactionTime) throws -> SignedAccountTransaction {
-        guard let account = try accountStore.lookup(transaction.sender) else {
-            throw WalletError.accountNotFound
+        try withAccount(of: transaction.sender) {
+            try $0.keys.sign(transaction, sequenceNumber: sequenceNumber, expiry: expiry)
         }
-        let preparedTransaction = transaction.prepare(
-            sequenceNumber: sequenceNumber,
-            expiry: expiry,
-            signatureCount: account.keys.count
-        )
-        return try account.keys.sign(transaction: preparedTransaction)
     }
 }
 
-public protocol AccountStoreProtocol {
+public protocol AccountRepositoryProtocol {
     func lookup(_ address: AccountAddress) throws -> WalletAccount?
     func insert(_ account: WalletAccount) throws
     func remove(_ address: AccountAddress) throws
 }
 
-public class SimpleAccountStore: AccountStoreProtocol {
+public class AccountStore: AccountRepositoryProtocol {
     private var dictionary: [AccountAddress: WalletAccount] = [:]
 
     public init(_ accounts: [WalletAccount] = []) {
@@ -75,7 +68,12 @@ public class WalletAccount {
     }
 }
 
-public class AccountKeys {
+public protocol TransactionSignerProtocol {
+    func sign(_ message: Data) throws -> Signatures
+    func sign(_ transaction: AccountTransaction, sequenceNumber: SequenceNumber, expiry: TransactionTime) throws -> SignedAccountTransaction
+}
+
+public class AccountKeys: TransactionSignerProtocol {
     public let keys: [CredentialIndex: [KeyIndex: Curve25519.Signing.PrivateKey]]
 
     public init(_ keys: [CredentialIndex: [KeyIndex: Curve25519.Signing.PrivateKey]]) {
@@ -94,7 +92,17 @@ public class AccountKeys {
         }
     }
 
-    public func sign(transaction: PreparedAccountTransaction) throws -> SignedAccountTransaction {
+    public func sign(_ transaction: AccountTransaction, sequenceNumber: SequenceNumber, expiry: TransactionTime) throws -> SignedAccountTransaction {
+        try sign(
+            transaction.prepare(
+                sequenceNumber: sequenceNumber,
+                expiry: expiry,
+                signatureCount: count
+            )
+        )
+    }
+
+    public func sign(_ transaction: PreparedAccountTransaction) throws -> SignedAccountTransaction {
         let hash = transaction.serialize().hash
         let signatures = try sign(hash)
         return SignedAccountTransaction(transaction: transaction, signatures: signatures)
