@@ -19,6 +19,7 @@ public struct AccountTransaction {
         self.payload = payload
     }
 
+    // TODO: Make expiry an enum that allows setting absolute time or duration from now.
     public func prepare(sequenceNumber: SequenceNumber, expiry: UInt64, signatureCount: Int) -> PreparedAccountTransaction {
         let serializedPayload = payload.serialize()
         // While the header size is fixed at the moment, this is sort of accidental and not guaranteed to stay that way in the future.
@@ -67,11 +68,13 @@ public struct SerializedAccountTransaction {
     }
 }
 
+public typealias Signatures = [CredentialIndex: [KeyIndex: Data]]
+
 public struct SignedAccountTransaction {
     public var transaction: PreparedAccountTransaction
-    public var signatures: [CredentialIndex: [KeyIndex: Data]]
+    public var signatures: Signatures
 
-    public init(transaction: PreparedAccountTransaction, signatures: [CredentialIndex: [KeyIndex: Data]]) {
+    public init(transaction: PreparedAccountTransaction, signatures: Signatures) {
         self.transaction = transaction
         self.signatures = signatures
     }

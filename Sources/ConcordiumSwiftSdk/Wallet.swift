@@ -12,7 +12,21 @@ public class Wallet {
         self.accountStore = accountStore
     }
 
-    public func prepareAndSign(transaction: AccountTransaction, sequenceNumber: SequenceNumber, expiry: TransactionTime) throws -> SignedAccountTransaction {
+    public func sign(_ message: Data, using address: AccountAddress) throws -> SignedAccountTransaction {
+        guard let account = try accountStore.lookup(address) else {
+            throw WalletError.accountNotFound
+        }
+        return try account.keys.sign(message)
+    }
+
+    public func sign(preparedTransaction _: PreparedAccountTransaction) throws -> SignedAccountTransaction {
+        guard let account = try accountStore.lookup(transaction.header.sender) else {
+            throw WalletError.accountNotFound
+        }
+        return try account.keys.sign(transaction: transaction)
+    }
+
+    public func sign(_ transaction: AccountTransaction, sequenceNumber: SequenceNumber, expiry: TransactionTime) throws -> SignedAccountTransaction {
         guard let account = try accountStore.lookup(transaction.sender) else {
             throw WalletError.accountNotFound
         }
@@ -22,13 +36,6 @@ public class Wallet {
             signatureCount: account.keys.count
         )
         return try account.keys.sign(transaction: preparedTransaction)
-    }
-
-    public func sign(transaction: PreparedAccountTransaction) throws -> SignedAccountTransaction {
-        guard let account = try accountStore.lookup(transaction.header.sender) else {
-            throw WalletError.accountNotFound
-        }
-        return try account.keys.sign(transaction: transaction)
     }
 }
 
@@ -79,7 +86,7 @@ public class AccountKeys {
         keys.reduce(0) { acc, cred in acc + cred.value.count }
     }
 
-    public func sign(_ message: Data) throws -> [CredentialIndex: [KeyIndex: Data]] {
+    public func sign(_ message: Data) throws -> Signatures {
         try keys.mapValues {
             try $0.mapValues {
                 try $0.signature(for: message)
