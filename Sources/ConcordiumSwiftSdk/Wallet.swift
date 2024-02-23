@@ -6,14 +6,14 @@ public enum WalletError: Error {
 }
 
 public class Wallet {
-    public let accountStore: AccountStoreProtocol
+    private let accountStore: AccountStoreProtocol
 
     public init(accountStore: AccountStoreProtocol) {
         self.accountStore = accountStore
     }
 
     public func prepareAndSign(transaction: AccountTransaction, sequenceNumber: SequenceNumber, expiry: TransactionTime) throws -> SignedAccountTransaction {
-        guard let account = try accountStore.lookup(address: transaction.sender) else {
+        guard let account = try accountStore.lookup(transaction.sender) else {
             throw WalletError.accountNotFound
         }
         let preparedTransaction = transaction.prepare(
@@ -25,7 +25,7 @@ public class Wallet {
     }
 
     public func sign(transaction: PreparedAccountTransaction) throws -> SignedAccountTransaction {
-        guard let account = try accountStore.lookup(address: transaction.header.sender) else {
+        guard let account = try accountStore.lookup(transaction.header.sender) else {
             throw WalletError.accountNotFound
         }
         return try account.keys.sign(transaction: transaction)
@@ -33,7 +33,9 @@ public class Wallet {
 }
 
 public protocol AccountStoreProtocol {
-    func lookup(address: AccountAddress) throws -> WalletAccount?
+    func lookup(_ address: AccountAddress) throws -> WalletAccount?
+    func insert(_ account: WalletAccount) throws
+    func remove(_ address: AccountAddress) throws
 }
 
 public class SimpleAccountStore: AccountStoreProtocol {
@@ -43,16 +45,16 @@ public class SimpleAccountStore: AccountStoreProtocol {
         accounts.forEach(insert)
     }
 
+    public func lookup(_ address: AccountAddress) -> WalletAccount? {
+        dictionary[address]
+    }
+
     public func insert(_ account: WalletAccount) {
         dictionary[account.address] = account
     }
 
-    public func remove(address: AccountAddress) {
+    public func remove(_ address: AccountAddress) {
         dictionary[address] = nil
-    }
-
-    public func lookup(address: AccountAddress) -> WalletAccount? {
-        dictionary[address]
     }
 }
 
@@ -67,7 +69,7 @@ public class WalletAccount {
 }
 
 public class AccountKeys {
-    let keys: [CredentialIndex: [KeyIndex: Curve25519.Signing.PrivateKey]]
+    public let keys: [CredentialIndex: [KeyIndex: Curve25519.Signing.PrivateKey]]
 
     public init(_ keys: [CredentialIndex: [KeyIndex: Curve25519.Signing.PrivateKey]]) {
         self.keys = keys
