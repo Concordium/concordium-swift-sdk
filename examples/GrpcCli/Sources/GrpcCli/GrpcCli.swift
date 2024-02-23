@@ -191,7 +191,7 @@ struct GrpcCli: AsyncParsableCommand {
                 // Derive account and put it into wallet.
                 let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
                 print("Resolved seed hex '\(seedHex)'.")
-                let account = try SeedBasedAccountGenerator(
+                let account = try DeterministicAccountGenerator(
                     seed: WalletSeed(hex: seedHex, network: .testnet),
                     commitmentKey: walletCli.commitmentKey
                 ).generateAccount(
@@ -257,7 +257,7 @@ struct GrpcCli: AsyncParsableCommand {
                 let export = try JSONDecoder().decode(LegacyWalletExportJson.self, from: exportContents)
                 let senderAddress = try walletCli.account.address
                 let receiverAddress = try receiver.address
-                guard let sender = try AccountStore(export.toAccounts()).lookup(senderAddress) else {
+                guard let sender = try WalletAccountStore(export.toAccounts()).lookup(senderAddress) else {
                     print("Account \(senderAddress) not found in export.")
                     return
                 }
