@@ -8,7 +8,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testMainnetSigningKey() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .mainnet)
         XCTAssertEqual(
-            try seed.signingKey(of: AccountCredential(identity: Identity(providerIndex: 0, index: 55), counter: 7)),
+            try seed.signingKey(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 55), counter: 7)),
             "e4d1693c86eb9438feb9cbc3d561fbd9299e3a8b3a676eb2483b135f8dbf6eb1"
         )
     }
@@ -16,15 +16,15 @@ final class SeedBasedWalletTest: XCTestCase {
     func testMainnetPublicKey() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .mainnet)
         XCTAssertEqual(
-            try seed.publicKey(of: AccountCredential(identity: Identity(providerIndex: 1, index: 341), counter: 9)),
+            try seed.publicKey(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 1, index: 341), counter: 9)),
             "d54aab7218fc683cbd4d822f7c2b4e7406c41ae08913012fab0fa992fa008e98"
         )
     }
 
     func testMainnetPublicAndSigningKeyMetch() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .mainnet)
-        let privateKey = try seed.signingKey(of: AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0))
-        let publicKey = try seed.publicKey(of: AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0))
+        let privateKey = try seed.signingKey(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0))
+        let publicKey = try seed.publicKey(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0))
         let message = "abcd1234abcd5678".data(using: .ascii)!
         let signature = try Curve25519.Signing.PrivateKey(
             rawRepresentation: Data(hex: privateKey)
@@ -38,7 +38,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testMainnetIdCredSec() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .mainnet)
         XCTAssertEqual(
-            try seed.credSec(of: Identity(providerIndex: 2, index: 115)),
+            try seed.credSec(of: IdentityCoordinates(providerIndex: 2, index: 115)),
             "33b9d19b2496f59ed853eb93b9d374482d2e03dd0a12e7807929d6ee54781bb1"
         )
     }
@@ -46,7 +46,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testMainnetPrfKey() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .mainnet)
         XCTAssertEqual(
-            try seed.prfKey(of: Identity(providerIndex: 3, index: 35)),
+            try seed.prfKey(of: IdentityCoordinates(providerIndex: 3, index: 35)),
             "4409e2e4acffeae641456b5f7406ecf3e1e8bd3472e2df67a9f1e8574f211bc5"
         )
     }
@@ -54,7 +54,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testMainnetCredId() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .mainnet)
         XCTAssertEqual(
-            try seed.id(of: AccountCredential(identity: Identity(providerIndex: 10, index: 50), counter: 5), commitmentKey: "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac"),
+            try seed.id(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 10, index: 50), counter: 5), commitmentKey: "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac"),
             "8a3a87f3f38a7a507d1e85dc02a92b8bcaa859f5cf56accb3c1bc7c40e1789b4933875a38dd4c0646ca3e940a02c42d8"
         )
     }
@@ -62,7 +62,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testMainnetBlindingRandomness() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .mainnet)
         XCTAssertEqual(
-            try seed.signatureBlindingRandomness(of: Identity(providerIndex: 4, index: 5713)),
+            try seed.signatureBlindingRandomness(of: IdentityCoordinates(providerIndex: 4, index: 5713)),
             "1e3633af2b1dbe5600becfea0324bae1f4fa29f90bdf419f6fba1ff520cb3167"
         )
     }
@@ -70,7 +70,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testMainnetAttributeCommitmentRandomness() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .mainnet)
         XCTAssertEqual(
-            try seed.attributeCommitmentRandomness(of: AccountCredential(identity: Identity(providerIndex: 5, index: 0), counter: 4), attribute: 0),
+            try seed.attributeCommitmentRandomness(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 5, index: 0), counter: 4), attribute: 0),
             "6ef6ba6490fa37cd517d2b89a12b77edf756f89df5e6f5597440630cd4580b8f"
         )
     }
@@ -78,7 +78,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testTestnetSigningKey() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
-            try seed.signingKey(of: AccountCredential(identity: Identity(providerIndex: 0, index: 55), counter: 7)),
+            try seed.signingKey(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 55), counter: 7)),
             "aff97882c6df085e91ae2695a32d39dccb8f4b8d68d2f0db9637c3a95f845e3c"
         )
     }
@@ -86,15 +86,15 @@ final class SeedBasedWalletTest: XCTestCase {
     func testTestnetPublicKey() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
-            try seed.publicKey(of: AccountCredential(identity: Identity(providerIndex: 1, index: 341), counter: 9)),
+            try seed.publicKey(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 1, index: 341), counter: 9)),
             "ef6fd561ca0291a57cdfee896245db9803a86da74c9a6c1bf0252b18f8033003"
         )
     }
 
     func testTestnetPublicAndSigningKeyMatch() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
-        let privateKey = try seed.signingKey(of: AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0))
-        let publicKey = try seed.publicKey(of: AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0))
+        let privateKey = try seed.signingKey(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0))
+        let publicKey = try seed.publicKey(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0))
         let message = "abcd1234abcd5678".data(using: .ascii)!
         let signature = try Curve25519.Signing.PrivateKey(
             rawRepresentation: Data(hex: privateKey)
@@ -108,7 +108,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testTestnetIdCredSec() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
-            try seed.credSec(of: Identity(providerIndex: 2, index: 115)),
+            try seed.credSec(of: IdentityCoordinates(providerIndex: 2, index: 115)),
             "33c9c538e362c5ac836afc08210f4b5d881ba65a0a45b7e353586dad0a0f56df"
         )
     }
@@ -116,7 +116,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testTestnetPrfKey() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
-            try seed.prfKey(of: Identity(providerIndex: 3, index: 35)),
+            try seed.prfKey(of: IdentityCoordinates(providerIndex: 3, index: 35)),
             "41d794d0b06a7a31fb79bb76c44e6b87c63e78f9afe8a772fc64d20f3d9e8e82"
         )
     }
@@ -124,7 +124,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testTestnetCredId() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
-            try seed.id(of: AccountCredential(identity: Identity(providerIndex: 10, index: 50), counter: 5), commitmentKey: "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac"),
+            try seed.id(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 10, index: 50), counter: 5), commitmentKey: "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac"),
             "9535e4f2f964c955c1dd0f312f2edcbf4c7d036fe3052372a9ad949ff061b9b7ed6b00f93bc0713e381a93a43715206c"
         )
     }
@@ -132,7 +132,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testTestnetBlindingRandomness() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
-            try seed.signatureBlindingRandomness(of: Identity(providerIndex: 4, index: 5713)),
+            try seed.signatureBlindingRandomness(of: IdentityCoordinates(providerIndex: 4, index: 5713)),
             "079eb7fe4a2e89007f411ede031543bd7f687d50341a5596e015c9f2f4c1f39b"
         )
     }
@@ -140,7 +140,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testTestnetAttributeCommitmentRandomness() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
-            try seed.attributeCommitmentRandomness(of: AccountCredential(identity: Identity(providerIndex: 5, index: 0), counter: 4), attribute: 0),
+            try seed.attributeCommitmentRandomness(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 5, index: 0), counter: 4), attribute: 0),
             "409fa90314ec8fb4a2ae812fd77fe58bfac81765cad3990478ff7a73ba6d88ae"
         )
     }
@@ -148,7 +148,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testTestnetCredIdMatchesCredDeployment() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
-            try seed.id(of: AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 1), commitmentKey: "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac"),
+            try seed.id(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 1), commitmentKey: "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac"),
             "b317d3fea7de56f8c96f6e72820c5cd502cc0eef8454016ee548913255897c6b52156cc60df965d3efb3f160eff6ced4"
         )
     }
@@ -156,7 +156,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testMainnetVerifiableCredentialSigningKey() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .mainnet)
         XCTAssertEqual(
-            try seed.signingKey(of: VerifiableCredential(issuer: Issuer(index: 1, subindex: 2), index: 1)),
+            try seed.signingKey(of: VerifiableCredentialCoordinates(issuer: IssuerCoordinates(index: 1, subindex: 2), index: 1)),
             "670d904509ce09372deb784e702d4951d4e24437ad3879188d71ae6db51f3301"
         )
     }
@@ -164,7 +164,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testMainnetVerifiableCredentialPublicKey() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .mainnet)
         XCTAssertEqual(
-            try seed.publicKey(of: VerifiableCredential(issuer: Issuer(index: 3, subindex: 1232), index: 341)),
+            try seed.publicKey(of: VerifiableCredentialCoordinates(issuer: IssuerCoordinates(index: 3, subindex: 1232), index: 341)),
             "16afdb3cb3568b5ad8f9a0fa3c741b065642de8c53e58f7920bf449e63ff2bf9"
         )
     }
@@ -172,7 +172,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testTestnetVerifiableCredentialSigningKey() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
-            try seed.signingKey(of: VerifiableCredential(issuer: Issuer(index: 13, subindex: 0), index: 1)),
+            try seed.signingKey(of: VerifiableCredentialCoordinates(issuer: IssuerCoordinates(index: 13, subindex: 0), index: 1)),
             "c75a161b97a1e204d9f31202308958e541e14f0b14903bd220df883bd06702bb"
         )
     }
@@ -180,7 +180,7 @@ final class SeedBasedWalletTest: XCTestCase {
     func testTestnetVerifiableCredentialPublicKey() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
-            try seed.publicKey(of: VerifiableCredential(issuer: Issuer(index: 17, subindex: 0), index: 341)),
+            try seed.publicKey(of: VerifiableCredentialCoordinates(issuer: IssuerCoordinates(index: 17, subindex: 0), index: 341)),
             "c52a30475bac88da9e65471cf9cf59f99dcce22ce31de580b3066597746b394a"
         )
     }

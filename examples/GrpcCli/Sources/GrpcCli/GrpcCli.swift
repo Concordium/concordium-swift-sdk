@@ -196,8 +196,8 @@ struct GrpcCli: AsyncParsableCommand {
                     commitmentKey: walletCli.commitmentKey
                 ).generateAccount(
                     credentials: [
-                        AccountCredential(
-                            identity: ConcordiumSwiftSdk.Identity(providerIndex: walletCli.identityProviderIndex, index: walletCli.identityIndex),
+                        .init(
+                            identity: IdentityCoordinates(providerIndex: walletCli.identityProviderIndex, index: walletCli.identityIndex),
                             counter: walletCli.credentialCounter
                         ),
                     ]

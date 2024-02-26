@@ -10,10 +10,10 @@ final class WalletTest: XCTestCase {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
         let gen = DeterministicAccountGenerator(seed: seed, commitmentKey: TESTNET_COMMITMENT_KEY)
         let account1 = try gen.generateAccount(
-            credentials: [AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0)]
+            credentials: [AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0)]
         )
         let account2 = try gen.generateAccount(
-            credentials: [AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 1)]
+            credentials: [AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 1)]
         )
 
         // Construct transaction.
@@ -34,7 +34,7 @@ final class WalletTest: XCTestCase {
         let signature = signaturesCred0[0]!
         let account1PublicKey = try Curve25519.Signing.PublicKey(
             rawRepresentation: Data(
-                hex: seed.publicKey(of: AccountCredential(identity: Identity(providerIndex: 0, index: 0), counter: 0))
+                hex: seed.publicKey(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0))
             )
         )
         XCTAssertTrue(account1PublicKey.isValidSignature(signature, for: transactionHash))
