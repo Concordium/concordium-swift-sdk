@@ -66,7 +66,7 @@ struct GrpcCli: AsyncParsableCommand {
     static var configuration = CommandConfiguration(
         abstract: "A CLI for demonstrating and testing use of the gRPC client of the SDK.",
         version: "1.0.0",
-        subcommands: [CryptographicParameters.self, Account.self, Wallet.self, LegacyWallet.self]
+        subcommands: [CryptographicParameters.self, Account.self, Wallet.self, LegacyWallet.self, Identity.self]
     )
 
     struct CryptographicParameters: AsyncParsableCommand {
@@ -197,7 +197,7 @@ struct GrpcCli: AsyncParsableCommand {
                 ).generateAccount(
                     credentials: [
                         AccountCredential(
-                            identity: Identity(providerIndex: walletCli.identityProviderIndex, index: walletCli.identityIndex),
+                            identity: ConcordiumSwiftSdk.Identity(providerIndex: walletCli.identityProviderIndex, index: walletCli.identityIndex),
                             counter: walletCli.credentialCounter
                         ),
                     ]
@@ -267,6 +267,28 @@ struct GrpcCli: AsyncParsableCommand {
                     try await transfer(client: client, sender: sender, receiver: receiverAddress, amount: amount, expiry: expiry)
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
+            }
+        }
+    }
+
+    struct Identity: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Commands related to identity management.",
+            subcommands: [Providers.self]
+        )
+
+        struct Providers: AsyncParsableCommand {
+            static var configuration = CommandConfiguration(
+                abstract: "List all Identity Providers."
+            )
+
+            @Option(help: "Base URL of WalletProxy instance.")
+            var walletProxyBaseUrl: String = "https://wallet-proxy.testnet.concordium.com"
+
+            func run() async throws {
+                let wp = WalletProxyClient(baseUrl: walletProxyBaseUrl)
+                let res = try await wp.getIdentityProviderInfo()
+                print(res)
             }
         }
     }
