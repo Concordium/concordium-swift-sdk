@@ -17,11 +17,11 @@
 		A17E07222B57F12400F7BFFC /* BlueTextStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17E07212B57F12400F7BFFC /* BlueTextStyle.swift */; };
 		A17E07242B57F7C600F7BFFC /* RecoverIdentityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17E07232B57F7C600F7BFFC /* RecoverIdentityView.swift */; };
 		A1A6B3A12B5A893100EC1313 /* MnemonicSwift in Frameworks */ = {isa = PBXBuildFile; productRef = A1A6B3A02B5A893100EC1313 /* MnemonicSwift */; };
-		A1C0E65F2B67EF2B0065AE99 /* ClientManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0E65E2B67EF2B0065AE99 /* ClientManager.swift */; };
 		A1CD79D82B556FD200F1CAA5 /* ExampleWalletApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CD79D72B556FD200F1CAA5 /* ExampleWalletApp.swift */; };
 		A1CD79DC2B556FD300F1CAA5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1CD79DB2B556FD300F1CAA5 /* Assets.xcassets */; };
 		A1CD79DF2B556FD300F1CAA5 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1CD79DE2B556FD300F1CAA5 /* Preview Assets.xcassets */; };
 		CD0E4E142B6116CA00E62FF1 /* ConcordiumSwiftSdk in Frameworks */ = {isa = PBXBuildFile; productRef = CD0E4E132B6116CA00E62FF1 /* ConcordiumSwiftSdk */; };
+		CD9DD5852B8947AF00120BD5 /* NodeClientService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9DD5842B8947AF00120BD5 /* NodeClientService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,11 +45,11 @@
 		A17E071F2B57EE8E00F7BFFC /* BlueButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlueButton.swift; sourceTree = "<group>"; };
 		A17E07212B57F12400F7BFFC /* BlueTextStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlueTextStyle.swift; sourceTree = "<group>"; };
 		A17E07232B57F7C600F7BFFC /* RecoverIdentityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoverIdentityView.swift; sourceTree = "<group>"; };
-		A1C0E65E2B67EF2B0065AE99 /* ClientManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientManager.swift; sourceTree = "<group>"; };
 		A1CD79D42B556FD200F1CAA5 /* ExampleWallet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ExampleWallet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1CD79D72B556FD200F1CAA5 /* ExampleWalletApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleWalletApp.swift; sourceTree = "<group>"; };
 		A1CD79DB2B556FD300F1CAA5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1CD79DE2B556FD300F1CAA5 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		CD9DD5842B8947AF00120BD5 /* NodeClientService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NodeClientService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,12 +75,12 @@
 		A16C9F8C2B5D28740009AD77 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				CD9DD5842B8947AF00120BD5 /* NodeClientService.swift */,
 				A11895DD2B67DC120091AC42 /* AccountView.swift */,
 				A17E071C2B57E8DE00F7BFFC /* IssueIdentityView.swift */,
 				A10E852F2B5574B70063B079 /* MainView.swift */,
 				A17E07232B57F7C600F7BFFC /* RecoverIdentityView.swift */,
 				A10E85312B56A6110063B079 /* SeedPhraseView.swift */,
-				A1C0E65E2B67EF2B0065AE99 /* ClientManager.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -257,6 +257,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CD9DD5852B8947AF00120BD5 /* NodeClientService.swift in Sources */,
 				A10E85302B5574B70063B079 /* MainView.swift in Sources */,
 				A17E07222B57F12400F7BFFC /* BlueTextStyle.swift in Sources */,
 				A10E85322B56A6110063B079 /* SeedPhraseView.swift in Sources */,
@@ -265,7 +266,6 @@
 				A17E07202B57EE8E00F7BFFC /* BlueButton.swift in Sources */,
 				A11895DE2B67DC120091AC42 /* AccountView.swift in Sources */,
 				A16C9F8F2B5D2CAF0009AD77 /* SeedPhraseValidator.swift in Sources */,
-				A1C0E65F2B67EF2B0065AE99 /* ClientManager.swift in Sources */,
 				A17E07242B57F7C600F7BFFC /* RecoverIdentityView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

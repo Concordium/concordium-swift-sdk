@@ -35,13 +35,14 @@ public class Wallet {
 
     public func sign(_ message: Data, with account: AccountAddress) throws -> Signatures {
         try withAccount(of: account) {
-            try $0.keys.sign(message)
+            try $0.keys.sign(message: message)
         }
     }
 
+    // TODO: Make expiry an enum that allows setting absolute time or duration from now.
     public func sign(_ transaction: AccountTransaction, sequenceNumber: SequenceNumber, expiry: TransactionTime) throws -> SignedAccountTransaction {
         try withAccount(of: transaction.sender) {
-            try $0.keys.sign(transaction, sequenceNumber: sequenceNumber, expiry: expiry)
+            try $0.keys.sign(transaction: transaction, sequenceNumber: sequenceNumber, expiry: expiry)
         }
     }
 }
@@ -115,8 +116,8 @@ public class DeterministicAccountGenerator {
         return AccountAddress(Data(hash))
     }
 
-    public func generateKeys(credentials: [AccountCredential]) throws -> AccountKeys {
-        try AccountKeys(
+    public func generateKeys(credentials: [AccountCredential]) throws -> AccountKeysCurve25519 {
+        try AccountKeysCurve25519(
             Dictionary(
                 uniqueKeysWithValues: credentials.enumerated().map { idx, cred in
                     try (

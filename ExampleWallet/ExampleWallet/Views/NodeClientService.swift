@@ -5,18 +5,10 @@ import GRPC
 import NIO
 
 class NodeClientService {
-    static let instance = NodeClientService()
-
     private var channel: GRPCChannel?
     private let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
-    private init() {}
-
-    func initialize() throws {
-        guard channel == nil else {
-            return
-        }
-
+    private init() throws {
         // Run the following command in a terminal to redirect to a node running on a different host/port:
         //   socat TCP-LISTEN:20000,fork TCP:<ip>:<port>
         let channelTarget = ConnectionTarget.host("localhost", port: 20000)
@@ -28,12 +20,12 @@ class NodeClientService {
         )
     }
 
-    func getClient() throws -> ConcordiumNodeGrpcClient {
+    func getClient() throws -> NodeClientProtocol {
         guard let channel else {
             throw GRPCClientError.notInitialized
         }
 
-        return ConcordiumNodeGrpcClient(channel: channel)
+        return GrpcNodeClient(channel: channel)
     }
 
     func shutdown() throws {

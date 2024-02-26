@@ -3,9 +3,9 @@ import Foundation
 
 public class WalletAccount {
     public let address: AccountAddress
-    public let keys: AccountKeys
+    public let keys: AccountKeysProtocol
 
-    public init(address: AccountAddress, keys: AccountKeys) {
+    public init(address: AccountAddress, keys: AccountKeysProtocol) {
         self.address = address
         self.keys = keys
     }
@@ -37,33 +37,15 @@ public class WalletAccountStore: WalletAccountRepositoryProtocol {
     }
 }
 
-public protocol TransactionSignerProtocol {
-    func sign(_ message: Data) throws -> Signatures
-    func sign(_ transaction: AccountTransaction, sequenceNumber: SequenceNumber, expiry: TransactionTime) throws -> SignedAccountTransaction
+public protocol AccountKeysProtocol {
+    var count: Int { get }
+    func sign(message: Data) throws -> Signatures
 }
 
-public class AccountKeys: TransactionSignerProtocol {
-    public let keys: [CredentialIndex: [KeyIndex: Curve25519.Signing.PrivateKey]]
-
-    public init(_ keys: [CredentialIndex: [KeyIndex: Curve25519.Signing.PrivateKey]]) {
-        self.keys = keys
-    }
-
-    public var count: Int {
-        keys.reduce(0) { acc, cred in acc + cred.value.count }
-    }
-
-    public func sign(_ message: Data) throws -> Signatures {
-        try keys.mapValues {
-            try $0.mapValues {
-                try $0.signature(for: message)
-            }
-        }
-    }
-
-    public func sign(_ transaction: AccountTransaction, sequenceNumber: SequenceNumber, expiry: TransactionTime) throws -> SignedAccountTransaction {
+public extension AccountKeysProtocol {
+    func sign(transaction: AccountTransaction, sequenceNumber: SequenceNumber, expiry: TransactionTime) throws -> SignedAccountTransaction {
         try sign(
-            transaction.prepare(
+            transaction: transaction.prepare(
                 sequenceNumber: sequenceNumber,
                 expiry: expiry,
                 signatureCount: count
@@ -71,10 +53,38 @@ public class AccountKeys: TransactionSignerProtocol {
         )
     }
 
-    public func sign(_ transaction: PreparedAccountTransaction) throws -> SignedAccountTransaction {
+    func sign(transaction: PreparedAccountTransaction) throws -> SignedAccountTransaction {
         try SignedAccountTransaction(
             transaction: transaction,
-            signatures: sign(transaction.serialize().hash)
+            signatures: sign(message: transaction.serialize().hash)
         )
+    }
+}
+
+public protocol AccountKeyProtocol {
+    func signature(for data: Data) throws -> Data
+}
+
+extension Curve25519.Signing.PrivateKey: AccountKeyProtocol {}
+
+public typealias AccountKeysCurve25519 = AccountKeys<Curve25519.Signing.PrivateKey>
+
+public class AccountKeys<Key: AccountKeyProtocol>: AccountKeysProtocol {
+    public let keys: [CredentialIndex: [KeyIndex: Key]]
+
+    public init(_ keys: [CredentialIndex: [KeyIndex: Key]]) {
+        self.keys = keys
+    }
+
+    public var count: Int {
+        keys.reduce(0) { acc, cred in acc + cred.value.count }
+    }
+
+    public func sign(message: Data) throws -> Signatures {
+        try keys.mapValues {
+            try $0.mapValues {
+                try $0.signature(for: message)
+            }
+        }
     }
 }

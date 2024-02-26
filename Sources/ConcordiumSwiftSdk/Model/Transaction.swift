@@ -19,10 +19,9 @@ public struct AccountTransaction {
         self.payload = payload
     }
 
-    // TODO: Make expiry an enum that allows setting absolute time or duration from now.
     public func prepare(sequenceNumber: SequenceNumber, expiry: UInt64, signatureCount: Int) -> PreparedAccountTransaction {
         let serializedPayload = payload.serialize()
-        // While the header size is fixed at the moment, this is sort of accidental and not guaranteed to stay that way in the future.
+        // While the header size is fixed at the moment, it isn't guaranteed to stay true in the future.
         // As the cost depends on this size, we first create the header with no energy allocated.
         // We then serialize this header and patch the computed cost back on.
         // Updating the energy allocation will never affect the header size.

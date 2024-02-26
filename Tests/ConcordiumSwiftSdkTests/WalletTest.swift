@@ -27,7 +27,7 @@ final class WalletTest: XCTestCase {
         XCTAssertEqual(transactionHash.hex, "56cb3bbb655c2aae88406e14ff4e77bce01d6a921bf0628e25abbeb665255864")
 
         // Sign transaction hash and verify signature against public key of the credential used to generate account 1.
-        let signatures = try account1.keys.sign(transactionHash)
+        let signatures = try account1.keys.sign(message: transactionHash)
         XCTAssertEqual(signatures.count, 1)
         let signaturesCred0 = signatures[0]!
         XCTAssertEqual(signaturesCred0.count, 1)

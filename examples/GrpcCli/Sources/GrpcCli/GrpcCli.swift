@@ -278,7 +278,7 @@ func transfer(client: NodeClientProtocol, sender: WalletAccount, receiver: Accou
     let next = try await client.nextAccountSequenceNumber(address: sender.address)
     print("Preparing and signing transaction.")
     let tx = try sender.keys.sign(
-        AccountTransaction(
+        transaction: AccountTransaction(
             sender: sender.address,
             payload: .transfer(amount: amount, receiver: receiver)
         ),

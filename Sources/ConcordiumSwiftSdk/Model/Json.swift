@@ -4,8 +4,8 @@ import Foundation
 public struct AccountKeysJson: Decodable {
     public var keys: [String: CredentialKeys]
 
-    public func toSdkType() throws -> AccountKeys {
-        try AccountKeys(
+    public func toSdkType() throws -> AccountKeysCurve25519 {
+        try AccountKeysCurve25519(
             Dictionary(
                 uniqueKeysWithValues: keys.map { credIdx, key in
                     try (
