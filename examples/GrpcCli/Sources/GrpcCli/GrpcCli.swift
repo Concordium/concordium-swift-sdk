@@ -5,6 +5,10 @@ import GRPC
 import MnemonicSwift
 import NIOPosix
 
+enum GrpcCliError: Error {
+    case unsupportedNetwork(String)
+}
+
 struct GrpcOptions: ParsableArguments {
     @Option(help: "IP or DNS name of the Node.")
     var host = "localhost"
@@ -58,6 +62,23 @@ struct AccountOption: ParsableArguments, ExpressibleByArgument {
     }
 }
 
+struct NetworkOption: ExpressibleByArgument {
+    var string: String
+
+    init?(argument: String) {
+        string = argument
+    }
+
+    var network: Network {
+        get throws {
+            if let res = Network(rawValue: string) {
+                return res
+            }
+            throw GrpcCliError.unsupportedNetwork(string)
+        }
+    }
+}
+
 @main
 struct GrpcCli: AsyncParsableCommand {
     @OptionGroup
@@ -81,7 +102,7 @@ struct GrpcCli: AsyncParsableCommand {
         var block: BlockOption
 
         func run() async throws {
-            let res = try await withClient(target: grpcCli.options.target) {
+            let res = try await withGrpcClient(target: grpcCli.options.target) {
                 try await $0.cryptographicParameters(
                     block: block.block
                 )
@@ -111,7 +132,7 @@ struct GrpcCli: AsyncParsableCommand {
             var accountCli: Account
 
             func run() async throws {
-                let res = try await withClient(target: grpcCli.options.target) {
+                let res = try await withGrpcClient(target: grpcCli.options.target) {
                     try await $0.nextAccountSequenceNumber(
                         address: accountCli.account.address
                     )
@@ -135,7 +156,7 @@ struct GrpcCli: AsyncParsableCommand {
             var accountCli: Account
 
             func run() async throws {
-                let res = try await withClient(target: grpcCli.options.target) {
+                let res = try await withGrpcClient(target: grpcCli.options.target) {
                     try await $0.info(
                         account: accountCli.account.identifier,
                         block: block.block
@@ -149,14 +170,14 @@ struct GrpcCli: AsyncParsableCommand {
     struct Wallet: AsyncParsableCommand {
         static var configuration = CommandConfiguration(
             abstract: "Subcommands related to wallet activities.",
-            subcommands: [Transfer.self]
+            subcommands: [Transfer.self, Recover.self]
         )
 
         @Option(help: "Seed phrase.")
         var seedPhrase: String
 
-        @Option(help: "Commitment key for the relevant network.")
-        var commitmentKey: String
+        @Option(help: "Network: 'mainnet' or 'testnet' (default).")
+        var network: NetworkOption = .init(argument: "Testnet")!
 
         @Option(help: "Index of IP that issued identity.")
         var identityProviderIndex: UInt32
@@ -191,22 +212,25 @@ struct GrpcCli: AsyncParsableCommand {
                 // Derive account and put it into wallet.
                 let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
                 print("Resolved seed hex '\(seedHex)'.")
-                let account = try DeterministicAccountGenerator(
-                    seed: WalletSeed(hex: seedHex, network: .testnet),
-                    commitmentKey: walletCli.commitmentKey
-                ).generateAccount(
-                    credentials: [
-                        .init(
-                            identity: IdentityCoordinates(providerIndex: walletCli.identityProviderIndex, index: walletCli.identityIndex),
-                            counter: walletCli.credentialCounter
-                        ),
-                    ]
-                )
-                print("Resolved address \(account.address.base58Check) from credential \(walletCli.credentialCounter) of identity \(walletCli.identityProviderIndex):\(walletCli.identityIndex).")
 
-                // Construct and send transaction.
-                let hash = try await withClient(target: grpcCli.options.target) { client in
-                    try await transfer(
+                print("Fetching crypto parameters (for commitment key).")
+                let hash = try await withGrpcClient(target: grpcCli.options.target) { client in
+                    let cryptoParams = try await client.cryptographicParameters(block: BlockIdentifier.lastFinal)
+                    let account = try DeterministicAccountGenerator(
+                        seed: WalletSeed(hex: seedHex, network: walletCli.network.network),
+                        commitmentKey: cryptoParams.onChainCommitmentKey
+                    ).generateAccount(
+                        credentials: [
+                            .init(
+                                identity: IdentityCoordinates(providerIndex: walletCli.identityProviderIndex, index: walletCli.identityIndex),
+                                counter: walletCli.credentialCounter
+                            ),
+                        ]
+                    )
+                    print("Resolved address \(account.address.base58Check) from credential \(walletCli.credentialCounter) of identity \(walletCli.identityProviderIndex):\(walletCli.identityIndex).")
+
+                    // Construct and send transaction.
+                    return try await transfer(
                         client: client,
                         sender: account,
                         receiver: AccountAddress(base58Check: receiver.accountAddress),
@@ -215,6 +239,41 @@ struct GrpcCli: AsyncParsableCommand {
                     )
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
+            }
+        }
+
+        // TODO: Move back to identity section?
+        struct Recover: AsyncParsableCommand {
+            static var configuration = CommandConfiguration(
+                abstract: "Recover identity"
+            )
+            @OptionGroup
+            var grpcCli: GrpcCli
+
+            @OptionGroup
+            var walletCli: Wallet
+
+            @Option(help: "Base URL of WalletProxy instance.")
+            var walletProxyBaseUrl: String = "https://wallet-proxy.testnet.concordium.com"
+
+            func run() async throws {
+                let wp = WalletProxyClient(baseUrl: walletProxyBaseUrl)
+                let ips = try await wp.getIdentityProviderInfo()
+                guard let ip = ips.first(where: { $0.ipInfo.ipIdentity == walletCli.identityProviderIndex }) else { // TODO: correct way to match index?
+                    print("Cannot find identity with index \(walletCli.identityProviderIndex).")
+                    return
+                }
+
+                print("Fetching crypto parameters.")
+                let cryptoParams = try await withGrpcClient(target: grpcCli.options.target) { client in
+                    try await client.cryptographicParameters(block: .lastFinal)
+                }
+
+                let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
+                let identity = try WalletIdentity(generator: WalletIdentityRequestGenerator(seed: WalletSeed(hex: seedHex, network: walletCli.network.network)))
+                print("Recovering identity.")
+                let res = try await identity.recoverIdentity(provider: ip.toSdkType(), index: walletCli.identityIndex, global: cryptoParams)
+                print(res)
             }
         }
     }
@@ -263,7 +322,7 @@ struct GrpcCli: AsyncParsableCommand {
                 }
 
                 // Construct and send transaction.
-                let hash = try await withClient(target: grpcCli.options.target) { client in
+                let hash = try await withGrpcClient(target: grpcCli.options.target) { client in
                     try await transfer(client: client, sender: sender, receiver: receiverAddress, amount: amount, expiry: expiry)
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
@@ -311,7 +370,7 @@ func transfer(client: NodeClientProtocol, sender: WalletAccount, receiver: Accou
     return try await client.send(transaction: tx)
 }
 
-func withClient<T>(target: ConnectionTarget, _ f: (NodeClientProtocol) async throws -> T) async throws -> T {
+func withGrpcClient<T>(target: ConnectionTarget, _ f: (NodeClientProtocol) async throws -> T) async throws -> T {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
         try! group.syncShutdownGracefully()

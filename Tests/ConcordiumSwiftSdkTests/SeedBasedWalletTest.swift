@@ -21,7 +21,7 @@ final class SeedBasedWalletTest: XCTestCase {
         )
     }
 
-    func testMainnetPublicAndSigningKeyMetch() throws {
+    func testMainnetPublicAndSigningKeyMatch() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .mainnet)
         let privateKey = try seed.signingKey(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0))
         let publicKey = try seed.publicKey(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0))

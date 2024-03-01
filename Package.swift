@@ -19,7 +19,8 @@ let package = Package(
         .package(url: "https://github.com/anquii/Base58Check.git", from: "1.0.0"),
         .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.15.0"),
         .package(url: "https://github.com/nicklockwood/SwiftFormat.git", exact: "0.53.0"),
-        .package(url: "https://github.com/Concordium/concordium-wallet-crypto-swift.git", exact: "1.0.0"),
+//        .package(url: "https://github.com/Concordium/concordium-wallet-crypto-swift.git", exact: "1.0.0"),
+        .package(path: "../concordium-wallet-crypto-swift"), // TODO: Revert before merging!
     ],
     targets: [
         .target(

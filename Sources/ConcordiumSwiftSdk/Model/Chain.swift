@@ -1,3 +1,4 @@
+import ConcordiumWalletCrypto
 import Foundation
 
 public struct CryptographicParameters {
@@ -10,6 +11,14 @@ public struct CryptographicParameters {
             onChainCommitmentKey: grpc.onChainCommitmentKey.hex,
             bulletproofGenerators: grpc.bulletproofGenerators.hex,
             genesisString: grpc.genesisString
+        )
+    }
+
+    func toCryptoType() -> GlobalContext {
+        GlobalContext(
+            onChainCommitmentKey: onChainCommitmentKey,
+            bulletproofGenerators: bulletproofGenerators,
+            genesisString: genesisString
         )
     }
 }

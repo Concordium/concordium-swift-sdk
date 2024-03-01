@@ -147,11 +147,6 @@ public struct ReleaseSchedule {
     }
 }
 
-public struct Versioned<V> {
-    var version: UInt32
-    var value: V
-}
-
 /// Index of an account key that is to be used.
 public typealias KeyIndex = UInt32
 

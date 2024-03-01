@@ -50,13 +50,11 @@ GrpcCli --host=<host> --port=<port> cryptographic-parameters
 #### Transfer
 
 ```shell
-GrpcCli --host=<host> --port=<port> wallet --seed-phrase=<seed-phrase> --commitment-key=<commitment-key> --identity-provider-index=<ip-idx> --identity-index=<id-idx> --credential-counter=<cred-cnt> transfer --receiver=<receiver-address> --amount=<amount>
+GrpcCli --host=<host> --port=<port> wallet --seed-phrase=<seed-phrase> --identity-provider-index=<ip-idx> --identity-index=<id-idx> --credential-counter=<cred-cnt> transfer --receiver=<receiver-address> --amount=<amount>
 ```
 
 where
 - `<seed-phrase>` is the seed phrase words separated by space (remember quotes!).
-- `<commitment-key>` is the commitment key (cryptographic parameter) of the network
-  (`b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac` for the 2022 testnet).
 - `<ip-idx>`, `<id-idx>`, and `<cred-cnt>` are the "coordinates" of the sender account derived from the seed.
 - `<receiver-address>` is the address of the receiving account.
 - `<amount>` is the amount of uCCD to transfer.
