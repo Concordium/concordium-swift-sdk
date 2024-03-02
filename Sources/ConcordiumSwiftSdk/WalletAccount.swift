@@ -88,3 +88,46 @@ public class AccountKeys<Key: AccountKeyProtocol>: AccountKeysProtocol {
         }
     }
 }
+
+public enum AccountGenerationError: Error {
+    case noCredentials
+}
+
+public class DeterministicAccountGenerator {
+    public let seed: WalletSeed
+    public let commitmentKey: String
+
+    public init(seed: WalletSeed, commitmentKey: String) {
+        self.seed = seed
+        self.commitmentKey = commitmentKey
+    }
+
+    public func generateAccount(credentials: [AccountCredentialCoordinates]) throws -> WalletAccount {
+        guard let firstCred = credentials.first else {
+            throw AccountGenerationError.noCredentials
+        }
+        return try WalletAccount(
+            address: generateAccountAddress(firstCredential: firstCred),
+            keys: generateKeys(credentials: credentials)
+        )
+    }
+
+    public func generateAccountAddress(firstCredential: AccountCredentialCoordinates) throws -> AccountAddress {
+        let id = try seed.id(of: firstCredential, commitmentKey: commitmentKey)
+        let hash = try SHA256.hash(data: Data(hex: id))
+        return AccountAddress(Data(hash))
+    }
+
+    public func generateKeys(credentials: [AccountCredentialCoordinates]) throws -> AccountKeysCurve25519 {
+        try AccountKeysCurve25519(
+            Dictionary(
+                uniqueKeysWithValues: credentials.enumerated().map { idx, cred in
+                    try (
+                        CredentialIndex(idx),
+                        [KeyIndex(0): Curve25519.Signing.PrivateKey(rawRepresentation: Data(hex: seed.signingKey(of: cred)))]
+                    )
+                }
+            )
+        )
+    }
+}

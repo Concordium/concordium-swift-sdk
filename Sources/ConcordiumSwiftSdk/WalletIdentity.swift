@@ -2,6 +2,7 @@ import ConcordiumWalletCrypto
 import Foundation
 
 public enum WalletIdentityError: Error {
+    case cannotConstructIssuanceUrl
     case cannotConstructRecoveryUrl
     case invalidUtf8
 }
@@ -80,6 +81,7 @@ public struct IdentityProvider {
     public var verifyKey: String
     public var cdiVerifyKey: String
     public var metadata: Metadata
+    public var arsInfos: [UInt32: AnonymityRevoker]
 
     func toCryptoType() -> IdentityProviderInfo {
         IdentityProviderInfo(
@@ -87,6 +89,20 @@ public struct IdentityProvider {
             description: description.toCryptoType(),
             verifyKey: verifyKey,
             cdiVerifyKey: cdiVerifyKey
+        )
+    }
+}
+
+public struct AnonymityRevoker {
+    public var identity: UInt32
+    public var description: Description
+    public var publicKey: String
+
+    func toCryptoType() -> AnonymityRevokerInfo {
+        AnonymityRevokerInfo(
+            identity: identity,
+            description: description.toCryptoType(),
+            publicKey: publicKey
         )
     }
 }
@@ -123,11 +139,11 @@ extension PreIdentityObject: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
             idCredPub: container.decode(String.self, forKey: .idCredPub),
-            ipArData: container.decode([String: ArData].self, forKey: .ipArData).reduce(into: [:]) { acc, e in
+            ipArData: container.decode([String: ArData].self, forKey: .ipArData).reduce(into: [:]) { res, e in
                 guard let key = UInt32(e.key) else {
                     throw DecodingError.dataCorruptedError(forKey: .ipArData, in: container, debugDescription: "invalid key index")
                 }
-                acc[key] = e.value
+                res[key] = e.value
             },
             choiceArData: container.decode(ChoiceArParameters.self, forKey: .choiceArData),
             idCredSecCommitment: container.decode(String.self, forKey: .idCredSecCommitment),
@@ -187,22 +203,47 @@ extension AttributeList: Decodable {
     }
 }
 
-public class WalletIdentity {
-    private let generator: WalletIdentityRequestGenerator
+// TODO: Can use for both issuance and recovery?
+public struct IdentityProviderRequest {
+    public var url: URL
 
-    public init(generator: WalletIdentityRequestGenerator) {
-        self.generator = generator
+    // For recovery, just call the URL and pass the reponse here.
+    // For issuance, we need to open the URL in a browser and wait for a callback. The callback might be the same format; I don't know yet.
+    public func decodeResponse(data: Data) throws -> Versioned<IdentityObject> {
+        try JSONDecoder().decode(Versioned<IdentityObject>.self, from: data)
+    }
+}
+
+public class WalletIdentityRequestUrlGenerator {
+    private let callbackUrl: URL // In Android example wallet: concordiumwallet-example://identity-issuer/callback
+
+    public init(callbackUrl: URL) {
+        self.callbackUrl = callbackUrl
     }
 
-    public func recoverIdentity(provider: IdentityProvider, index: UInt32, global: CryptographicParameters) async throws -> Versioned<IdentityObject> {
-        // FUTURE: Use 'Date.now' instead of 'Date()' once platform restrictions allow it.
-        let requestJson = try generator.createRecoveryRequestJson(provider: provider, index: index, context: global, time: Date())
-        let url = try recoveryUrl(baseUrl: provider.metadata.recoveryStart, requestJson: requestJson)
-        let (data, _) = try await URLSession.shared.data(from: url)
-        return try JSONDecoder().decode(Versioned<IdentityObject>.self, from: data)
+    public func issuanceRequest(baseUrl: URL, requestJson: String) throws -> IdentityProviderRequest {
+        try IdentityProviderRequest(url: issuanceRequestUrl(baseUrl: baseUrl, requestJson: requestJson)) // TODO: ?
     }
 
-    private func recoveryUrl(baseUrl: URL, requestJson: String) throws -> URL {
+    private func issuanceRequestUrl(baseUrl: URL, requestJson: String) throws -> URL {
+        // FUTURE: The URL method 'appending(queryItems:)' is nicer but requires bumping supported platforms.
+        guard var components = URLComponents(url: baseUrl, resolvingAgainstBaseURL: true) else {
+            throw WalletIdentityError.cannotConstructIssuanceUrl
+        }
+        components.queryItems = (components.queryItems ?? []) + [
+            URLQueryItem(name: "response_type", value: "code"),
+            URLQueryItem(name: "redirect_uri", value: "\(callbackUrl).CALLBACK_URL"),
+            URLQueryItem(name: "scope", value: "identity"),
+            URLQueryItem(name: "state", value: requestJson),
+        ]
+        return try components.url ?! WalletIdentityError.cannotConstructIssuanceUrl
+    }
+
+    public func recoveryRequest(baseUrl: URL, requestJson: String) throws -> IdentityProviderRequest {
+        try IdentityProviderRequest(url: recoveryRequestUrl(baseUrl: baseUrl, requestJson: requestJson))
+    }
+
+    private func recoveryRequestUrl(baseUrl: URL, requestJson: String) throws -> URL {
         // FUTURE: The URL method 'appending(queryItems:)' is nicer but requires bumping supported platforms.
         guard var components = URLComponents(url: baseUrl, resolvingAgainstBaseURL: true) else {
             throw WalletIdentityError.cannotConstructRecoveryUrl
@@ -212,18 +253,18 @@ public class WalletIdentity {
     }
 }
 
-public class WalletIdentityRequestGenerator {
+public class DeterministicIdentityRequestGenerator {
     private let seed: WalletSeed
 
     public init(seed: WalletSeed) {
         self.seed = seed
     }
 
-    public func createRecoveryRequestJson(provider: IdentityProvider, index: UInt32, context: CryptographicParameters, time: Date) throws -> String {
+    public func createRecoveryRequestJson(provider: IdentityProvider, index: UInt32, cryptoParams: CryptographicParameters, time: Date) throws -> String {
         try createIdentityRecoveryRequestJson(
             input: IdentityRecoveryRequestInput(
                 ipInfo: provider.toCryptoType(),
-                globalContext: context.toCryptoType(),
+                globalContext: cryptoParams.toCryptoType(),
                 timestamp: UInt64(time.timeIntervalSince1970),
                 idCredSec: seed.credSec(
                     of: IdentityCoordinates(
@@ -231,6 +272,21 @@ public class WalletIdentityRequestGenerator {
                         index: index
                     )
                 )
+            )
+        )
+    }
+
+    public func createIssuanceRequestJson(provider: IdentityProvider, index: UInt32, cryptoParams: CryptographicParameters, anonymityRevokerThreshold: UInt8) throws -> String {
+        let identityCoordinates = IdentityCoordinates(providerIndex: provider.identity, index: index)
+        return try createIdentityRequestJson(
+            input: IdentityObjectRequestInput(
+                ipInfo: provider.toCryptoType(),
+                globalContext: cryptoParams.toCryptoType(),
+                arsInfos: provider.arsInfos.mapValues { $0.toCryptoType() },
+                arThreshold: anonymityRevokerThreshold,
+                prfKey: seed.prfKey(of: identityCoordinates),
+                idCredSec: seed.credSec(of: identityCoordinates),
+                blindingRandomness: seed.signatureBlindingRandomness(of: identityCoordinates)
             )
         )
     }

@@ -7,16 +7,52 @@ public enum WalletError: Error {
 }
 
 public class Wallet {
+    private let cryptoParams: CryptographicParameters
     private let accounts: WalletAccountRepositoryProtocol
-    private let generator: DeterministicAccountGenerator // for now we only support this one scheme
+    private let accountGenerator: DeterministicAccountGenerator // for now we only support this one scheme
+    private let identityRequestGenerator: DeterministicIdentityRequestGenerator // for now we only support this one scheme
+    private let identityRequestUrlGenerator: WalletIdentityRequestUrlGenerator
 
-    public init(accounts: WalletAccountRepositoryProtocol, generator: DeterministicAccountGenerator) {
+    public init(
+        seed: WalletSeed,
+        cryptoParams: CryptographicParameters,
+        accounts: WalletAccountRepositoryProtocol,
+        identityIssuanceCallback: URL
+    ) {
+        self.cryptoParams = cryptoParams
         self.accounts = accounts
-        self.generator = generator
+        accountGenerator = DeterministicAccountGenerator(seed: seed, commitmentKey: cryptoParams.onChainCommitmentKey)
+        identityRequestGenerator = DeterministicIdentityRequestGenerator(seed: seed)
+        identityRequestUrlGenerator = WalletIdentityRequestUrlGenerator(callbackUrl: identityIssuanceCallback)
+    }
+
+    // TODO: Add method to be called to insert final identity.
+    public func prepareCreateIdentity(provider: IdentityProvider, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> IdentityProviderRequest {
+        try identityRequestUrlGenerator.issuanceRequest(
+            baseUrl: provider.metadata.issuanceStart,
+            requestJson: identityRequestGenerator.createIssuanceRequestJson(
+                provider: provider,
+                index: index,
+                cryptoParams: cryptoParams,
+                anonymityRevokerThreshold: anonymityRevokerThreshold
+            )
+        )
+    }
+
+    public func prepareRecoverIdentity(provider: IdentityProvider, index: UInt32, anonymityRevokerThreshold _: UInt8) throws -> IdentityProviderRequest {
+        try identityRequestUrlGenerator.recoveryRequest(
+            baseUrl: provider.metadata.recoveryStart,
+            requestJson: identityRequestGenerator.createRecoveryRequestJson(
+                provider: provider,
+                index: index,
+                cryptoParams: cryptoParams,
+                time: Date() // FUTURE: Use 'Date.now' once platform restrictions allow it
+            )
+        )
     }
 
     public func createAccount(credential: AccountCredentialCoordinates) throws -> AccountAddress {
-        let account = try generator.generateAccount(credentials: [credential])
+        let account = try accountGenerator.generateAccount(credentials: [credential])
         let address = account.address
         if try accounts.lookup(address) != nil {
             throw WalletError.accountAlreadyExists
@@ -43,48 +79,5 @@ public class Wallet {
         try withAccount(of: transaction.sender) {
             try $0.keys.sign(transaction: transaction, sequenceNumber: sequenceNumber, expiry: expiry)
         }
-    }
-}
-
-public enum AccountGenerationError: Error {
-    case noCredentials
-}
-
-public class DeterministicAccountGenerator {
-    private let seed: WalletSeed
-    public let commitmentKey: String
-
-    public init(seed: WalletSeed, commitmentKey: String) {
-        self.seed = seed
-        self.commitmentKey = commitmentKey
-    }
-
-    public func generateAccount(credentials: [AccountCredentialCoordinates]) throws -> WalletAccount {
-        guard let firstCred = credentials.first else {
-            throw AccountGenerationError.noCredentials
-        }
-        return try WalletAccount(
-            address: generateAccountAddress(firstCredential: firstCred),
-            keys: generateKeys(credentials: credentials)
-        )
-    }
-
-    public func generateAccountAddress(firstCredential: AccountCredentialCoordinates) throws -> AccountAddress {
-        let id = try seed.id(of: firstCredential, commitmentKey: commitmentKey)
-        let hash = try SHA256.hash(data: Data(hex: id))
-        return AccountAddress(Data(hash))
-    }
-
-    public func generateKeys(credentials: [AccountCredentialCoordinates]) throws -> AccountKeysCurve25519 {
-        try AccountKeysCurve25519(
-            Dictionary(
-                uniqueKeysWithValues: credentials.enumerated().map { idx, cred in
-                    try (
-                        CredentialIndex(idx),
-                        [KeyIndex(0): Curve25519.Signing.PrivateKey(rawRepresentation: Data(hex: seed.signingKey(of: cred)))]
-                    )
-                }
-            )
-        )
     }
 }

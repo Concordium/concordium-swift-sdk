@@ -270,9 +270,17 @@ struct GrpcCli: AsyncParsableCommand {
                 }
 
                 let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
-                let identity = try WalletIdentity(generator: WalletIdentityRequestGenerator(seed: WalletSeed(hex: seedHex, network: walletCli.network.network)))
+                let identity = try WalletIdentity(
+                    generator: WalletIdentityRequestGenerator(
+                        seed: WalletSeed(hex: seedHex, network: walletCli.network.network)
+                    )
+                )
                 print("Recovering identity.")
-                let res = try await identity.recoverIdentity(provider: ip.toSdkType(), index: walletCli.identityIndex, global: cryptoParams)
+                let res = try await identity.recoverIdentity(
+                    provider: ip.toSdkType(),
+                    index: walletCli.identityIndex,
+                    global: cryptoParams
+                )
                 print(res)
             }
         }
