@@ -26,9 +26,11 @@ public struct Description: Decodable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        name = try container.decodeIfPresent(String.self, forKey: .name)
-        description = try container.decodeIfPresent(String.self, forKey: .description)
-        url = try container.decodeIfPresent(String.self, forKey: .url)
+        try self.init(
+            name: container.decodeIfPresent(String.self, forKey: .name),
+            description: container.decodeIfPresent(String.self, forKey: .description),
+            url: container.decodeIfPresent(String.self, forKey: .url)
+        )
     }
 
     func toCryptoType() -> ConcordiumWalletCrypto.Description {
@@ -63,10 +65,12 @@ public struct Metadata: Decodable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        icon = try container.decode(String.self, forKey: .icon)
-        support = try container.decodeIfPresent(String.self, forKey: .support)
-        issuanceStart = try container.decode(URL.self, forKey: .issuanceStart)
-        recoveryStart = try container.decode(URL.self, forKey: .recoveryStart)
+        try self.init(
+            icon: container.decode(String.self, forKey: .icon),
+            support: container.decodeIfPresent(String.self, forKey: .support),
+            issuanceStart: container.decode(URL.self, forKey: .issuanceStart),
+            recoveryStart: container.decode(URL.self, forKey: .recoveryStart)
+        )
     }
 }
 
@@ -123,7 +127,7 @@ extension PreIdentityObject: Decodable {
                 guard let key = UInt32(e.key) else {
                     throw DecodingError.dataCorruptedError(forKey: .ipArData, in: container, debugDescription: "invalid key index")
                 }
-                return acc[key] = e.value
+                acc[key] = e.value
             },
             choiceArData: container.decode(ChoiceArParameters.self, forKey: .choiceArData),
             idCredSecCommitment: container.decode(String.self, forKey: .idCredSecCommitment),
@@ -193,16 +197,18 @@ public class WalletIdentity {
     public func recoverIdentity(provider: IdentityProvider, index: UInt32, global: CryptographicParameters) async throws -> Versioned<IdentityObject> {
         // FUTURE: Use 'Date.now' instead of 'Date()' once platform restrictions allow it.
         let requestJson = try generator.createRecoveryRequestJson(provider: provider, index: index, context: global, time: Date())
-        let url = try recoveryUrl(baseUrl: provider.metadata.recoveryStart, requestJson: requestJson) ?! WalletIdentityError.cannotConstructRecoveryUrl
+        let url = try recoveryUrl(baseUrl: provider.metadata.recoveryStart, requestJson: requestJson)
         let (data, _) = try await URLSession.shared.data(from: url)
         return try JSONDecoder().decode(Versioned<IdentityObject>.self, from: data)
     }
 
-    private func recoveryUrl(baseUrl: URL, requestJson: String) -> URL? {
-        // FUTURE: The URL method 'appendComponent(queryItems:)' is nicer but requires bumping supported platforms.
-        var components = URLComponents(url: baseUrl, resolvingAgainstBaseURL: true)
-        components?.queryItems = [URLQueryItem(name: "state", value: requestJson)]
-        return components?.url
+    private func recoveryUrl(baseUrl: URL, requestJson: String) throws -> URL {
+        // FUTURE: The URL method 'appending(queryItems:)' is nicer but requires bumping supported platforms.
+        guard var components = URLComponents(url: baseUrl, resolvingAgainstBaseURL: true) else {
+            throw WalletIdentityError.cannotConstructRecoveryUrl
+        }
+        components.queryItems = [URLQueryItem(name: "state", value: requestJson)]
+        return try components.url ?! WalletIdentityError.cannotConstructRecoveryUrl
     }
 }
 

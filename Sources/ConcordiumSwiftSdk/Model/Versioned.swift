@@ -18,7 +18,9 @@ extension Versioned: Decodable where V: Decodable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        version = try container.decode(UInt32.self, forKey: .v)
-        value = try container.decode(V.self, forKey: .value)
+        try self.init(
+            version: container.decode(UInt32.self, forKey: .v),
+            value: container.decode(V.self, forKey: .value)
+        )
     }
 }

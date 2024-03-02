@@ -16,9 +16,3 @@ func ?! <T>(value: T?, error: @autoclosure () -> Error) throws -> T {
     }
     return value
 }
-
-public enum GrpcError: Error, Equatable {
-    case unexpectedBase64CheckVersion(expected: UInt8, actual: UInt8)
-    case requiredValueMissing(String)
-    case unsupportedValue(String)
-}

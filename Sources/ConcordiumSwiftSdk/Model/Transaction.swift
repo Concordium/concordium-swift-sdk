@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 import NIO
 
-func baseTransactionCost(headerByteCount: Int, payloadByteCount: Int, signatureCount: Int) -> Energy {
+public func baseTransactionCost(headerByteCount: Int, payloadByteCount: Int, signatureCount: Int) -> Energy {
     let energyPerByte = 1
     let energyPerSignature = 100
     let sizeCost = Energy(energyPerByte * (headerByteCount + payloadByteCount))
@@ -37,8 +37,8 @@ public struct AccountTransaction {
 }
 
 public struct PreparedAccountTransaction {
-    var header: AccountTransactionHeader
-    var serializedPayload: Data
+    public var header: AccountTransactionHeader
+    public var serializedPayload: Data
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
         var res = 0
@@ -159,16 +159,16 @@ public enum AccountTransactionPayload {
 /// the sender and the transaction are valid. The header is shared by all transaction types.
 public struct AccountTransactionHeader {
     /// Sender of the transaction.
-    var sender: AccountAddress
+    public var sender: AccountAddress
 
     /// Sequence number of the transaction.
-    var sequenceNumber: SequenceNumber
+    public var sequenceNumber: SequenceNumber
 
     /// Maximum amount of energy the transaction can take to execute.
-    var maxEnergy: Energy
+    public var maxEnergy: Energy
 
     /// Latest time the transaction can included in a block.
-    var expiry: TransactionTime
+    public var expiry: TransactionTime
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer, serializedPayloadSize: UInt32) -> Int {
         var res = 0
