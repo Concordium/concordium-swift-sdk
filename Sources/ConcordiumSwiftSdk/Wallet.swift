@@ -9,25 +9,20 @@ public enum WalletError: Error {
 public class Wallet {
     private let cryptoParams: CryptographicParameters
     private let accounts: WalletAccountRepositoryProtocol
-    private let accountGenerator: DeterministicAccountGenerator // for now we only support this one scheme
-    private let identityRequestGenerator: DeterministicIdentityRequestGenerator // for now we only support this one scheme
+    private let accountGenerator: SeedBasedAccountGenerator // for now we only support this one scheme
+    private let identityRequestGenerator: SeedBasedIdentityRequestGenerator // for now we only support this one scheme
     private let identityRequestUrlGenerator: WalletIdentityRequestUrlGenerator
 
-    public init(
-        seed: WalletSeed,
-        cryptoParams: CryptographicParameters,
-        accounts: WalletAccountRepositoryProtocol,
-        identityIssuanceCallback: URL
-    ) {
+    public init(seed: WalletSeed, cryptoParams: CryptographicParameters, accounts: WalletAccountRepositoryProtocol, identityIssuanceCallback: URL) {
         self.cryptoParams = cryptoParams
         self.accounts = accounts
-        accountGenerator = DeterministicAccountGenerator(seed: seed, commitmentKey: cryptoParams.onChainCommitmentKey)
-        identityRequestGenerator = DeterministicIdentityRequestGenerator(seed: seed)
+        accountGenerator = SeedBasedAccountGenerator(seed: seed, commitmentKey: cryptoParams.onChainCommitmentKey)
+        identityRequestGenerator = SeedBasedIdentityRequestGenerator(seed: seed)
         identityRequestUrlGenerator = WalletIdentityRequestUrlGenerator(callbackUrl: identityIssuanceCallback)
     }
 
     // TODO: Add method to be called to insert final identity.
-    public func prepareCreateIdentity(provider: IdentityProvider, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> IdentityProviderRequest {
+    public func prepareCreateIdentity(provider: IdentityProvider, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> IdentityIssuanceRequest {
         try identityRequestUrlGenerator.issuanceRequest(
             baseUrl: provider.metadata.issuanceStart,
             requestJson: identityRequestGenerator.createIssuanceRequestJson(
@@ -39,7 +34,7 @@ public class Wallet {
         )
     }
 
-    public func prepareRecoverIdentity(provider: IdentityProvider, index: UInt32, anonymityRevokerThreshold _: UInt8) throws -> IdentityProviderRequest {
+    public func prepareRecoverIdentity(provider: IdentityProvider, index: UInt32) throws -> IdentityRecoveryRequest {
         try identityRequestUrlGenerator.recoveryRequest(
             baseUrl: provider.metadata.recoveryStart,
             requestJson: identityRequestGenerator.createRecoveryRequestJson(

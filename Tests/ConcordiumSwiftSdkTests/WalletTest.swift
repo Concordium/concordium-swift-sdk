@@ -8,7 +8,7 @@ final class WalletTest: XCTestCase {
 
     func testSimpleTransfer() throws {
         let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
-        let gen = DeterministicAccountGenerator(seed: seed, commitmentKey: TESTNET_COMMITMENT_KEY)
+        let gen = SeedBasedAccountGenerator(seed: seed, commitmentKey: TESTNET_COMMITMENT_KEY)
         let account1 = try gen.generateAccount(
             credentials: [AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0)]
         )

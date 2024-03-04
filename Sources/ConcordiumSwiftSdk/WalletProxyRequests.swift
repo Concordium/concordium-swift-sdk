@@ -1,16 +1,20 @@
 import Foundation
 
-public class WalletProxyClient {
-    let baseUrl: String
+public enum WalletProxyClientError: Error {
+    case cannotConstructUrl
+}
 
-    public init(baseUrl: String) {
+public class WalletProxyEndpoints {
+    let baseUrl: URL
+
+    public init(baseUrl: URL) {
         self.baseUrl = baseUrl
     }
 
-    public func getIdentityProviderInfo() async throws -> [IdentityProviderInfoJson] {
-        let url = URL(string: "\(baseUrl)/v1/ip_info")!
-        let (data, _) = try await URLSession.shared.data(from: url)
-        return try JSONDecoder().decode([IdentityProviderInfoJson].self, from: data)
+    public var getIdentityProviders: HttpRequest<[IdentityProviderInfoJson]> {
+        get throws {
+            try HttpRequest(url: URL(string: "/v1/ip_info", relativeTo: baseUrl) ?! WalletProxyClientError.cannotConstructUrl)
+        }
     }
 }
 

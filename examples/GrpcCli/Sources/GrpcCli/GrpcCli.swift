@@ -21,6 +21,15 @@ struct GrpcOptions: ParsableArguments {
     }
 }
 
+struct WalletProxyOptions: ParsableArguments {
+    @Option(help: "Base URL of WalletProxy instance.")
+    var url: String = "https://wallet-proxy.testnet.concordium.com"
+
+    var baseUrl: URL {
+        URL(string: url)!
+    }
+}
+
 struct BlockOption: ParsableArguments {
     @Option(help: "Hash of the block to query against. Defaults to last finalized block.")
     var blockHash: String?
@@ -87,7 +96,7 @@ struct GrpcCli: AsyncParsableCommand {
     static var configuration = CommandConfiguration(
         abstract: "A CLI for demonstrating and testing use of the gRPC client of the SDK.",
         version: "1.0.0",
-        subcommands: [CryptographicParameters.self, Account.self, Wallet.self, LegacyWallet.self, Identity.self]
+        subcommands: [CryptographicParameters.self, Account.self, Wallet.self, LegacyWallet.self, IdentityProviders.self]
     )
 
     struct CryptographicParameters: AsyncParsableCommand {
@@ -170,7 +179,7 @@ struct GrpcCli: AsyncParsableCommand {
     struct Wallet: AsyncParsableCommand {
         static var configuration = CommandConfiguration(
             abstract: "Subcommands related to wallet activities.",
-            subcommands: [Transfer.self, Recover.self]
+            subcommands: [Transfer.self, Identity.self]
         )
 
         @Option(help: "Seed phrase.")
@@ -216,7 +225,7 @@ struct GrpcCli: AsyncParsableCommand {
                 print("Fetching crypto parameters (for commitment key).")
                 let hash = try await withGrpcClient(target: grpcCli.options.target) { client in
                     let cryptoParams = try await client.cryptographicParameters(block: BlockIdentifier.lastFinal)
-                    let account = try DeterministicAccountGenerator(
+                    let account = try SeedBasedAccountGenerator(
                         seed: WalletSeed(hex: seedHex, network: walletCli.network.network),
                         commitmentKey: cryptoParams.onChainCommitmentKey
                     ).generateAccount(
@@ -242,46 +251,59 @@ struct GrpcCli: AsyncParsableCommand {
             }
         }
 
-        // TODO: Move back to identity section?
-        struct Recover: AsyncParsableCommand {
+        struct Identity: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
-                abstract: "Recover identity"
+                abstract: "Subcommands for identity creation or recovery.",
+                subcommands: [Recover.self]
             )
-            @OptionGroup
-            var grpcCli: GrpcCli
 
             @OptionGroup
-            var walletCli: Wallet
+            var walletProxyOptions: WalletProxyOptions
 
-            @Option(help: "Base URL of WalletProxy instance.")
-            var walletProxyBaseUrl: String = "https://wallet-proxy.testnet.concordium.com"
+            struct Recover: AsyncParsableCommand {
+                static var configuration = CommandConfiguration(
+                    abstract: "Recover identity"
+                )
 
-            func run() async throws {
-                let wp = WalletProxyClient(baseUrl: walletProxyBaseUrl)
-                let ips = try await wp.getIdentityProviderInfo()
-                guard let ip = ips.first(where: { $0.ipInfo.ipIdentity == walletCli.identityProviderIndex }) else { // TODO: correct way to match index?
-                    print("Cannot find identity with index \(walletCli.identityProviderIndex).")
-                    return
-                }
+                @OptionGroup
+                var grpcCli: GrpcCli
 
-                print("Fetching crypto parameters.")
-                let cryptoParams = try await withGrpcClient(target: grpcCli.options.target) { client in
-                    try await client.cryptographicParameters(block: .lastFinal)
-                }
+                @OptionGroup
+                var walletCli: Wallet
 
-                let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
-                let identity = try WalletIdentity(
-                    generator: WalletIdentityRequestGenerator(
-                        seed: WalletSeed(hex: seedHex, network: walletCli.network.network)
+                @OptionGroup
+                var identityCli: Identity
+
+                func run() async throws {
+                    let endpoints = WalletProxyEndpoints(baseUrl: identityCli.walletProxyOptions.baseUrl)
+                    guard let ip = try await findIdentityProvider(endpoints: endpoints, index: walletCli.identityProviderIndex) else {
+                        print("Cannot find identity with index \(walletCli.identityProviderIndex).")
+                        return
+                    }
+
+                    print("Fetching crypto parameters.")
+                    let cryptoParams = try await withGrpcClient(target: grpcCli.options.target) {
+                        try await $0.cryptographicParameters(block: .lastFinal)
+                    }
+
+                    let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
+                    let callbackUrl = URL(string: "concordiumwallet-example://identity-issuer/callback")! // TODO: Make input?
+                    let seed = try WalletSeed(hex: seedHex, network: walletCli.network.network)
+
+                    print("Preparing identity recovery request.")
+                    let identityRequestGenerator = SeedBasedIdentityRequestGenerator(seed: seed)
+                    let reqJson = try identityRequestGenerator.createRecoveryRequestJson(
+                        provider: ip.toSdkType(),
+                        index: walletCli.identityIndex,
+                        cryptoParams: cryptoParams,
+                        time: Date.now
                     )
-                )
-                print("Recovering identity.")
-                let res = try await identity.recoverIdentity(
-                    provider: ip.toSdkType(),
-                    index: walletCli.identityIndex,
-                    global: cryptoParams
-                )
-                print(res)
+                    let urlGenerator = WalletIdentityRequestUrlGenerator(callbackUrl: callbackUrl)
+                    let req = try urlGenerator.recoveryRequest(baseUrl: ip.metadata.recoveryStart, requestJson: reqJson)
+                    print("Recovering identity.")
+                    let identity = try await req.response(session: URLSession.shared)
+                    print(identity)
+                }
             }
         }
     }
@@ -338,25 +360,18 @@ struct GrpcCli: AsyncParsableCommand {
         }
     }
 
-    struct Identity: AsyncParsableCommand {
+    struct IdentityProviders: AsyncParsableCommand {
         static var configuration = CommandConfiguration(
-            abstract: "Commands related to identity management.",
-            subcommands: [Providers.self]
+            abstract: "List all Identity Providers."
         )
 
-        struct Providers: AsyncParsableCommand {
-            static var configuration = CommandConfiguration(
-                abstract: "List all Identity Providers."
-            )
+        @OptionGroup
+        var walletProxyOptions: WalletProxyOptions
 
-            @Option(help: "Base URL of WalletProxy instance.")
-            var walletProxyBaseUrl: String = "https://wallet-proxy.testnet.concordium.com"
-
-            func run() async throws {
-                let wp = WalletProxyClient(baseUrl: walletProxyBaseUrl)
-                let res = try await wp.getIdentityProviderInfo()
-                print(res)
-            }
+        func run() async throws {
+            let endpoints = WalletProxyEndpoints(baseUrl: walletProxyOptions.baseUrl)
+            let res = try await endpoints.getIdentityProviders.response(session: URLSession.shared)
+            print(res)
         }
     }
 }
@@ -376,6 +391,11 @@ func transfer(client: NodeClientProtocol, sender: WalletAccount, receiver: Accou
     )
     print("Sending transaction.")
     return try await client.send(transaction: tx)
+}
+
+func findIdentityProvider(endpoints: WalletProxyEndpoints, index: UInt32) async throws -> IdentityProviderInfoJson? {
+    let res = try await endpoints.getIdentityProviders.response(session: URLSession.shared)
+    return res.first { $0.ipInfo.ipIdentity == index } // TODO: correct way to match index?
 }
 
 func withGrpcClient<T>(target: ConnectionTarget, _ f: (NodeClientProtocol) async throws -> T) async throws -> T {

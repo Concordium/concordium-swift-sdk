@@ -203,16 +203,8 @@ extension AttributeList: Decodable {
     }
 }
 
-// TODO: Can use for both issuance and recovery?
-public struct IdentityProviderRequest {
-    public var url: URL
-
-    // For recovery, just call the URL and pass the reponse here.
-    // For issuance, we need to open the URL in a browser and wait for a callback. The callback might be the same format; I don't know yet.
-    public func decodeResponse(data: Data) throws -> Versioned<IdentityObject> {
-        try JSONDecoder().decode(Versioned<IdentityObject>.self, from: data)
-    }
-}
+public typealias IdentityIssuanceRequest = HttpRequest<Versioned<IdentityObject>>
+public typealias IdentityRecoveryRequest = HttpRequest<Versioned<IdentityObject>> // TODO: ?
 
 public class WalletIdentityRequestUrlGenerator {
     private let callbackUrl: URL // In Android example wallet: concordiumwallet-example://identity-issuer/callback
@@ -221,14 +213,15 @@ public class WalletIdentityRequestUrlGenerator {
         self.callbackUrl = callbackUrl
     }
 
-    public func issuanceRequest(baseUrl: URL, requestJson: String) throws -> IdentityProviderRequest {
-        try IdentityProviderRequest(url: issuanceRequestUrl(baseUrl: baseUrl, requestJson: requestJson)) // TODO: ?
+    public func issuanceRequest(baseUrl: URL, requestJson: String) throws -> IdentityIssuanceRequest {
+        let url = try issuanceRequestUrl(baseUrl: baseUrl, requestJson: requestJson) ?! WalletIdentityError.cannotConstructIssuanceUrl
+        return HttpRequest(url: url)
     }
 
-    private func issuanceRequestUrl(baseUrl: URL, requestJson: String) throws -> URL {
+    private func issuanceRequestUrl(baseUrl: URL, requestJson: String) -> URL? {
         // FUTURE: The URL method 'appending(queryItems:)' is nicer but requires bumping supported platforms.
         guard var components = URLComponents(url: baseUrl, resolvingAgainstBaseURL: true) else {
-            throw WalletIdentityError.cannotConstructIssuanceUrl
+            return nil
         }
         components.queryItems = (components.queryItems ?? []) + [
             URLQueryItem(name: "response_type", value: "code"),
@@ -236,58 +229,22 @@ public class WalletIdentityRequestUrlGenerator {
             URLQueryItem(name: "scope", value: "identity"),
             URLQueryItem(name: "state", value: requestJson),
         ]
-        return try components.url ?! WalletIdentityError.cannotConstructIssuanceUrl
+        return components.url
     }
 
-    public func recoveryRequest(baseUrl: URL, requestJson: String) throws -> IdentityProviderRequest {
-        try IdentityProviderRequest(url: recoveryRequestUrl(baseUrl: baseUrl, requestJson: requestJson))
+    public func recoveryRequest(baseUrl: URL, requestJson: String) throws -> IdentityRecoveryRequest {
+        let url = try recoveryRequestUrl(baseUrl: baseUrl, requestJson: requestJson) ?! WalletIdentityError.cannotConstructRecoveryUrl
+        return HttpRequest(url: url)
     }
 
-    private func recoveryRequestUrl(baseUrl: URL, requestJson: String) throws -> URL {
+    private func recoveryRequestUrl(baseUrl: URL, requestJson: String) -> URL? {
         // FUTURE: The URL method 'appending(queryItems:)' is nicer but requires bumping supported platforms.
         guard var components = URLComponents(url: baseUrl, resolvingAgainstBaseURL: true) else {
-            throw WalletIdentityError.cannotConstructRecoveryUrl
+            return nil
         }
-        components.queryItems = [URLQueryItem(name: "state", value: requestJson)]
-        return try components.url ?! WalletIdentityError.cannotConstructRecoveryUrl
-    }
-}
-
-public class DeterministicIdentityRequestGenerator {
-    private let seed: WalletSeed
-
-    public init(seed: WalletSeed) {
-        self.seed = seed
-    }
-
-    public func createRecoveryRequestJson(provider: IdentityProvider, index: UInt32, cryptoParams: CryptographicParameters, time: Date) throws -> String {
-        try createIdentityRecoveryRequestJson(
-            input: IdentityRecoveryRequestInput(
-                ipInfo: provider.toCryptoType(),
-                globalContext: cryptoParams.toCryptoType(),
-                timestamp: UInt64(time.timeIntervalSince1970),
-                idCredSec: seed.credSec(
-                    of: IdentityCoordinates(
-                        providerIndex: provider.identity,
-                        index: index
-                    )
-                )
-            )
-        )
-    }
-
-    public func createIssuanceRequestJson(provider: IdentityProvider, index: UInt32, cryptoParams: CryptographicParameters, anonymityRevokerThreshold: UInt8) throws -> String {
-        let identityCoordinates = IdentityCoordinates(providerIndex: provider.identity, index: index)
-        return try createIdentityRequestJson(
-            input: IdentityObjectRequestInput(
-                ipInfo: provider.toCryptoType(),
-                globalContext: cryptoParams.toCryptoType(),
-                arsInfos: provider.arsInfos.mapValues { $0.toCryptoType() },
-                arThreshold: anonymityRevokerThreshold,
-                prfKey: seed.prfKey(of: identityCoordinates),
-                idCredSec: seed.credSec(of: identityCoordinates),
-                blindingRandomness: seed.signatureBlindingRandomness(of: identityCoordinates)
-            )
-        )
+        components.queryItems = (components.queryItems ?? []) + [
+            URLQueryItem(name: "state", value: requestJson),
+        ]
+        return components.url
     }
 }
