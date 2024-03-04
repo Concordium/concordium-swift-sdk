@@ -1,7 +1,7 @@
 import Foundation
 
 public struct HttpRequest<Response: Decodable> {
-    var request: URLRequest
+    public var request: URLRequest
 
     public init(request: URLRequest) {
         self.request = request

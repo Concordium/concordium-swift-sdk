@@ -254,15 +254,96 @@ struct GrpcCli: AsyncParsableCommand {
         struct Identity: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
                 abstract: "Subcommands for identity creation or recovery.",
-                subcommands: [Recover.self]
+                subcommands: [Issue.self, Recover.self]
             )
 
             @OptionGroup
             var walletProxyOptions: WalletProxyOptions
 
+            struct Issue: AsyncParsableCommand {
+                static var configuration = CommandConfiguration(
+                    abstract: "Issue identity."
+                )
+
+                @OptionGroup
+                var grpcCli: GrpcCli
+
+                @OptionGroup
+                var walletCli: Wallet
+
+                @OptionGroup
+                var identityCli: Identity
+
+                @Option(help: "Number of anonymity revokers needed to revoke anonymity.")
+                var anonymityRevokerThreshold: UInt8 = 2
+
+                func run() async throws {
+                    let endpoints = WalletProxyEndpoints(baseUrl: identityCli.walletProxyOptions.baseUrl)
+                    guard let ip = try await findIdentityProvider(endpoints: endpoints, index: walletCli.identityProviderIndex) else {
+                        print("Cannot find identity with index \(walletCli.identityProviderIndex).")
+                        return
+                    }
+
+                    print("Fetching crypto parameters.")
+                    let cryptoParams = try await withGrpcClient(target: grpcCli.options.target) {
+                        try await $0.cryptographicParameters(block: .lastFinal)
+                    }
+
+                    let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
+                    let seed = try WalletSeed(hex: seedHex, network: walletCli.network.network)
+
+                    print("Preparing identity issuance request.")
+                    let identityRequestGenerator = SeedBasedIdentityRequestGenerator(seed: seed)
+                    let reqJson = try identityRequestGenerator.createIssuanceRequestJson(
+                        provider: ip.toSdkType(),
+                        index: walletCli.identityIndex,
+                        cryptoParams: cryptoParams,
+                        anonymityRevokerThreshold: anonymityRevokerThreshold
+                    )
+
+                    print("Starting server to listen for callback.")
+                    let identityUrlRes = try withIdentityIssuanceCallbackServer(port: 3453) { port in
+                        let identityIssuanceCallbackUrl = URL(string: "http://127.0.0.1:\(port)/callback")!
+                        let urlGenerator = WalletIdentityRequestUrlGenerator(callbackUrl: identityIssuanceCallbackUrl)
+                        let reqUrl = try urlGenerator.issuanceUrlToOpen(baseUrl: ip.metadata.issuanceStart, requestJson: reqJson)
+                        openURL(url: reqUrl)
+                    }
+                    guard let identityUrlRes else {
+                        print("Invalid response.")
+                        return
+                    }
+
+                    var identityUrl: String!
+                    switch identityUrlRes {
+                    case let .failure(err):
+                        print("Cannot create identity: \(String(describing: err))")
+                        return
+                    case let .success(url):
+                        identityUrl = url
+                    }
+
+                    let identityReq = HttpRequest<IdentityIssuanceResponse>(url: URL(string: identityUrl)!)
+                    let identityRes = try await identityReq.response(session: URLSession.shared)
+                    guard identityRes.status == "done" else {
+                        print("Unexpected identity creation status code: \(identityRes.status)")
+                        return
+                    }
+                    let identity = identityRes.token.identityObject
+                    print(identity)
+                }
+
+                func openURL(url: URL) {
+                    let p = Process()
+                    p.launchPath = "/usr/bin/open"
+                    p.arguments = [url.absoluteString]
+                    p.launch()
+                    p.waitUntilExit()
+                }
+            }
+
             struct Recover: AsyncParsableCommand {
                 static var configuration = CommandConfiguration(
-                    abstract: "Recover identity"
+                    abstract: "Recover identity."
                 )
 
                 @OptionGroup
@@ -287,7 +368,6 @@ struct GrpcCli: AsyncParsableCommand {
                     }
 
                     let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
-                    let callbackUrl = URL(string: "concordiumwallet-example://identity-issuer/callback")! // TODO: Make input?
                     let seed = try WalletSeed(hex: seedHex, network: walletCli.network.network)
 
                     print("Preparing identity recovery request.")
@@ -298,7 +378,7 @@ struct GrpcCli: AsyncParsableCommand {
                         cryptoParams: cryptoParams,
                         time: Date.now
                     )
-                    let urlGenerator = WalletIdentityRequestUrlGenerator(callbackUrl: callbackUrl)
+                    let urlGenerator = WalletIdentityRequestUrlGenerator(callbackUrl: nil)
                     let req = try urlGenerator.recoveryRequest(baseUrl: ip.metadata.recoveryStart, requestJson: reqJson)
                     print("Recovering identity.")
                     let identity = try await req.response(session: URLSession.shared)

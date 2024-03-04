@@ -22,8 +22,9 @@ public class Wallet {
     }
 
     // TODO: Add method to be called to insert final identity.
-    public func prepareCreateIdentity(provider: IdentityProvider, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> IdentityIssuanceRequest {
-        try identityRequestUrlGenerator.issuanceRequest(
+    // TODO: Add abstraction for opening the URL and then intercepting the callback.
+    public func prepareCreateIdentity(provider: IdentityProvider, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> URL {
+        try identityRequestUrlGenerator.issuanceUrlToOpen(
             baseUrl: provider.metadata.issuanceStart,
             requestJson: identityRequestGenerator.createIssuanceRequestJson(
                 provider: provider,

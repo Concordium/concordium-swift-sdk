@@ -2,6 +2,7 @@ import ConcordiumWalletCrypto
 import Foundation
 
 public enum WalletIdentityError: Error {
+    case issuanceNotSupported
     case cannotConstructIssuanceUrl
     case cannotConstructRecoveryUrl
     case invalidUtf8
@@ -203,29 +204,75 @@ extension AttributeList: Decodable {
     }
 }
 
-public typealias IdentityIssuanceRequest = HttpRequest<Versioned<IdentityObject>>
-public typealias IdentityRecoveryRequest = HttpRequest<Versioned<IdentityObject>> // TODO: ?
+public struct IdentityIssuanceResponse: Decodable {
+    public var status: String
+    public var token: Token
+
+    public init(status: String, token: Token) {
+        self.status = status
+        self.token = token
+    }
+
+    enum CodingKeys: CodingKey {
+        case status
+        case token
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            status: container.decode(String.self, forKey: .status),
+            token: container.decode(Token.self, forKey: .token)
+        )
+    }
+
+    public struct Token: Decodable {
+        public var identityObject: Versioned<IdentityObject>
+
+        public init(identityObject: Versioned<IdentityObject>) {
+            self.identityObject = identityObject
+        }
+
+        enum CodingKeys: CodingKey {
+            case identityObject
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            try self.init(identityObject: container.decode(Versioned<IdentityObject>.self, forKey: .identityObject))
+        }
+    }
+}
+
+// public typealias IdentityIssuanceRequest = HttpRequest<IdentityIssuanceResponse>
+public typealias IdentityRecoveryRequest = HttpRequest<Versioned<IdentityObject>>
 
 public class WalletIdentityRequestUrlGenerator {
-    private let callbackUrl: URL // In Android example wallet: concordiumwallet-example://identity-issuer/callback
+    private let callbackUrl: URL? // In Android example wallet: concordiumwallet-example://identity-issuer/callback
 
-    public init(callbackUrl: URL) {
+    // If callback URL is nil then only recovery is supported.
+    public init(callbackUrl: URL?) {
         self.callbackUrl = callbackUrl
     }
 
-    public func issuanceRequest(baseUrl: URL, requestJson: String) throws -> IdentityIssuanceRequest {
-        let url = try issuanceRequestUrl(baseUrl: baseUrl, requestJson: requestJson) ?! WalletIdentityError.cannotConstructIssuanceUrl
-        return HttpRequest(url: url)
+    // Returned URL will go through identity flow (or produce error) and eventually produce URL from where you can fetch identity object.
+    // To be decoded as `IdentityIssuanceResponse`.
+    public func issuanceUrlToOpen(baseUrl: URL, requestJson: String) throws -> URL {
+        try issuanceUrl(baseUrl: baseUrl, requestJson: requestJson) ?! WalletIdentityError.cannotConstructIssuanceUrl
+//        return HttpRequest(url: url)
     }
 
-    private func issuanceRequestUrl(baseUrl: URL, requestJson: String) -> URL? {
+    private func issuanceUrl(baseUrl: URL, requestJson: String) throws -> URL? {
+        guard let redirectUri = callbackUrl else {
+            throw WalletIdentityError.issuanceNotSupported
+        }
         // FUTURE: The URL method 'appending(queryItems:)' is nicer but requires bumping supported platforms.
         guard var components = URLComponents(url: baseUrl, resolvingAgainstBaseURL: true) else {
             return nil
         }
         components.queryItems = (components.queryItems ?? []) + [
             URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "redirect_uri", value: "\(callbackUrl).CALLBACK_URL"),
+            URLQueryItem(name: "redirect_uri", value: redirectUri.absoluteString),
             URLQueryItem(name: "scope", value: "identity"),
             URLQueryItem(name: "state", value: requestJson),
         ]
