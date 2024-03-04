@@ -322,7 +322,7 @@ struct GrpcCli: AsyncParsableCommand {
                         identityUrl = url
                     }
 
-                    let identityReq = HttpRequest<IdentityIssuanceResponse>(url: URL(string: identityUrl)!)
+                    let identityReq = HttpRequest<IdentityIssuanceResponseJson>(url: URL(string: identityUrl)!)
                     let identityRes = try await identityReq.response(session: URLSession.shared)
                     guard identityRes.status == "done" else {
                         print("Unexpected identity creation status code: \(identityRes.status)")
