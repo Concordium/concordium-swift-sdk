@@ -17,14 +17,14 @@ public class Wallet {
     public init(seed: WalletSeed, cryptoParams: CryptographicParameters, accounts: WalletAccountRepositoryProtocol, identityIssuanceCallback: URL) {
         self.accounts = accounts
         accountGenerator = SeedBasedAccountGenerator(seed: seed, commitmentKey: cryptoParams.onChainCommitmentKey)
-        identityRequestGenerator = SeedBasedIdentityRequestGenerator(seed: seed, globalContext: cryptoParams.toCryptoType())
+        identityRequestGenerator = SeedBasedIdentityRequestGenerator(seed: seed, globalContext: cryptoParams)
         identityRequestUrlGenerator = WalletIdentityRequestUrlGenerator(callbackUrl: identityIssuanceCallback)
-        seedBasedCredentialGenerator = SeedBasedCredentialGenerator(seed: seed, globalContext: cryptoParams.toCryptoType())
+        seedBasedCredentialGenerator = SeedBasedCredentialGenerator(seed: seed, globalContext: cryptoParams)
     }
 
     // TODO: Add method to be called to insert final identity.
     // TODO: Add abstraction for opening the URL and then intercepting the callback.
-    public func prepareCreateIdentity(provider: IdentityProviderExt, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> URL {
+    public func prepareCreateIdentity(provider: IdentityProvider, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> URL {
         try identityRequestUrlGenerator.issuanceUrlToOpen(
             baseUrl: provider.metadata.issuanceStart,
             requestJson: identityRequestGenerator.createIssuanceRequestJson(
@@ -35,7 +35,7 @@ public class Wallet {
         )
     }
 
-    public func prepareRecoverIdentity(provider: IdentityProviderExt, index: UInt32) throws -> IdentityRecoveryRequest {
+    public func prepareRecoverIdentity(provider: IdentityProvider, index: UInt32) throws -> IdentityRecoveryRequest {
         try identityRequestUrlGenerator.recoveryRequest(
             baseUrl: provider.metadata.recoveryStart,
             requestJson: identityRequestGenerator.createRecoveryRequestJson(
@@ -47,7 +47,7 @@ public class Wallet {
     }
 
     // TODO: Stored identity object should know its own index?
-    public func prepareCreateAccount(identity: IdentityObject, identityIndex: UInt32, provider: IdentityProviderExt, index: UInt8) throws -> CredentialDeploymentPayload {
+    public func prepareCreateAccount(identity: IdentityObject, identityIndex: UInt32, provider: IdentityProvider, index: UInt8) throws -> CredentialDeploymentPayload {
         let cred = try seedBasedCredentialGenerator.createCredential(
             coordinates: AccountCredentialCoordinates(
                 identity: IdentityCoordinates(providerIndex: provider.info.identity, index: identityIndex),

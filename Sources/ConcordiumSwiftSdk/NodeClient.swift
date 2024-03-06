@@ -7,10 +7,9 @@ import NIOPosix
 public protocol NodeClientProtocol {
     func cryptographicParameters(block: BlockIdentifier) async throws -> CryptographicParameters
 
-    // Identity providers fetched from gRPC don't have metadata nor AR info.
-//    func identityProviders(block: BlockIdentifier) async throws -> [IdentityProvider]
+    func identityProviders(block: BlockIdentifier) async throws -> [IdentityProviderInfo]
 
-    func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevoker]
+    func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevokerInfo]
 
     func nextAccountSequenceNumber(address: AccountAddress) async throws -> NextAccountSequenceNumber
 
@@ -36,9 +35,19 @@ public class GrpcNodeClient: NodeClientProtocol {
         return .fromGrpcType(res)
     }
 
-    public func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevoker] {
+    public func identityProviders(block: BlockIdentifier) async throws -> [IdentityProviderInfo] {
         let req = block.toGrpcType()
-        var res: [AnonymityRevoker] = []
+        var res: [IdentityProviderInfo] = []
+        let call = grpc.getIdentityProviders(req) {
+            res.append(.fromGrpcType($0))
+        }
+        _ = try await call.status.get()
+        return res
+    }
+
+    public func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevokerInfo] {
+        let req = block.toGrpcType()
+        var res: [AnonymityRevokerInfo] = []
         let call = grpc.getAnonymityRevokers(req) {
             res.append(.fromGrpcType($0))
         }

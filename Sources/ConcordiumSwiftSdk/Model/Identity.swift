@@ -1,156 +1,47 @@
 import ConcordiumWalletCrypto
 import Foundation
 
-public struct Description: Decodable {
-    public var name: String?
-    public var description: String?
-    public var url: String?
-
-    public init(name: String?, description: String?, url: String?) {
-        self.name = name
-        self.description = description
-        self.url = url
-    }
-
-    static func fromGrpcType(_ grpc: Concordium_V2_Description) -> Description {
-        .init(name: grpc.name, description: grpc.description_p, url: grpc.url)
-    }
-
-    /// Fields used in Wallet Proxy response.
-    enum CodingKeys: CodingKey {
-        case name
-        case description
-        case url
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        try self.init(
-            name: container.decodeIfPresent(String.self, forKey: .name),
-            description: container.decodeIfPresent(String.self, forKey: .description),
-            url: container.decodeIfPresent(String.self, forKey: .url)
-        )
-    }
-
-    func toCryptoType() -> ConcordiumWalletCrypto.Description {
-        ConcordiumWalletCrypto.Description(
-            name: name ?? "",
-            url: url ?? "",
-            description: description ?? ""
-        )
-    }
-}
-
-public struct Metadata: Decodable {
-    public var icon: String
-    public var support: String?
-    public var issuanceStart: URL
-    public var recoveryStart: URL
-
-    public init(icon: String, support: String? = "", issuanceStart: URL, recoveryStart: URL) {
-        self.icon = icon
-        self.support = support
-        self.issuanceStart = issuanceStart
-        self.recoveryStart = recoveryStart
-    }
-
-    /// Fields used in Wallet Proxy response.
-    enum CodingKeys: CodingKey {
-        case icon
-        case support
-        case issuanceStart
-        case recoveryStart
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        try self.init(
-            icon: container.decode(String.self, forKey: .icon),
-            support: container.decodeIfPresent(String.self, forKey: .support),
-            issuanceStart: container.decode(URL.self, forKey: .issuanceStart),
-            recoveryStart: container.decode(URL.self, forKey: .recoveryStart)
-        )
-    }
-}
-
 public struct IdentityProvider {
-    public var identity: UInt32
-    public var description: Description
-    public var verifyKey: String
-    public var cdiVerifyKey: String
+    public var info: IdentityProviderInfo
+    public var metadata: Metadata
+    public var anonymityRevokers: [UInt32: AnonymityRevokerInfo]
 
-    public init(identity: UInt32, description: Description, verifyKey: String, cdiVerifyKey: String) {
-        self.identity = identity
-        self.description = description
-        self.verifyKey = verifyKey
-        self.cdiVerifyKey = cdiVerifyKey
+    public init(info: IdentityProviderInfo, metadata: Metadata, anonymityRevokers: [UInt32: AnonymityRevokerInfo]) {
+        self.info = info
+        self.metadata = metadata
+        self.anonymityRevokers = anonymityRevokers
     }
+}
 
-    static func fromGrpcType(grpc: Concordium_V2_IpInfo) -> IdentityProvider {
-        IdentityProvider(
+public typealias IdentityProviderInfo = ConcordiumWalletCrypto.IdentityProviderInfo
+public typealias AnonymityRevokerInfo = ConcordiumWalletCrypto.AnonymityRevokerInfo
+public typealias Description = ConcordiumWalletCrypto.Description
+public typealias IdentityObject = ConcordiumWalletCrypto.IdentityObject
+public typealias AttributeList = ConcordiumWalletCrypto.AttributeList
+public typealias ChoiceArParameters = ConcordiumWalletCrypto.ChoiceArParameters
+public typealias ArData = ConcordiumWalletCrypto.ArData
+public typealias PreIdentityObject = ConcordiumWalletCrypto.PreIdentityObject
+
+extension IdentityProviderInfo {
+    static func fromGrpcType(_ grpc: Concordium_V2_IpInfo) -> Self {
+        .init(
             identity: grpc.identity.value,
             description: .fromGrpcType(grpc.description_p),
             verifyKey: grpc.verifyKey.value.hex,
             cdiVerifyKey: grpc.cdiVerifyKey.value.hex
         )
     }
-
-    func toCryptoType() -> IdentityProviderInfo {
-        IdentityProviderInfo(
-            identity: identity,
-            description: description.toCryptoType(),
-            verifyKey: verifyKey,
-            cdiVerifyKey: cdiVerifyKey
-        )
-    }
 }
 
-// TODO: Very unsure whether this is the right solution...
-public struct IdentityProviderExt {
-    public var info: IdentityProvider
-    public var metadata: Metadata
-    public var arsInfos: [UInt32: AnonymityRevoker]
-
-    public init(info: IdentityProvider, metadata: Metadata, arsInfos: [UInt32: AnonymityRevoker]) {
-        self.info = info
-        self.metadata = metadata
-        self.arsInfos = arsInfos
-    }
-}
-
-public struct AnonymityRevoker {
-    public var identity: UInt32
-    public var description: Description
-    public var publicKey: String
-
-    public init(identity: UInt32, description: Description, publicKey: String) {
-        self.identity = identity
-        self.description = description
-        self.publicKey = publicKey
-    }
-
-    static func fromGrpcType(_ grpc: Concordium_V2_ArInfo) -> AnonymityRevoker {
-        AnonymityRevoker(
+extension AnonymityRevokerInfo {
+    static func fromGrpcType(_ grpc: Concordium_V2_ArInfo) -> Self {
+        .init(
             identity: grpc.identity.value,
             description: .fromGrpcType(grpc.description_p),
             publicKey: grpc.publicKey.value.hex
         )
     }
-
-    func toCryptoType() -> AnonymityRevokerInfo {
-        AnonymityRevokerInfo(
-            identity: identity,
-            description: description.toCryptoType(),
-            publicKey: publicKey
-        )
-    }
 }
-
-public typealias IdentityObject = ConcordiumWalletCrypto.IdentityObject
-public typealias AttributeList = ConcordiumWalletCrypto.AttributeList
-public typealias ChoiceArParameters = ConcordiumWalletCrypto.ChoiceArParameters
-public typealias ArData = ConcordiumWalletCrypto.ArData
-public typealias PreIdentityObject = ConcordiumWalletCrypto.PreIdentityObject
 
 extension IdentityObject: Decodable {
     enum CodingKeys: CodingKey {
@@ -248,6 +139,62 @@ extension AttributeList: Decodable {
     }
 }
 
+extension Description {
+    static func fromGrpcType(_ grpc: Concordium_V2_Description) -> Self {
+        .init(name: grpc.name, url: grpc.url, description: grpc.description_p)
+    }
+}
+
+extension Description: Decodable {
+    /// Fields used in Wallet Proxy response.
+    enum CodingKeys: CodingKey {
+        case name
+        case description
+        case url
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            name: container.decodeIfPresent(String.self, forKey: .name) ?? "",
+            url: container.decodeIfPresent(String.self, forKey: .url) ?? "",
+            description: container.decodeIfPresent(String.self, forKey: .description) ?? ""
+        )
+    }
+}
+
+public struct Metadata: Decodable {
+    public var icon: String
+    public var support: String?
+    public var issuanceStart: URL
+    public var recoveryStart: URL
+
+    public init(icon: String, support: String?, issuanceStart: URL, recoveryStart: URL) {
+        self.icon = icon
+        self.support = support
+        self.issuanceStart = issuanceStart
+        self.recoveryStart = recoveryStart
+    }
+
+    /// Fields used in Wallet Proxy response.
+    enum CodingKeys: CodingKey {
+        case icon
+        case support
+        case issuanceStart
+        case recoveryStart
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            icon: container.decode(String.self, forKey: .icon),
+            support: container.decodeIfPresent(String.self, forKey: .support),
+            issuanceStart: container.decode(URL.self, forKey: .issuanceStart),
+            recoveryStart: container.decode(URL.self, forKey: .recoveryStart)
+        )
+    }
+}
+
 public struct IdentityIssuanceResponseJson: Decodable {
     public var status: String
     public var token: Token
@@ -282,5 +229,6 @@ public enum AttributeType: UInt8, CustomStringConvertible, CaseIterable {
     case taxIdNo = 12
     case lei = 13
 
+    // Make it explicit that the case names are significant.
     public var description: String { "\(self)" }
 }

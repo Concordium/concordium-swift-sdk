@@ -11,14 +11,14 @@ public class WalletProxyEndpoints {
         self.baseUrl = baseUrl
     }
 
-    public var getIdentityProviders: HttpRequest<[IdentityProviderInfoJson]> {
+    public var getIdentityProviders: HttpRequest<[IdentityProviderJson]> {
         get throws {
             try HttpRequest(url: URL(string: "/v1/ip_info", relativeTo: baseUrl) ?! WalletProxyEndpointError.cannotConstructUrl)
         }
     }
 }
 
-public struct IdentityProviderInfoJson: Decodable {
+public struct IdentityProviderJson: Decodable {
     public var ipInfo: IdentityProviderInfo
     public var arsInfos: [UInt32: AnonymityRevokerInfo]
     public var metadata: Metadata
@@ -46,6 +46,15 @@ public struct IdentityProviderInfoJson: Decodable {
         public var ipDescription: Description
         public var ipCdiVerifyKey: String
         public var ipVerifyKey: String
+
+        public func toSdkType() -> ConcordiumSwiftSdk.IdentityProviderInfo {
+            .init(
+                identity: ipIdentity,
+                description: ipDescription,
+                verifyKey: ipVerifyKey,
+                cdiVerifyKey: ipCdiVerifyKey
+            )
+        }
     }
 
     public struct AnonymityRevokerInfo: Decodable {
@@ -53,8 +62,8 @@ public struct IdentityProviderInfoJson: Decodable {
         public var arDescription: Description
         public var arPublicKey: String
 
-        public func toSdkType() -> AnonymityRevoker {
-            AnonymityRevoker(
+        public func toSdkType() -> ConcordiumSwiftSdk.AnonymityRevokerInfo {
+            .init(
                 identity: arIdentity,
                 description: arDescription,
                 publicKey: arPublicKey
@@ -62,16 +71,11 @@ public struct IdentityProviderInfoJson: Decodable {
         }
     }
 
-    public func toSdkType() -> IdentityProviderExt {
-        IdentityProviderExt(
-            info: IdentityProvider(
-                identity: ipInfo.ipIdentity,
-                description: ipInfo.ipDescription,
-                verifyKey: ipInfo.ipVerifyKey,
-                cdiVerifyKey: ipInfo.ipCdiVerifyKey
-            ),
+    public func toSdkType() -> IdentityProvider {
+        .init(
+            info: ipInfo.toSdkType(),
             metadata: metadata,
-            arsInfos: arsInfos.mapValues { $0.toSdkType() }
+            anonymityRevokers: arsInfos.mapValues { $0.toSdkType() }
         )
     }
 }

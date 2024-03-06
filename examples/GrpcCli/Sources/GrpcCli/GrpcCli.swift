@@ -295,7 +295,7 @@ struct GrpcCli: AsyncParsableCommand {
                     print("Preparing identity issuance request.")
                     let identityRequestGenerator = SeedBasedIdentityRequestGenerator(
                         seed: seed,
-                        globalContext: cryptoParams.toCryptoType()
+                        globalContext: cryptoParams
                     )
                     let reqJson = try identityRequestGenerator.createIssuanceRequestJson(
                         provider: ip.toSdkType(),
@@ -375,7 +375,7 @@ struct GrpcCli: AsyncParsableCommand {
                     print("Preparing identity recovery request.")
                     let identityRequestGenerator = SeedBasedIdentityRequestGenerator(
                         seed: seed,
-                        globalContext: cryptoParams.toCryptoType()
+                        globalContext: cryptoParams
                     )
                     let reqJson = try identityRequestGenerator.createRecoveryRequestJson(
                         provider: ip.toSdkType().info,
@@ -493,7 +493,7 @@ func transfer(client: NodeClientProtocol, sender: WalletAccount, receiver: Accou
     return try await client.send(transaction: tx)
 }
 
-func findIdentityProvider(endpoints: WalletProxyEndpoints, index: UInt32) async throws -> IdentityProviderInfoJson? {
+func findIdentityProvider(endpoints: WalletProxyEndpoints, index: UInt32) async throws -> IdentityProviderJson? {
     let res = try await endpoints.getIdentityProviders.response(session: URLSession.shared)
     return res.first { $0.ipInfo.ipIdentity == index } // TODO: correct way to match index?
 }

@@ -205,12 +205,12 @@ public class SeedBasedIdentityRequestGenerator {
         self.globalContext = globalContext
     }
 
-    public func createRecoveryRequestJson(provider: IdentityProvider, index: UInt32, time: Date) throws -> String {
+    public func createRecoveryRequestJson(provider: IdentityProviderInfo, index: UInt32, time: Date) throws -> String {
         let identityCoordinates = IdentityCoordinates(providerIndex: provider.identity, index: index)
         let credSec = try seed.credSec(of: identityCoordinates)
         return try createIdentityRecoveryRequestJson(
             params: IdentityRecoveryRequestParameters(
-                ipInfo: provider.toCryptoType(),
+                ipInfo: provider,
                 globalContext: globalContext,
                 timestamp: UInt64(time.timeIntervalSince1970),
                 idCredSec: credSec
@@ -218,16 +218,16 @@ public class SeedBasedIdentityRequestGenerator {
         )
     }
 
-    public func createIssuanceRequestJson(provider: IdentityProviderExt, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> String {
+    public func createIssuanceRequestJson(provider: IdentityProvider, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> String {
         let identityCoordinates = IdentityCoordinates(providerIndex: provider.info.identity, index: index)
         let prfKey = try seed.prfKey(of: identityCoordinates)
         let credSec = try seed.credSec(of: identityCoordinates)
         let blindingRandomness = try seed.signatureBlindingRandomness(of: identityCoordinates)
         return try createIdentityIssuanceRequestJson(
             params: IdentityIssuanceRequestParameters(
-                ipInfo: provider.info.toCryptoType(),
+                ipInfo: provider.info,
                 globalContext: globalContext,
-                arsInfos: provider.arsInfos.mapValues { $0.toCryptoType() },
+                arsInfos: provider.anonymityRevokers,
                 arThreshold: anonymityRevokerThreshold,
                 prfKey: prfKey,
                 idCredSec: credSec,
@@ -249,12 +249,12 @@ public class SeedBasedCredentialGenerator {
     public func createCredential(
         coordinates: AccountCredentialCoordinates, // TODO: shouldn't identity know its own indexes?
         identity: IdentityObject,
-        provider: IdentityProviderExt,
+        provider: IdentityProvider,
         revealedAttributes: [UInt8] = [],
         threshold: SignatureThreshold
     ) throws -> UnsignedCredentialResult {
-        // TODO: Must you provide exactly the IP's ARs?
-        let anonymityRevokers = provider.arsInfos.mapValues { $0.toCryptoType() }
+        // TODO: Must provide exactly the IP's ARs?
+        let anonymityRevokers = provider.anonymityRevokers
         let idCredSec = try seed.credSec(of: coordinates.identity)
         let prfKey = try seed.prfKey(of: coordinates.identity)
         let blindingRandomness = try seed.signatureBlindingRandomness(of: coordinates.identity)
@@ -262,10 +262,10 @@ public class SeedBasedCredentialGenerator {
             res["\(attr)"] = try seed.attributeCommitmentRandomness(of: coordinates, attribute: attr.rawValue)
         }
         let key = try [KeyIndex(0): seed.publicKey(of: coordinates)]
-        let credentialPublicKeys = ConcordiumWalletCrypto.CredentialPublicKeys(keys: key, threshold: threshold)
+        let credentialPublicKeys = CredentialPublicKeys(keys: key, threshold: threshold)
         return try createUnsignedCredential(
             params: UnsignedCredentialParameters(
-                ipInfo: provider.info.toCryptoType(),
+                ipInfo: provider.info,
                 globalContext: globalContext,
                 arsInfos: anonymityRevokers,
                 idObject: identity,
