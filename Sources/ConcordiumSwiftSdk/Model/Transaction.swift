@@ -1,3 +1,4 @@
+import ConcordiumWalletCrypto
 import CryptoKit
 import Foundation
 import NIO
@@ -78,16 +79,16 @@ public struct SignedAccountTransaction {
         self.signatures = signatures
     }
 
-    func toGrpcType() throws -> Concordium_V2_AccountTransaction {
+    func toGrpcType() -> Concordium_V2_AccountTransaction {
         var p = Concordium_V2_AccountTransactionPayload()
         p.rawPayload = transaction.serializedPayload
         var s = Concordium_V2_AccountTransactionSignature()
         s.signatures = signatures.mapValues {
             var m = Concordium_V2_AccountSignatureMap()
-            m.signatures = $0.mapValues {
+            m.signatures = $0.reduce(into: [:]) { res, e in
                 var s = Concordium_V2_Signature()
-                s.value = $0
-                return s
+                s.value = e.value
+                res[UInt32(e.key)] = s
             }
             return m
         }
@@ -170,6 +171,13 @@ public struct AccountTransactionHeader {
     /// Latest time the transaction can included in a block.
     public var expiry: TransactionTime
 
+    public init(sender: AccountAddress, sequenceNumber: SequenceNumber, maxEnergy: Energy, expiry: TransactionTime) {
+        self.sender = sender
+        self.sequenceNumber = sequenceNumber
+        self.maxEnergy = maxEnergy
+        self.expiry = expiry
+    }
+
     @discardableResult public func serializeInto(buffer: inout ByteBuffer, serializedPayloadSize: UInt32) -> Int {
         var res = 0
         res += buffer.writeData(sender.data)
@@ -201,5 +209,37 @@ public struct AccountTransactionHeader {
         h.energyAmount = e
         h.expiry = x
         return h
+    }
+}
+
+public struct CredentialDeploymentPayload {
+    public var credential: UnsignedCredentialDeploymentInfo
+}
+
+public struct SignedCredentialDeploymentTransaction {
+    public var payload: CredentialDeploymentPayload
+    public var signatures: Signatures
+
+    public init(payload: CredentialDeploymentPayload, signatures: Signatures) {
+        self.payload = payload
+        self.signatures = signatures
+    }
+
+    public func serialize() throws -> SerializedSignedCredentialDeploymentTransaction {
+        SerializedSignedCredentialDeploymentTransaction(payload: Data()) // TODO: ...
+    }
+}
+
+public struct SerializedSignedCredentialDeploymentTransaction {
+    public var payload: Data
+
+    public init(payload: Data) {
+        self.payload = payload
+    }
+
+    func toGrpcType() -> Concordium_V2_CredentialDeployment {
+        var d = Concordium_V2_CredentialDeployment()
+        d.rawPayload = payload
+        return d
     }
 }

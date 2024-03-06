@@ -96,7 +96,7 @@ struct GrpcCli: AsyncParsableCommand {
     static var configuration = CommandConfiguration(
         abstract: "A CLI for demonstrating and testing use of the gRPC client of the SDK.",
         version: "1.0.0",
-        subcommands: [CryptographicParameters.self, Account.self, Wallet.self, LegacyWallet.self, IdentityProviders.self]
+        subcommands: [CryptographicParameters.self, Account.self, Wallet.self, LegacyWallet.self, IdentityProviders.self, AnonymityRevokers.self]
     )
 
     struct CryptographicParameters: AsyncParsableCommand {
@@ -231,7 +231,7 @@ struct GrpcCli: AsyncParsableCommand {
                     ).generateAccount(
                         credentials: [
                             .init(
-                                identity: IdentityCoordinates(providerIndex: walletCli.identityProviderIndex, index: walletCli.identityIndex),
+                                identity: .init(providerIndex: walletCli.identityProviderIndex, index: walletCli.identityIndex),
                                 counter: walletCli.credentialCounter
                             ),
                         ]
@@ -293,11 +293,13 @@ struct GrpcCli: AsyncParsableCommand {
                     let seed = try WalletSeed(hex: seedHex, network: walletCli.network.network)
 
                     print("Preparing identity issuance request.")
-                    let identityRequestGenerator = SeedBasedIdentityRequestGenerator(seed: seed)
+                    let identityRequestGenerator = SeedBasedIdentityRequestGenerator(
+                        seed: seed,
+                        globalContext: cryptoParams.toCryptoType()
+                    )
                     let reqJson = try identityRequestGenerator.createIssuanceRequestJson(
                         provider: ip.toSdkType(),
                         index: walletCli.identityIndex,
-                        cryptoParams: cryptoParams,
                         anonymityRevokerThreshold: anonymityRevokerThreshold
                     )
 
@@ -371,11 +373,13 @@ struct GrpcCli: AsyncParsableCommand {
                     let seed = try WalletSeed(hex: seedHex, network: walletCli.network.network)
 
                     print("Preparing identity recovery request.")
-                    let identityRequestGenerator = SeedBasedIdentityRequestGenerator(seed: seed)
+                    let identityRequestGenerator = SeedBasedIdentityRequestGenerator(
+                        seed: seed,
+                        globalContext: cryptoParams.toCryptoType()
+                    )
                     let reqJson = try identityRequestGenerator.createRecoveryRequestJson(
-                        provider: ip.toSdkType(),
+                        provider: ip.toSdkType().info,
                         index: walletCli.identityIndex,
-                        cryptoParams: cryptoParams,
                         time: Date.now
                     )
                     let urlGenerator = WalletIdentityRequestUrlGenerator(callbackUrl: nil)
@@ -451,6 +455,22 @@ struct GrpcCli: AsyncParsableCommand {
         func run() async throws {
             let endpoints = WalletProxyEndpoints(baseUrl: walletProxyOptions.baseUrl)
             let res = try await endpoints.getIdentityProviders.response(session: URLSession.shared)
+            print(res)
+        }
+    }
+
+    struct AnonymityRevokers: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "List all Anonymity Revokers."
+        )
+
+        @OptionGroup
+        var grpcCli: GrpcCli
+
+        func run() async throws {
+            let res = try await withGrpcClient(target: grpcCli.options.target) { client in
+                try await client.anonymityRevokers(block: .lastFinal)
+            }
             print(res)
         }
     }

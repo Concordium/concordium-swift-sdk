@@ -1,6 +1,6 @@
 import Foundation
 
-public enum WalletProxyClientError: Error {
+public enum WalletProxyEndpointError: Error {
     case cannotConstructUrl
 }
 
@@ -13,7 +13,7 @@ public class WalletProxyEndpoints {
 
     public var getIdentityProviders: HttpRequest<[IdentityProviderInfoJson]> {
         get throws {
-            try HttpRequest(url: URL(string: "/v1/ip_info", relativeTo: baseUrl) ?! WalletProxyClientError.cannotConstructUrl)
+            try HttpRequest(url: URL(string: "/v1/ip_info", relativeTo: baseUrl) ?! WalletProxyEndpointError.cannotConstructUrl)
         }
     }
 }
@@ -62,12 +62,14 @@ public struct IdentityProviderInfoJson: Decodable {
         }
     }
 
-    public func toSdkType() -> IdentityProvider {
-        IdentityProvider(
-            identity: ipInfo.ipIdentity,
-            description: ipInfo.ipDescription,
-            verifyKey: ipInfo.ipVerifyKey,
-            cdiVerifyKey: ipInfo.ipCdiVerifyKey,
+    public func toSdkType() -> IdentityProviderExt {
+        IdentityProviderExt(
+            info: IdentityProvider(
+                identity: ipInfo.ipIdentity,
+                description: ipInfo.ipDescription,
+                verifyKey: ipInfo.ipVerifyKey,
+                cdiVerifyKey: ipInfo.ipCdiVerifyKey
+            ),
             metadata: metadata,
             arsInfos: arsInfos.mapValues { $0.toSdkType() }
         )

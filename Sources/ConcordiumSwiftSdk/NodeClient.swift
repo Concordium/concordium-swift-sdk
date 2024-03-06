@@ -7,6 +7,11 @@ import NIOPosix
 public protocol NodeClientProtocol {
     func cryptographicParameters(block: BlockIdentifier) async throws -> CryptographicParameters
 
+    // Identity providers fetched from gRPC don't have metadata nor AR info.
+//    func identityProviders(block: BlockIdentifier) async throws -> [IdentityProvider]
+
+    func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevoker]
+
     func nextAccountSequenceNumber(address: AccountAddress) async throws -> NextAccountSequenceNumber
 
     func info(account: AccountIdentifier, block: BlockIdentifier) async throws -> AccountInfo
@@ -31,6 +36,16 @@ public class GrpcNodeClient: NodeClientProtocol {
         return .fromGrpcType(res)
     }
 
+    public func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevoker] {
+        let req = block.toGrpcType()
+        var res: [AnonymityRevoker] = []
+        let call = grpc.getAnonymityRevokers(req) {
+            res.append(.fromGrpcType($0))
+        }
+        _ = try await call.status.get()
+        return res
+    }
+
     public func nextAccountSequenceNumber(address: AccountAddress) async throws -> NextAccountSequenceNumber {
         var req = Concordium_V2_AccountAddress()
         req.value = address.data
@@ -48,7 +63,14 @@ public class GrpcNodeClient: NodeClientProtocol {
 
     public func send(transaction: SignedAccountTransaction) async throws -> TransactionHash {
         var req = Concordium_V2_SendBlockItemRequest()
-        req.accountTransaction = try transaction.toGrpcType()
+        req.accountTransaction = transaction.toGrpcType()
+        let res = try await grpc.sendBlockItem(req).response.get()
+        return res.value
+    }
+
+    public func send(credentialDeploymentTransaction: SerializedSignedCredentialDeploymentTransaction) async throws -> TransactionHash {
+        var req = Concordium_V2_SendBlockItemRequest()
+        req.credentialDeployment = credentialDeploymentTransaction.toGrpcType()
         let res = try await grpc.sendBlockItem(req).response.get()
         return res.value
     }

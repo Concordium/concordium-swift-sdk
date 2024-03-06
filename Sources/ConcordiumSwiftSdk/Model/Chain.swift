@@ -14,7 +14,7 @@ public struct CryptographicParameters {
         )
     }
 
-    func toCryptoType() -> GlobalContext {
+    public func toCryptoType() -> GlobalContext {
         GlobalContext(
             onChainCommitmentKey: onChainCommitmentKey,
             bulletproofGenerators: bulletproofGenerators,

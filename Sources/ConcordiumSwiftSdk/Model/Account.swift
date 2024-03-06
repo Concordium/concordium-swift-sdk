@@ -148,7 +148,7 @@ public struct ReleaseSchedule {
 }
 
 /// Index of an account key that is to be used.
-public typealias KeyIndex = UInt32
+public typealias KeyIndex = UInt8
 
 /// The minimum number of signatures on a credential that need to sign any transaction coming from an associated account.
 ///
@@ -156,7 +156,7 @@ public typealias KeyIndex = UInt32
 /// and each credential has one or more public keys, and its own threshold for how many of those credential's keys need to sign any valid message.
 ///
 /// See ``AccountThreshold`` for the threshold of how many credentials need to sign a valid message.
-public typealias SignatureThreshold = UInt32
+public typealias SignatureThreshold = UInt8
 
 /// A succinct identifier of an identity provider on the chain.
 /// In credential deployments and other interactions with the chain, this is used to identify which identity provider is meant.
@@ -191,16 +191,22 @@ public enum VerifyKey {
 
 /// Public credential keys currently on the account, together with the threshold
 /// needed for a valid signature on a transaction.
+/// - Note: There's a similar type in `ConcordiumWalletCrypto` which stores the keys as strings instead of bytes.
 public struct CredentialPublicKeys {
     public var keys: [KeyIndex: VerifyKey]
     public var threshold: SignatureThreshold
 
     static func fromGrpcType(_ grpc: Concordium_V2_CredentialPublicKeys) throws -> CredentialPublicKeys {
         try CredentialPublicKeys(
-            keys: grpc.keys.mapValues {
-                try VerifyKey.fromGrpcType($0) ?! GrpcError.requiredValueMissing("credential public keys")
-            },
-            threshold: grpc.threshold.value
+            keys: Dictionary(
+                uniqueKeysWithValues: grpc.keys.map { idx, key in
+                    try (
+                        KeyIndex(exactly: idx) ?! GrpcError.valueOutOfBounds,
+                        VerifyKey.fromGrpcType(key) ?! GrpcError.requiredValueMissing("credential public keys")
+                    )
+                }
+            ),
+            threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GrpcError.valueOutOfBounds
         )
     }
 }

@@ -12,6 +12,10 @@ public struct Description: Decodable {
         self.url = url
     }
 
+    static func fromGrpcType(_ grpc: Concordium_V2_Description) -> Description {
+        .init(name: grpc.name, description: grpc.description_p, url: grpc.url)
+    }
+
     /// Fields used in Wallet Proxy response.
     enum CodingKeys: CodingKey {
         case name
@@ -74,8 +78,22 @@ public struct IdentityProvider {
     public var description: Description
     public var verifyKey: String
     public var cdiVerifyKey: String
-    public var metadata: Metadata
-    public var arsInfos: [UInt32: AnonymityRevoker]
+
+    public init(identity: UInt32, description: Description, verifyKey: String, cdiVerifyKey: String) {
+        self.identity = identity
+        self.description = description
+        self.verifyKey = verifyKey
+        self.cdiVerifyKey = cdiVerifyKey
+    }
+
+    static func fromGrpcType(grpc: Concordium_V2_IpInfo) -> IdentityProvider {
+        IdentityProvider(
+            identity: grpc.identity.value,
+            description: .fromGrpcType(grpc.description_p),
+            verifyKey: grpc.verifyKey.value.hex,
+            cdiVerifyKey: grpc.cdiVerifyKey.value.hex
+        )
+    }
 
     func toCryptoType() -> IdentityProviderInfo {
         IdentityProviderInfo(
@@ -87,10 +105,37 @@ public struct IdentityProvider {
     }
 }
 
+// TODO: Very unsure whether this is the right solution...
+public struct IdentityProviderExt {
+    public var info: IdentityProvider
+    public var metadata: Metadata
+    public var arsInfos: [UInt32: AnonymityRevoker]
+
+    public init(info: IdentityProvider, metadata: Metadata, arsInfos: [UInt32: AnonymityRevoker]) {
+        self.info = info
+        self.metadata = metadata
+        self.arsInfos = arsInfos
+    }
+}
+
 public struct AnonymityRevoker {
     public var identity: UInt32
     public var description: Description
     public var publicKey: String
+
+    public init(identity: UInt32, description: Description, publicKey: String) {
+        self.identity = identity
+        self.description = description
+        self.publicKey = publicKey
+    }
+
+    static func fromGrpcType(_ grpc: Concordium_V2_ArInfo) -> AnonymityRevoker {
+        AnonymityRevoker(
+            identity: grpc.identity.value,
+            description: .fromGrpcType(grpc.description_p),
+            publicKey: grpc.publicKey.value.hex
+        )
+    }
 
     func toCryptoType() -> AnonymityRevokerInfo {
         AnonymityRevokerInfo(
@@ -219,4 +264,23 @@ public struct IdentityIssuanceResponseJson: Decodable {
             self.identityObject = identityObject
         }
     }
+}
+
+public enum AttributeType: UInt8, CustomStringConvertible, CaseIterable {
+    case firstName = 0
+    case lastName = 1
+    case sex = 2
+    case dob = 3
+    case countryOfResidence = 4
+    case nationality = 5
+    case idDocType = 6
+    case idDocNo = 7
+    case idDocIssuer = 8
+    case idDocIssuedAt = 9
+    case idDocExpiresAt = 10
+    case nationalIdNo = 11
+    case taxIdNo = 12
+    case lei = 13
+
+    public var description: String { "\(self)" }
 }

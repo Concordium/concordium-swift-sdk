@@ -198,38 +198,84 @@ public class SeedBasedAccountGenerator {
 
 public class SeedBasedIdentityRequestGenerator {
     private let seed: WalletSeed
+    private let globalContext: GlobalContext
 
-    public init(seed: WalletSeed) {
+    public init(seed: WalletSeed, globalContext: GlobalContext) {
         self.seed = seed
+        self.globalContext = globalContext
     }
 
-    public func createRecoveryRequestJson(provider: IdentityProvider, index: UInt32, cryptoParams: CryptographicParameters, time: Date) throws -> String {
+    public func createRecoveryRequestJson(provider: IdentityProvider, index: UInt32, time: Date) throws -> String {
         let identityCoordinates = IdentityCoordinates(providerIndex: provider.identity, index: index)
         let credSec = try seed.credSec(of: identityCoordinates)
         return try createIdentityRecoveryRequestJson(
-            input: IdentityRecoveryRequestInput(
+            params: IdentityRecoveryRequestParameters(
                 ipInfo: provider.toCryptoType(),
-                globalContext: cryptoParams.toCryptoType(),
+                globalContext: globalContext,
                 timestamp: UInt64(time.timeIntervalSince1970),
                 idCredSec: credSec
             )
         )
     }
 
-    public func createIssuanceRequestJson(provider: IdentityProvider, index: UInt32, cryptoParams: CryptographicParameters, anonymityRevokerThreshold: UInt8) throws -> String {
-        let identityCoordinates = IdentityCoordinates(providerIndex: provider.identity, index: index)
+    public func createIssuanceRequestJson(provider: IdentityProviderExt, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> String {
+        let identityCoordinates = IdentityCoordinates(providerIndex: provider.info.identity, index: index)
         let prfKey = try seed.prfKey(of: identityCoordinates)
         let credSec = try seed.credSec(of: identityCoordinates)
         let blindingRandomness = try seed.signatureBlindingRandomness(of: identityCoordinates)
-        return try createIdentityRequestJson(
-            input: IdentityObjectRequestInput(
-                ipInfo: provider.toCryptoType(),
-                globalContext: cryptoParams.toCryptoType(),
+        return try createIdentityIssuanceRequestJson(
+            params: IdentityIssuanceRequestParameters(
+                ipInfo: provider.info.toCryptoType(),
+                globalContext: globalContext,
                 arsInfos: provider.arsInfos.mapValues { $0.toCryptoType() },
                 arThreshold: anonymityRevokerThreshold,
                 prfKey: prfKey,
                 idCredSec: credSec,
                 blindingRandomness: blindingRandomness
+            )
+        )
+    }
+}
+
+public class SeedBasedCredentialGenerator {
+    private let seed: WalletSeed
+    private let globalContext: GlobalContext
+
+    public init(seed: WalletSeed, globalContext: GlobalContext) {
+        self.seed = seed
+        self.globalContext = globalContext
+    }
+
+    public func createCredential(
+        coordinates: AccountCredentialCoordinates, // TODO: shouldn't identity know its own indexes?
+        identity: IdentityObject,
+        provider: IdentityProviderExt,
+        revealedAttributes: [UInt8] = [],
+        threshold: SignatureThreshold
+    ) throws -> UnsignedCredentialResult {
+        // TODO: Must you provide exactly the IP's ARs?
+        let anonymityRevokers = provider.arsInfos.mapValues { $0.toCryptoType() }
+        let idCredSec = try seed.credSec(of: coordinates.identity)
+        let prfKey = try seed.prfKey(of: coordinates.identity)
+        let blindingRandomness = try seed.signatureBlindingRandomness(of: coordinates.identity)
+        let attributeRandomness = try AttributeType.allCases.reduce(into: [:]) { res, attr in
+            res["\(attr)"] = try seed.attributeCommitmentRandomness(of: coordinates, attribute: attr.rawValue)
+        }
+        let key = try [KeyIndex(0): seed.publicKey(of: coordinates)]
+        let credentialPublicKeys = ConcordiumWalletCrypto.CredentialPublicKeys(keys: key, threshold: threshold)
+        return try createUnsignedCredential(
+            params: UnsignedCredentialParameters(
+                ipInfo: provider.info.toCryptoType(),
+                globalContext: globalContext,
+                arsInfos: anonymityRevokers,
+                idObject: identity,
+                revealedAttributes: revealedAttributes,
+                credNumber: coordinates.counter,
+                idCredSec: idCredSec,
+                prfKey: prfKey,
+                blindingRandomness: blindingRandomness,
+                attributeRandomness: attributeRandomness,
+                credentialPublicKeys: credentialPublicKeys
             )
         )
     }
