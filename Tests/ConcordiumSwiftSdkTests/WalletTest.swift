@@ -7,8 +7,8 @@ final class WalletTest: XCTestCase {
     let TESTNET_COMMITMENT_KEY = "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac"
 
     func testSimpleTransfer() throws {
-        let seed = WalletSeed(hex: TEST_SEED, network: .testnet)
-        let gen = SeedBasedAccountGenerator(seed: seed, commitmentKey: TESTNET_COMMITMENT_KEY)
+        let seed = WalletSeed(seedHex: TEST_SEED, network: .testnet)
+        let gen = SeedBasedAccountGenerator(seed: seed, commitmentKeyHex: TESTNET_COMMITMENT_KEY)
         let account1 = try gen.generateAccount(
             credentials: [AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0)]
         )
@@ -34,7 +34,7 @@ final class WalletTest: XCTestCase {
         let signature = signaturesCred0[0]!
         let account1PublicKey = try Curve25519.Signing.PublicKey(
             rawRepresentation: Data(
-                hex: seed.publicKey(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0))
+                hex: seed.publicKeyHex(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0))
             )
         )
         XCTAssertTrue(account1PublicKey.isValidSignature(signature, for: transactionHash))

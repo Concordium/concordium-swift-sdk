@@ -11,15 +11,15 @@ public class Wallet {
     private let accountGenerator: SeedBasedAccountGenerator // for now we only support this one scheme
     private let identityRequestGenerator: SeedBasedIdentityRequestGenerator // for now we only support this one scheme
     private let identityRequestUrlGenerator: WalletIdentityRequestUrlGenerator
-    private let seedBasedCredentialGenerator: SeedBasedCredentialGenerator
+    private let accountCredentialGenerator: SeedBasedAccountCredentialGenerator
 
     // TODO: Take identity providers/anonymity revokers (or wrap all this into some identity manager).
     public init(seed: WalletSeed, cryptoParams: CryptographicParameters, accounts: WalletAccountRepositoryProtocol, identityIssuanceCallback: URL) {
         self.accounts = accounts
-        accountGenerator = SeedBasedAccountGenerator(seed: seed, commitmentKey: cryptoParams.onChainCommitmentKey)
+        accountGenerator = SeedBasedAccountGenerator(seed: seed, commitmentKeyHex: cryptoParams.onChainCommitmentKeyHex)
         identityRequestGenerator = SeedBasedIdentityRequestGenerator(seed: seed, globalContext: cryptoParams)
         identityRequestUrlGenerator = WalletIdentityRequestUrlGenerator(callbackUrl: identityIssuanceCallback)
-        seedBasedCredentialGenerator = SeedBasedCredentialGenerator(seed: seed, globalContext: cryptoParams)
+        accountCredentialGenerator = SeedBasedAccountCredentialGenerator(seed: seed, globalContext: cryptoParams)
     }
 
     // TODO: Add method to be called to insert final identity.
@@ -27,7 +27,7 @@ public class Wallet {
     public func prepareCreateIdentity(provider: IdentityProvider, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> URL {
         try identityRequestUrlGenerator.issuanceUrlToOpen(
             baseUrl: provider.metadata.issuanceStart,
-            requestJson: identityRequestGenerator.createIssuanceRequestJson(
+            requestJson: identityRequestGenerator.issuanceRequestJson(
                 provider: provider,
                 index: index,
                 anonymityRevokerThreshold: anonymityRevokerThreshold
@@ -38,7 +38,7 @@ public class Wallet {
     public func prepareRecoverIdentity(provider: IdentityProvider, index: UInt32) throws -> IdentityRecoveryRequest {
         try identityRequestUrlGenerator.recoveryRequest(
             baseUrl: provider.metadata.recoveryStart,
-            requestJson: identityRequestGenerator.createRecoveryRequestJson(
+            requestJson: identityRequestGenerator.recoveryRequestJson(
                 provider: provider.info,
                 index: index,
                 time: Date() // FUTURE: Use 'Date.now' once platform restrictions allow it
@@ -47,8 +47,8 @@ public class Wallet {
     }
 
     // TODO: Stored identity object should know its own index?
-    public func prepareCreateAccount(identity: IdentityObject, identityIndex: UInt32, provider: IdentityProvider, index: UInt8) throws -> CredentialDeploymentPayload {
-        let cred = try seedBasedCredentialGenerator.createCredential(
+    public func prepareCreateAccount(identity: IdentityObject, identityIndex: UInt32, provider: IdentityProvider, index: UInt8) throws -> AccountCredentialDeploymentPayload {
+        let res = try accountCredentialGenerator.accountCredentialDeployment(
             coordinates: AccountCredentialCoordinates(
                 identity: IdentityCoordinates(providerIndex: provider.info.identity, index: identityIndex),
                 counter: index
@@ -57,7 +57,7 @@ public class Wallet {
             provider: provider,
             threshold: 1
         )
-        return CredentialDeploymentPayload(credential: cred.unsignedCdi)
+        return .init(deployment: res)
     }
 
 //    public func createAccount(credential: AccountCredentialCoordinates) throws -> AccountAddress {

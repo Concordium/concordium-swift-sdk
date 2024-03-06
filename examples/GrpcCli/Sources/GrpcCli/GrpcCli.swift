@@ -226,8 +226,8 @@ struct GrpcCli: AsyncParsableCommand {
                 let hash = try await withGrpcClient(target: grpcCli.options.target) { client in
                     let cryptoParams = try await client.cryptographicParameters(block: BlockIdentifier.lastFinal)
                     let account = try SeedBasedAccountGenerator(
-                        seed: WalletSeed(hex: seedHex, network: walletCli.network.network),
-                        commitmentKey: cryptoParams.onChainCommitmentKey
+                        seed: WalletSeed(seedHex: seedHex, network: walletCli.network.network),
+                        commitmentKeyHex: cryptoParams.onChainCommitmentKeyHex
                     ).generateAccount(
                         credentials: [
                             .init(
@@ -290,14 +290,14 @@ struct GrpcCli: AsyncParsableCommand {
                     }
 
                     let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
-                    let seed = try WalletSeed(hex: seedHex, network: walletCli.network.network)
+                    let seed = try WalletSeed(seedHex: seedHex, network: walletCli.network.network)
 
                     print("Preparing identity issuance request.")
                     let identityRequestGenerator = SeedBasedIdentityRequestGenerator(
                         seed: seed,
                         globalContext: cryptoParams
                     )
-                    let reqJson = try identityRequestGenerator.createIssuanceRequestJson(
+                    let reqJson = try identityRequestGenerator.issuanceRequestJson(
                         provider: ip.toSdkType(),
                         index: walletCli.identityIndex,
                         anonymityRevokerThreshold: anonymityRevokerThreshold
@@ -370,14 +370,14 @@ struct GrpcCli: AsyncParsableCommand {
                     }
 
                     let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
-                    let seed = try WalletSeed(hex: seedHex, network: walletCli.network.network)
+                    let seed = try WalletSeed(seedHex: seedHex, network: walletCli.network.network)
 
                     print("Preparing identity recovery request.")
                     let identityRequestGenerator = SeedBasedIdentityRequestGenerator(
                         seed: seed,
                         globalContext: cryptoParams
                     )
-                    let reqJson = try identityRequestGenerator.createRecoveryRequestJson(
+                    let reqJson = try identityRequestGenerator.recoveryRequestJson(
                         provider: ip.toSdkType().info,
                         index: walletCli.identityIndex,
                         time: Date.now

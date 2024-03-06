@@ -51,8 +51,8 @@ public struct IdentityProviderJson: Decodable {
             .init(
                 identity: ipIdentity,
                 description: ipDescription,
-                verifyKey: ipVerifyKey,
-                cdiVerifyKey: ipCdiVerifyKey
+                verifyKeyHex: ipVerifyKey,
+                cdiVerifyKeyHex: ipCdiVerifyKey
             )
         }
     }
@@ -66,7 +66,7 @@ public struct IdentityProviderJson: Decodable {
             .init(
                 identity: arIdentity,
                 description: arDescription,
-                publicKey: arPublicKey
+                publicKeyHex: arPublicKey
             )
         }
     }

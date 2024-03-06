@@ -2,7 +2,70 @@ import Base58Check
 import ConcordiumWalletCrypto
 import Foundation
 
-// TODO: Use types from `ConcordiumWalletCrypto` where it makes sense.
+/// Index of an account in the account table.
+/// These are assigned sequentially in the order of creation of accounts.
+/// The first account has index 0.
+public typealias AccountIndex = UInt64
+
+/// Internal short ID of the baker/validator.
+public typealias BakerId = AccountIndex
+
+/// Index of the credential that is to be used.
+public typealias CredentialIndex = UInt32
+
+/// Index of an account key that is to be used.
+public typealias KeyIndex = UInt8
+
+/// A registration ID of a credential.
+/// This ID is generated from the user's PRF key and a sequential counter.
+/// ``CredentialRegistrationId``'s generated from the same PRF key,
+/// but different counter values cannot easily be linked together.
+public typealias CredentialRegistrationId = Data // 48 bytes
+
+/// A succinct identifier of an identity provider on the chain.
+/// In credential deployments and other interactions with the chain, this is used to identify which identity provider is meant.
+public typealias IpIdentity = UInt32
+
+/// Identity of an anonymity revoker on the chain.
+/// This defines their evaluation point for secret sharing, and thus it cannot be 0.
+public typealias ArIdentity = UInt32
+
+/// The minimum number of signatures on a credential that need to sign any transaction coming from an associated account.
+public typealias SignatureThreshold = UInt8
+
+/// Revealing threshold, i.e., degree of the polynomial + 1.
+/// This value must always be at least 1.
+public typealias RevocationThreshold = UInt8
+
+/// Amount of uCCD.
+public typealias MicroCcdAmount = UInt64
+
+public typealias EncryptedAmount = Data
+
+public typealias AggregatedAmount = Data // in Rust/Java SDK this is (EncryptedAmount<ArCurve>, UInt32)
+
+/// An ed25519-like public key.
+/// This has a bit stricter requirements than the signature scheme public keys.
+/// In particular, points of small order are not allowed.
+/// This is checked during serialization.
+public typealias VrfPublicKey = String
+
+public typealias Ed25519PublicKey = String
+
+/// A Public Key is a point on the second curve of the pairing.
+public typealias BlsPublicKey = String
+
+/// Elgamal public key.
+public typealias ElgamalPublicKey = String
+
+/// A public key that corresponds to ``BakerElectionSignKey``.
+public typealias BakerElectionVerifyKey = VrfPublicKey
+
+/// A public key that corresponds to ``BakerSignatureSignKey``.
+public typealias BakerSignatureVerifyKey = Ed25519PublicKey
+
+/// Public key corresponding to ``BakerAggregationSignKey``.
+public typealias BakerAggregationVerifyKey = BlsPublicKey
 
 /// An account identifier used in queries.
 public enum AccountIdentifier {
@@ -82,33 +145,6 @@ public struct NextAccountSequenceNumber {
     }
 }
 
-/// Index of the account in the account table.
-/// These are assigned sequentially in the order of creation of accounts.
-/// The first account has index 0.
-public typealias AccountIndex = UInt64
-
-/// A registration ID of a credential.
-/// This ID is generated from the user's PRF key and a sequential counter.
-/// ``CredentialRegistrationId``'s generated from the same PRF key,
-/// but different counter values cannot easily be linked together.
-public typealias CredentialRegistrationId = Data // 48 bytes
-
-/// Amount of uCCD.
-public typealias MicroCcdAmount = UInt64
-
-/// Index of the credential that is to be used.
-public typealias CredentialIndex = UInt32
-
-/// Curve used by the anonymity revoker.
-public typealias ArCurve = Data
-
-/// Concrete attribute values.
-/// All currently supported attributes are string values.
-public typealias AttributeKind = Data
-
-/// The minimum number of credentials that need to sign any transaction coming from an associated account.
-public typealias AccountThreshold = UInt32
-
 func dateFromUnixTimeMillis(_ timestamp: UInt64) -> Date {
     Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000)
 }
@@ -146,43 +182,8 @@ public struct ReleaseSchedule {
     }
 }
 
-/// Index of an account key that is to be used.
-public typealias KeyIndex = UInt8
-
-/// The minimum number of signatures on a credential that need to sign any transaction coming from an associated account.
-///
-/// Accounts on Concordium consist of one or more credentials,
-/// and each credential has one or more public keys, and its own threshold for how many of those credential's keys need to sign any valid message.
-///
-/// See ``AccountThreshold`` for the threshold of how many credentials need to sign a valid message.
-public typealias SignatureThreshold = UInt8
-
-/// A succinct identifier of an identity provider on the chain.
-/// In credential deployments and other interactions with the chain, this is used to identify which identity provider is meant.
-public typealias IpIdentity = UInt32
-
-/// An abstraction of an attribute.
-/// In the ID library internals the only thing we care about attributes is that they can be encoded as field elements.
-/// The meaning of attributes is then assigned at the outer layers when the library is used.
-public typealias AttributeTag = UInt32 // in Java SDK this is an public enum of 14 predefined values
-
-/// Revealing threshold, i.e., degree of the polynomial + 1.
-/// This value must always be at least 1.
-public typealias Threshold = UInt32
-
-/// Identity of the anonymity revoker on the chain.
-/// This defines their evaluation point for secret sharing, and thus it cannot be 0.
-public typealias ArIdentity = UInt32
-
-/// Public AKA verification key for a given scheme. Currently only ed25519 is supported.
-public typealias VerifyKey = String
-
 enum VerifyKeyGrpc {
     case Ed25519VerifyKey(String)
-
-//    init?(grpc: Concordium_V2_AccountVerifyKey) {
-//            return nil
-//    }
 
     static func fromGrpcType(_ grpc: Concordium_V2_AccountVerifyKey) -> Self? {
         switch grpc.key {
@@ -203,8 +204,9 @@ enum VerifyKeyGrpc {
 
 /// Public credential keys currently on the account, together with the threshold
 /// needed for a valid signature on a transaction.
-public typealias CredentialPublicKeys = ConcordiumWalletCrypto.CredentialPublicKeys
-extension CredentialPublicKeys {
+public typealias CredentialPublicKeysHex = ConcordiumWalletCrypto.CredentialPublicKeysHex
+
+extension CredentialPublicKeysHex {
     static func fromGrpcType(_ grpc: Concordium_V2_CredentialPublicKeys) throws -> Self {
         try .init(
             keys: grpc.keys.reduce(into: [:]) { res, e in
@@ -215,153 +217,119 @@ extension CredentialPublicKeys {
             threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GrpcError.valueOutOfBounds
         )
     }
-}
 
-/// YearMonth in Gregorian calendar.
-/// The year is in Gregorian calendar and months are numbered from 1, i.e.,
-/// 1 is January, ..., 12 is December.
-/// Year must be a 4 digit year, i.e., between 1000 and 9999.
-public struct YearMonth {
-    public var year: UInt32
-    public var month: UInt32
-
-    static func fromGrpcType(_ grpc: Concordium_V2_YearMonth) -> Self {
-        .init(year: grpc.year, month: grpc.month)
-    }
-
-    /// The string encoding (YYYYMM) used in JSON formats over FFI.
-    public var ffiJsonString: String {
-        String(format: "%04d%02d", year, month)
-    }
-}
-
-/// A policy is (currently) revealed values of attributes that are part of the
-/// identity object. Policies are part of credentials.
-public struct Policy {
-    public var validTo: YearMonth
-    public var createdAt: YearMonth
-    /// Revealed attributes.
-    public var policyVec: [AttributeTag: AttributeKind]
-
-    static func fromGrpcType(_ grpc: Concordium_V2_Policy) -> Self {
+    func toWithSchemeType() -> CredentialPublicKeysWithScheme {
         .init(
-            validTo: .fromGrpcType(grpc.validTo),
-            createdAt: .fromGrpcType(grpc.createdAt),
-            policyVec: grpc.attributes
+            keys: keys.mapValues {
+                VerifyKeyWithScheme(schemeId: "Ed25519", keyHex: $0)
+            },
+            threshold: threshold
         )
     }
 }
 
-/// Values in initial credential deployment.
-public struct InitialCredentialDeploymentValues {
-    /// Account this credential belongs to.
-    public var credAccount: CredentialPublicKeys
+func yearMonthString(year: UInt32, month: UInt32) -> String {
+    String(format: "%04d%02d", year, month)
+}
+
+/// A policy is (currently) revealed values of attributes that are part of the identity object.
+/// Policies are part of credentials.
+public typealias Policy = ConcordiumWalletCrypto.Policy
+
+extension Policy {
+    static func fromGrpcType(_ grpc: Concordium_V2_Policy) throws -> Self {
+        try .init(
+            createdAtYearMonth: yearMonthString(year: grpc.createdAt.year, month: grpc.createdAt.month),
+            validToYearMonth: yearMonthString(year: grpc.validTo.year, month: grpc.validTo.month),
+            revealedAttributes: grpc.attributes.reduce(into: [:]) { res, e in
+                let attr = try UInt8(exactly: e.key)
+                    .flatMap { AttributeType(rawValue: $0) }
+                    ?! GrpcError.valueOutOfBounds
+                res["\(attr)"] = String(data: e.value, encoding: .utf8) // TODO: correct to treat attribute value as UTF-8?
+            }
+        )
+    }
+}
+
+public struct CredentialDeploymentValuesInitial {
+    /// Credential keys (i.e. account holder keys).
+    public var credentialPublicKeys: CredentialPublicKeysHex
     /// Credential registration id of the credential.
-    public var regId: ArCurve
+    public var credId: CredentialRegistrationId
     /// Identity of the identity provider who signed the identity object from which this credential is derived.
     public var ipIdentity: IpIdentity
     /// Policy of this credential object.
     public var policy: Policy
+
+    static func fromGrpcType(_ grpc: Concordium_V2_InitialCredentialValues) throws -> Self {
+        try .init(
+            credentialPublicKeys: .fromGrpcType(grpc.keys),
+            credId: grpc.credID.value,
+            ipIdentity: grpc.ipID.value,
+            policy: .fromGrpcType(grpc.policy)
+        )
+    }
 }
 
-/// Data relating to a single anonymity revoker sent by the account holder to the chain.
-/// Typically a vector of these will be sent to the chain.
-public typealias ChainArData<C> = Cipher<C>
+public typealias ChainArData = ConcordiumWalletCrypto.ChainArData
 
-/// Encrypted message.
-public typealias Cipher<C> = C // in Rust SDK this is split into two values that each implement the "Curve" trait
+extension ChainArData {
+    static func fromGrpcType(_ grpc: Concordium_V2_ChainArData) -> Self {
+        .init(endIdCredPubShareHex: grpc.encIDCredPubShare.hex)
+    }
+}
 
-/// Type of credential registration IDs.
-public typealias CredId<C> = C // 48 bytes (according to Java SDK)
-
-// TODO: Use `UnsignedCredentialDeploymentInfo` from crypto lib?
-/// Values (as opposed to proofs) in credential deployment.
-public struct CredentialDeploymentValues {
-    /// Credential keys (i.e. account holder keys).
-    public var credKeyInfo: CredentialPublicKeys
-    /// Credential registration id of the credential.
-    public var credId: CredId<ArCurve>
-    /// Identity of the identity provider who signed the identity object from which this credential is derived.
-    public var ipIdentity: IpIdentity
+public struct CredentialDeploymentValuesNormal {
+    public var initial: CredentialDeploymentValuesInitial
     /// Anonymity revocation threshold. Must be <= length of ar_data.
-    public var threshold: Threshold
+    public var revocationThreshold: RevocationThreshold
     /// Anonymity revocation data. List of anonymity revokers which can revoke identity.
     /// NB: The order is important since it is the same order as that signed by the identity provider,
     ///  and permuting the list will invalidate the signature from the identity provider.
-    public var arData: [ArIdentity: ChainArData<ArCurve>]
-    /// Policy of this credential object.
-    public var policy: Policy
+    public var arData: [ArIdentity: ChainArData]
+
+    static func fromGrpcType(_ grpc: Concordium_V2_NormalCredentialValues) throws -> Self {
+        try .init(
+            initial: CredentialDeploymentValuesInitial(
+                credentialPublicKeys: .fromGrpcType(grpc.keys),
+                credId: grpc.credID.value,
+                ipIdentity: grpc.ipID.value,
+                policy: .fromGrpcType(grpc.policy)
+            ),
+            revocationThreshold: SignatureThreshold(exactly: grpc.arThreshold.value) ?! GrpcError.valueOutOfBounds,
+            arData: grpc.arData.mapValues { .fromGrpcType($0) }
+        )
+    }
+
+    public func toCryptoType(proofs: Proofs) -> AccountCredentialDeployment {
+        .init(
+            arData: arData,
+            credIdHex: initial.credId.hex,
+            credentialPublicKeys: initial.credentialPublicKeys.toWithSchemeType(),
+            ipIdentity: initial.ipIdentity,
+            policy: initial.policy,
+            proofs: proofs,
+            revocationThreshold: revocationThreshold
+        )
+    }
 }
 
-/// A Commitment is a group element.
-public typealias PedersenCommitment<C> = C
-
-public struct CredentialDeploymentCommitments {
-    /// Commitment to the PRF key.
-    public var prf: PedersenCommitment<ArCurve>
-    /// Commitment to credential counter.
-    public var credCounter: PedersenCommitment<ArCurve>
-    /// Commitment to the max account number.
-    public var maxAccounts: PedersenCommitment<ArCurve>
-    /// List of commitments to the attributes that are not revealed.
-    /// For the purposes of checking signatures,
-    /// the commitments to those that are revealed as part of the policy are going to be computed by the verifier.
-    public var attributes: [AttributeTag: PedersenCommitment<ArCurve>]
-    /// Commitments to the coefficients of the polynomial
-    /// used to share `id_cred_sec`
-    /// `S + b1 X + b2 X^2...`
-    /// where `S` is `id_cred_sec`.
-    public var idCredSecSharingCoeff: [PedersenCommitment<ArCurve>]
-}
-
-/// Account credential with values and commitments, but without proofs.
-/// Serialization must match the serializaiton of `AccountCredential` in Haskell.
-public enum AccountCredentialWithoutProofs {
-    case initial(InitialCredentialDeploymentValues)
-    case normal(CredentialDeploymentValues, CredentialDeploymentCommitments)
+/// Account credential values without proofs.
+public enum AccountCredentialDeploymentValues {
+    case initial(CredentialDeploymentValuesInitial)
+    case normal(CredentialDeploymentValuesNormal)
 
     static func fromGrpcType(_ grpc: Concordium_V2_AccountCredential) throws -> Self? {
         switch grpc.credentialValues {
         case nil:
             return nil
         case let .initial(v):
-            return try .initial(
-                .init(
-                    credAccount: .fromGrpcType(v.keys),
-                    regId: v.credID.value,
-                    ipIdentity: v.ipID.value,
-                    policy: .fromGrpcType(v.policy)
-                )
-            )
+            return try .initial(.fromGrpcType(v))
         case let .normal(v):
-            return try .normal(
-                .init(
-                    credKeyInfo: .fromGrpcType(v.keys),
-                    credId: v.credID.value,
-                    ipIdentity: v.ipID.value,
-                    threshold: v.arThreshold.value,
-                    arData: v.arData.mapValues {
-                        $0.encIDCredPubShare
-                    },
-                    policy: .fromGrpcType(v.policy)
-                ),
-                .init(
-                    prf: v.commitments.prf.value,
-                    credCounter: v.commitments.credCounter.value,
-                    maxAccounts: v.commitments.maxAccounts.value,
-                    attributes: v.commitments.attributes.mapValues {
-                        $0.value
-                    },
-                    idCredSecSharingCoeff: v.commitments.idCredSecSharingCoeff.map(\.value)
-                )
-            )
+            return try .normal(.fromGrpcType(v))
         }
     }
 }
-
-public typealias EncryptedAmount<C> = C
-
-public typealias AggregatedAmount = Data // in Rust/Java SDK this is (EncryptedAmount<ArCurve>, UInt32)
 
 /// The state of the encrypted balance of an account.
 public struct AccountEncryptedAmount {
@@ -373,7 +341,7 @@ public struct AccountEncryptedAmount {
     /// - encrypted amounts that are transferred from public balance
     ///
     /// When a transfer is made all of these must always be used.
-    public var selfAmount: EncryptedAmount<ArCurve>
+    public var selfAmount: EncryptedAmount
     /// Starting index for incoming encrypted amounts.
     /// If an aggregated amount is present then this index is associated with such an amount
     /// and the list of incoming encrypted amounts starts at the index `start_index + 1`.
@@ -386,7 +354,7 @@ public struct AccountEncryptedAmount {
     /// They are assumed to be numbered sequentially.
     /// The length of this list is bounded by the maximum number of incoming amounts on the accounts, which is currently 32.
     /// After that aggregation kicks in.
-    public var incomingAmounts: [EncryptedAmount<ArCurve>]
+    public var incomingAmounts: [EncryptedAmount]
 
     static func fromGrpcType(_ grpc: Concordium_V2_EncryptedBalance) -> Self {
         .init(
@@ -397,29 +365,6 @@ public struct AccountEncryptedAmount {
         )
     }
 }
-
-/// An ed25519-like public key.
-/// This has a bit stricter requirements than the signature scheme public keys.
-/// In particular, points of small order are not allowed.
-/// This is checked during serialization.
-public typealias VrfPublicKey = String
-
-public typealias Ed25519PublicKey = String
-
-/// A Public Key is a point on the second curve of the pairing.
-public typealias BlsPublicKey = String
-
-/// A public key that corresponds to ``BakerElectionSignKey``.
-public typealias BakerElectionVerifyKey = VrfPublicKey
-
-/// A public key that corresponds to ``BakerSignatureSignKey``.
-public typealias BakerSignatureVerifyKey = Ed25519PublicKey
-
-/// Public key corresponding to ``BakerAggregationSignKey``.
-public typealias BakerAggregationVerifyKey = BlsPublicKey
-
-/// Internal short ID of the baker/validator.
-public typealias BakerId = AccountIndex
 
 /// Information about a baker/validator.
 public struct BakerInfo {
@@ -580,9 +525,6 @@ public enum AccountStakingInfo {
     }
 }
 
-/// Elgamal public key.
-public typealias ElgamalPublicKey = String
-
 /// Information about the account at a particular point in time on chain.
 public struct AccountInfo {
     /// Next sequence number to be used for transactions signed from this account.
@@ -595,9 +537,9 @@ public struct AccountInfo {
     /// This includes public keys that can sign for the given credentials,
     /// as well as any revealed attributes.
     /// This map always contains a credential with index 0.
-    public var credentials: [CredentialIndex: Versioned<AccountCredentialWithoutProofs>]
+    public var credentials: [CredentialIndex: Versioned<AccountCredentialDeploymentValues>]
     /// Lower bound on how many credentials must sign any given transaction from this account.
-    public var threshold: AccountThreshold
+    public var threshold: SignatureThreshold
     /// The encrypted balance of the account.
     public var encryptedAmount: AccountEncryptedAmount
     /// The public key for sending encrypted balances to the account.
@@ -627,7 +569,7 @@ public struct AccountInfo {
                     value: .fromGrpcType($0) ?! GrpcError.requiredValueMissing("credential values")
                 )
             },
-            threshold: grpc.threshold.value,
+            threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GrpcError.valueOutOfBounds,
             encryptedAmount: .fromGrpcType(grpc.encryptedBalance),
             encryptionKey: grpc.encryptionKey.value.hex,
             index: grpc.index.value,

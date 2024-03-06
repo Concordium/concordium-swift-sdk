@@ -27,8 +27,8 @@ extension IdentityProviderInfo {
         .init(
             identity: grpc.identity.value,
             description: .fromGrpcType(grpc.description_p),
-            verifyKey: grpc.verifyKey.value.hex,
-            cdiVerifyKey: grpc.cdiVerifyKey.value.hex
+            verifyKeyHex: grpc.verifyKey.value.hex,
+            cdiVerifyKeyHex: grpc.cdiVerifyKey.value.hex
         )
     }
 }
@@ -38,7 +38,7 @@ extension AnonymityRevokerInfo {
         .init(
             identity: grpc.identity.value,
             description: .fromGrpcType(grpc.description_p),
-            publicKey: grpc.publicKey.value.hex
+            publicKeyHex: grpc.publicKey.value.hex
         )
     }
 }
@@ -55,7 +55,7 @@ extension IdentityObject: Decodable {
         try self.init(
             preIdentityObject: container.decode(PreIdentityObject.self, forKey: .preIdentityObject),
             attributeList: container.decode(AttributeList.self, forKey: .attributeList),
-            signature: container.decode(String.self, forKey: .signature)
+            signatureHex: container.decode(String.self, forKey: .signature)
         )
     }
 }
@@ -74,7 +74,7 @@ extension PreIdentityObject: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
-            idCredPub: container.decode(String.self, forKey: .idCredPub),
+            idCredPubHex: container.decode(String.self, forKey: .idCredPub),
             ipArData: container.decode([String: ArData].self, forKey: .ipArData).reduce(into: [:]) { res, e in
                 guard let key = UInt32(e.key) else {
                     throw DecodingError.dataCorruptedError(forKey: .ipArData, in: container, debugDescription: "invalid key index")
@@ -82,10 +82,10 @@ extension PreIdentityObject: Decodable {
                 res[key] = e.value
             },
             choiceArData: container.decode(ChoiceArParameters.self, forKey: .choiceArData),
-            idCredSecCommitment: container.decode(String.self, forKey: .idCredSecCommitment),
-            prfKeyCommitmentWithIp: container.decode(String.self, forKey: .prfKeyCommitmentWithIP),
-            prfKeySharingCoeffCommitments: container.decode([String].self, forKey: .prfKeySharingCoeffCommitments),
-            proofsOfKnowledge: container.decode(String.self, forKey: .proofsOfKnowledge)
+            idCredSecCommitmentHex: container.decode(String.self, forKey: .idCredSecCommitment),
+            prfKeyCommitmentWithIpHex: container.decode(String.self, forKey: .prfKeyCommitmentWithIP),
+            prfKeySharingCoeffCommitmentsHex: container.decode([String].self, forKey: .prfKeySharingCoeffCommitments),
+            proofsOfKnowledgeHex: container.decode(String.self, forKey: .proofsOfKnowledge)
         )
     }
 }
@@ -99,8 +99,8 @@ extension ArData: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
-            encPrfKeyShare: container.decode(String.self, forKey: .encPrfKeyShare),
-            proofComEncEq: container.decode(String.self, forKey: .proofComEncEq)
+            encPrfKeyShareHex: container.decode(String.self, forKey: .encPrfKeyShare),
+            proofComEncEqHex: container.decode(String.self, forKey: .proofComEncEq)
         )
     }
 }
@@ -131,8 +131,8 @@ extension AttributeList: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
-            validTo: container.decode(String.self, forKey: .validTo),
-            createdAt: container.decode(String.self, forKey: .createdAt),
+            validToYearMonth: container.decode(String.self, forKey: .validTo),
+            createdAtYearMonth: container.decode(String.self, forKey: .createdAt),
             maxAccounts: container.decode(UInt8.self, forKey: .maxAccounts),
             chosenAttributes: container.decode([String: String].self, forKey: .chosenAttributes)
         )
@@ -229,6 +229,22 @@ public enum AttributeType: UInt8, CustomStringConvertible, CaseIterable {
     case taxIdNo = 12
     case lei = 13
 
-    // Make it explicit that the case names are significant.
-    public var description: String { "\(self)" }
+    public var description: String {
+        switch self {
+        case .firstName: return "firstName"
+        case .lastName: return "lastName"
+        case .sex: return "sex"
+        case .dob: return "dob"
+        case .countryOfResidence: return "countryOfResidence"
+        case .nationality: return "nationality"
+        case .idDocType: return "idDocType"
+        case .idDocNo: return "idDocNo"
+        case .idDocIssuer: return "idDocIssuer"
+        case .idDocIssuedAt: return "idDocIssuedAt"
+        case .idDocExpiresAt: return "idDocExpiresAt"
+        case .nationalIdNo: return "nationalIdNo"
+        case .taxIdNo: return "taxIdNo"
+        case .lei: return "lei"
+        }
+    }
 }

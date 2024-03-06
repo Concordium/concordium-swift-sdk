@@ -212,25 +212,25 @@ public struct AccountTransactionHeader {
     }
 }
 
-public struct CredentialDeploymentPayload {
-    public var credential: UnsignedCredentialDeploymentInfo
+public struct AccountCredentialDeploymentPayload {
+    public var deployment: AccountCredentialDeployment
 }
 
-public struct SignedCredentialDeploymentTransaction {
-    public var payload: CredentialDeploymentPayload
+public struct SignedAccountCredentialDeploymentTransaction {
+    public var payload: AccountCredentialDeploymentPayload
     public var signatures: Signatures
 
-    public init(payload: CredentialDeploymentPayload, signatures: Signatures) {
+    public init(payload: AccountCredentialDeploymentPayload, signatures: Signatures) {
         self.payload = payload
         self.signatures = signatures
     }
 
-    public func serialize() throws -> SerializedSignedCredentialDeploymentTransaction {
-        SerializedSignedCredentialDeploymentTransaction(payload: Data()) // TODO: ...
+    public func serialize() throws -> SerializedSignedAccountCredentialDeploymentTransaction {
+        SerializedSignedAccountCredentialDeploymentTransaction(payload: Data()) // TODO: ...
     }
 }
 
-public struct SerializedSignedCredentialDeploymentTransaction {
+public struct SerializedSignedAccountCredentialDeploymentTransaction {
     public var payload: Data
 
     public init(payload: Data) {
