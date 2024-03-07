@@ -17,7 +17,7 @@ public protocol NodeClientProtocol {
 
     func send(transaction: SignedAccountTransaction) async throws -> TransactionHash
 
-    func send(credentialDeployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash
+    func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash
 }
 
 public class GrpcNodeClient: NodeClientProtocol {
@@ -79,9 +79,9 @@ public class GrpcNodeClient: NodeClientProtocol {
         return res.value
     }
 
-    public func send(credentialDeployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash {
+    public func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash {
         var req = Concordium_V2_SendBlockItemRequest()
-        req.credentialDeployment = credentialDeployment.toGrpcType()
+        req.credentialDeployment = deployment.toGrpcType()
         let res = try await grpc.sendBlockItem(req).response.get()
         return res.value
     }

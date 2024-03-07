@@ -301,7 +301,7 @@ public struct CredentialDeploymentValuesNormal {
         )
     }
 
-    public func toCryptoType(proofs: Proofs) -> AccountCredentialDeployment {
+    public func toCryptoType(proofs: Proofs) -> AccountCredential {
         .init(
             arData: arData,
             credIdHex: initial.credId.hex,

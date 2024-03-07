@@ -4,15 +4,19 @@ import XCTest
 
 final class WalletTest: XCTestCase {
     let TEST_SEED = "efa5e27326f8fa0902e647b52449bf335b7b605adc387015ec903f41d95080eb71361cbc7fb78721dcd4f3926a337340aa1406df83332c44c1cdcfe100603860"
-    let TESTNET_COMMITMENT_KEY = "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac"
+    let TESTNET_CONTEXT = CryptographicParameters(
+        onChainCommitmentKeyHex: "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac",
+        bulletproofGeneratorsHex: "", // not used in this test
+        genesisString: "" // not used in this test
+    )
 
     func testSimpleTransfer() throws {
         let seed = WalletSeed(seedHex: TEST_SEED, network: .testnet)
-        let gen = SeedBasedAccountGenerator(seed: seed, commitmentKeyHex: TESTNET_COMMITMENT_KEY)
-        let account1 = try gen.generateAccount(
+        let gen = SeedBasedAccountDerivation(seed: seed, globalContext: TESTNET_CONTEXT)
+        let account1 = try gen.deriveAccount(
             credentials: [AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0)]
         )
-        let account2 = try gen.generateAccount(
+        let account2 = try gen.deriveAccount(
             credentials: [AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 1)]
         )
 

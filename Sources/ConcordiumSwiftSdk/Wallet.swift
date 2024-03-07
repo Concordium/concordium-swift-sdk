@@ -8,26 +8,24 @@ public enum WalletError: Error {
 
 public class Wallet {
     private let accounts: WalletAccountRepositoryProtocol // TODO: add identity repo
-    private let accountGenerator: SeedBasedAccountGenerator // for now we only support this one scheme
-    private let identityRequestGenerator: SeedBasedIdentityRequestGenerator // for now we only support this one scheme
-    private let identityRequestUrlGenerator: WalletIdentityRequestUrlGenerator
-    private let accountCredentialGenerator: SeedBasedAccountCredentialGenerator
+    private let accountDerivation: SeedBasedAccountDerivation // for now we only support the seed based scheme
+    private let identityRequestBuilder: SeedBasedIdentityRequestBuilder // for now we only support the seed based scheme
+    private let identityRequestUrlBuilder: WalletIdentityRequestUrlBuilder
 
     // TODO: Take identity providers/anonymity revokers (or wrap all this into some identity manager).
     public init(seed: WalletSeed, cryptoParams: CryptographicParameters, accounts: WalletAccountRepositoryProtocol, identityIssuanceCallback: URL) {
         self.accounts = accounts
-        accountGenerator = SeedBasedAccountGenerator(seed: seed, commitmentKeyHex: cryptoParams.onChainCommitmentKeyHex)
-        identityRequestGenerator = SeedBasedIdentityRequestGenerator(seed: seed, globalContext: cryptoParams)
-        identityRequestUrlGenerator = WalletIdentityRequestUrlGenerator(callbackUrl: identityIssuanceCallback)
-        accountCredentialGenerator = SeedBasedAccountCredentialGenerator(seed: seed, globalContext: cryptoParams)
+        accountDerivation = SeedBasedAccountDerivation(seed: seed, globalContext: cryptoParams)
+        identityRequestBuilder = SeedBasedIdentityRequestBuilder(seed: seed, globalContext: cryptoParams)
+        identityRequestUrlBuilder = WalletIdentityRequestUrlBuilder(callbackUrl: identityIssuanceCallback)
     }
 
     // TODO: Add method to be called to insert final identity.
     // TODO: Add abstraction for opening the URL and then intercepting the callback.
     public func prepareCreateIdentity(provider: IdentityProvider, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> URL {
-        try identityRequestUrlGenerator.issuanceUrlToOpen(
+        try identityRequestUrlBuilder.issuanceUrlToOpen(
             baseUrl: provider.metadata.issuanceStart,
-            requestJson: identityRequestGenerator.issuanceRequestJson(
+            requestJson: identityRequestBuilder.issuanceRequestJson(
                 provider: provider,
                 index: index,
                 anonymityRevokerThreshold: anonymityRevokerThreshold
@@ -35,10 +33,10 @@ public class Wallet {
         )
     }
 
-    public func prepareRecoverIdentity(provider: IdentityProvider, index: UInt32) throws -> IdentityRecoveryRequest {
-        try identityRequestUrlGenerator.recoveryRequest(
+    public func prepareRecoverIdentity(provider: IdentityProvider, index: UInt32) throws -> IdentityRecoverRequest {
+        try identityRequestUrlBuilder.recoveryRequestToFetch(
             baseUrl: provider.metadata.recoveryStart,
-            requestJson: identityRequestGenerator.recoveryRequestJson(
+            requestJson: identityRequestBuilder.recoveryRequestJson(
                 provider: provider.info,
                 index: index,
                 time: Date() // FUTURE: Use 'Date.now' once platform restrictions allow it
@@ -52,14 +50,14 @@ public class Wallet {
             identity: IdentityCoordinates(providerIndex: provider.info.identity, index: identityIndex),
             counter: index
         )
-        let deployment = try accountCredentialGenerator.accountCredentialDeployment(
+        let deployment = try accountDerivation.deriveCredential(
             coordinates: coordinates,
             identity: identity,
             provider: provider,
             threshold: 1
         )
-        let account = try accountGenerator.generateAccount(credentials: [coordinates])
-        return .init(deployment: deployment, account: account)
+        let account = try accountDerivation.deriveAccount(credentials: [coordinates])
+        return .init(credential: deployment, account: account)
     }
 
     public func withAccount<T>(of address: AccountAddress, _ f: (WalletAccount) throws -> T) throws -> T {
@@ -85,10 +83,10 @@ public class Wallet {
 
 // TODO: If WalletAccount knew its credentials then this type wouldn't be needed.
 public struct WalletAccountCredential {
-    var deployment: AccountCredentialDeployment
+    var credential: AccountCredential
     var account: WalletAccount
 
     public func sign(expiry: TransactionTime) throws -> SignedAccountCredentialDeployment {
-        try account.keys.sign(credentialDeployment: deployment, expiry: expiry)
+        try account.keys.sign(deployment: credential, expiry: expiry)
     }
 }

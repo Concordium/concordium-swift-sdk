@@ -195,16 +195,39 @@ public struct Metadata: Decodable {
     }
 }
 
-public struct IdentityIssuanceResponseJson: Decodable {
-    public var status: String
-    public var token: Token
+public enum IdentityIssuanceResult {
+    case pending(detail: String?)
+    case failure(detail: String?)
+    case success(identity: Versioned<IdentityObject>, detail: String?)
+}
 
-    public init(status: String, token: Token) {
-        self.status = status
-        self.token = token
+public struct IdentityIssuanceResponse: Decodable {
+    public var result: IdentityIssuanceResult
+
+    enum CodingKeys: CodingKey {
+        case status
+        case token
+        case detail
     }
 
-    public struct Token: Decodable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let status = try container.decode(String.self, forKey: .status)
+        let detail = try container.decodeIfPresent(String.self, forKey: .detail)
+        switch status {
+        case "done":
+            let token = try container.decode(TokenJson.self, forKey: .token)
+            result = .success(identity: token.identityObject, detail: detail)
+        case "error":
+            result = .failure(detail: detail)
+        case "pending":
+            result = .pending(detail: detail)
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .status, in: container, debugDescription: "unexpected status '\(status)'")
+        }
+    }
+
+    struct TokenJson: Decodable {
         public var identityObject: Versioned<IdentityObject>
 
         public init(identityObject: Versioned<IdentityObject>) {
@@ -212,6 +235,25 @@ public struct IdentityIssuanceResponseJson: Decodable {
         }
     }
 }
+
+// public struct IdentityIssuedResponseJson: Decodable {
+//    public var status: String
+//    public var token: Token?
+//    public var details: String?
+//
+//    public init(status: String, token: Token) {
+//        self.status = status
+//        self.token = token
+//    }
+//
+//    public struct Token: Decodable {
+//        public var identityObject: Versioned<IdentityObject>
+//
+//        public init(identityObject: Versioned<IdentityObject>) {
+//            self.identityObject = identityObject
+//        }
+//    }
+// }
 
 public enum AttributeType: UInt8, CustomStringConvertible, CaseIterable {
     case firstName = 0
@@ -249,4 +291,4 @@ public enum AttributeType: UInt8, CustomStringConvertible, CaseIterable {
     }
 }
 
-public typealias AccountCredentialDeployment = ConcordiumWalletCrypto.AccountCredentialDeployment
+public typealias AccountCredential = ConcordiumWalletCrypto.AccountCredential

@@ -7,10 +7,10 @@ public enum WalletIdentityError: Error {
     case invalidUtf8
 }
 
-// public typealias IdentityIssuanceRequest = HttpRequest<IdentityIssuanceResponseJson>
-public typealias IdentityRecoveryRequest = HttpRequest<Versioned<IdentityObject>>
+public typealias IdentityIssuanceRequest = HttpRequest<IdentityIssuanceResponse>
+public typealias IdentityRecoverRequest = HttpRequest<Versioned<IdentityObject>>
 
-public class WalletIdentityRequestUrlGenerator {
+public class WalletIdentityRequestUrlBuilder {
     private let callbackUrl: URL? // In Android example wallet: concordiumwallet-example://identity-issuer/callback
 
     // If callback URL is nil then only recovery is supported.
@@ -22,7 +22,6 @@ public class WalletIdentityRequestUrlGenerator {
     // To be decoded as `IdentityIssuanceResponse`.
     public func issuanceUrlToOpen(baseUrl: URL, requestJson: String) throws -> URL {
         try issuanceUrl(baseUrl: baseUrl, requestJson: requestJson) ?! WalletIdentityError.cannotConstructIssuanceUrl
-//        return HttpRequest(url: url)
     }
 
     private func issuanceUrl(baseUrl: URL, requestJson: String) throws -> URL? {
@@ -42,7 +41,7 @@ public class WalletIdentityRequestUrlGenerator {
         return components.url
     }
 
-    public func recoveryRequest(baseUrl: URL, requestJson: String) throws -> IdentityRecoveryRequest {
+    public func recoveryRequestToFetch(baseUrl: URL, requestJson: String) throws -> IdentityRecoverRequest {
         let url = try recoveryRequestUrl(baseUrl: baseUrl, requestJson: requestJson) ?! WalletIdentityError.cannotConstructRecoveryUrl
         return HttpRequest(url: url)
     }

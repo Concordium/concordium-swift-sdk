@@ -7,6 +7,7 @@ import NIOPosix
 
 enum GrpcCliError: Error {
     case unsupportedNetwork(String)
+    case invalidIdentityUrl
 }
 
 struct GrpcOptions: ParsableArguments {
@@ -225,10 +226,10 @@ struct GrpcCli: AsyncParsableCommand {
                 print("Fetching crypto parameters (for commitment key).")
                 let hash = try await withGrpcClient(target: grpcCli.options.target) { client in
                     let cryptoParams = try await client.cryptographicParameters(block: BlockIdentifier.lastFinal)
-                    let account = try SeedBasedAccountGenerator(
+                    let account = try SeedBasedAccountDerivation(
                         seed: WalletSeed(seedHex: seedHex, network: walletCli.network.network),
-                        commitmentKeyHex: cryptoParams.onChainCommitmentKeyHex
-                    ).generateAccount(
+                        globalContext: cryptoParams
+                    ).deriveAccount(
                         credentials: [
                             .init(
                                 identity: .init(providerIndex: walletCli.identityProviderIndex, index: walletCli.identityIndex),
@@ -292,54 +293,53 @@ struct GrpcCli: AsyncParsableCommand {
                     let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
                     let seed = try WalletSeed(seedHex: seedHex, network: walletCli.network.network)
 
-                    print("Preparing identity issuance request.")
-                    let identityRequestGenerator = SeedBasedIdentityRequestGenerator(
+                    let callbackServerPort = 3453 // would ideally want the OS to just pick an available port
+                    let identityReq = try issueIdentity(
                         seed: seed,
-                        globalContext: cryptoParams
-                    )
-                    let reqJson = try identityRequestGenerator.issuanceRequestJson(
-                        provider: ip.toSdkType(),
-                        index: walletCli.identityIndex,
+                        cryptoParams: cryptoParams,
+                        identityProvider: ip.toSdkType(),
+                        identityIndex: walletCli.identityIndex,
                         anonymityRevokerThreshold: anonymityRevokerThreshold
-                    )
+                    ) { issuanceStartUrl, requestJson in
+                        print("Starting temporary server waiting for identity verification to start.")
+                        let res = try withIdentityIssuanceCallbackServer(port: callbackServerPort) { _, callbackUrl in
+                            func openURL(url: URL) {
+                                let p = Process()
+                                p.launchPath = "/usr/bin/open"
+                                p.arguments = [url.absoluteString]
+                                p.launch()
+                                p.waitUntilExit()
+                            }
 
-                    print("Starting server to listen for callback.")
-                    let identityUrlRes = try withIdentityIssuanceCallbackServer(port: 3453) { port in
-                        let identityIssuanceCallbackUrl = URL(string: "http://127.0.0.1:\(port)/callback")!
-                        let urlGenerator = WalletIdentityRequestUrlGenerator(callbackUrl: identityIssuanceCallbackUrl)
-                        let reqUrl = try urlGenerator.issuanceUrlToOpen(baseUrl: ip.metadata.issuanceStart, requestJson: reqJson)
-                        openURL(url: reqUrl)
-                    }
-                    guard let identityUrlRes else {
-                        print("Invalid response.")
-                        return
-                    }
-
-                    var identityUrl: String!
-                    switch identityUrlRes {
-                    case let .failure(err):
-                        print("Cannot create identity: \(String(describing: err))")
-                        return
-                    case let .success(url):
-                        identityUrl = url
+                            let urlBuilder = WalletIdentityRequestUrlBuilder(callbackUrl: callbackUrl)
+                            let url = try urlBuilder.issuanceUrlToOpen(baseUrl: issuanceStartUrl, requestJson: requestJson)
+                            openURL(url: url)
+                        }
+                        print("Shutting down temporary server.")
+                        return try res.get()
                     }
 
-                    let identityReq = HttpRequest<IdentityIssuanceResponseJson>(url: URL(string: identityUrl)!)
-                    let identityRes = try await identityReq.response(session: URLSession.shared)
-                    guard identityRes.status == "done" else {
-                        print("Unexpected identity creation status code: \(identityRes.status)")
-                        return
+                    func fetchIdentityIssuance(request: IdentityIssuanceRequest) async throws -> IdentityIssuanceResult {
+                        var delaySecs: UInt64 = 1
+                        while true {
+                            print("Attempting to fetch identity.")
+                            try await Task.sleep(nanoseconds: delaySecs * 1_000_000_000)
+                            let res = try await request.response(session: URLSession.shared).result
+                            if case let .pending(detail) = res {
+                                delaySecs = min(delaySecs * 2, 10) // exponential backoff
+                                var msg = ""
+                                if let detail, !detail.isEmpty {
+                                    msg = " (\"\(detail)\")"
+                                }
+                                print("Verification pending\(msg). Retrying in \(delaySecs) s.")
+                                continue
+                            }
+                            return res
+                        }
                     }
-                    let identity = identityRes.token.identityObject
+
+                    let identity = try await fetchIdentityIssuance(request: identityReq)
                     print(identity)
-                }
-
-                func openURL(url: URL) {
-                    let p = Process()
-                    p.launchPath = "/usr/bin/open"
-                    p.arguments = [url.absoluteString]
-                    p.launch()
-                    p.waitUntilExit()
                 }
             }
 
@@ -373,7 +373,7 @@ struct GrpcCli: AsyncParsableCommand {
                     let seed = try WalletSeed(seedHex: seedHex, network: walletCli.network.network)
 
                     print("Preparing identity recovery request.")
-                    let req = try identityRecoveryRequest(
+                    let req = try prepareRecoverIdentity(
                         seed: seed,
                         cryptoParams: cryptoParams,
                         identityProvider: ip.toSdkType(),
@@ -422,7 +422,7 @@ struct GrpcCli: AsyncParsableCommand {
                     let seed = try WalletSeed(seedHex: seedHex, network: walletCli.network.network)
                     print("Preparing identity recovery request.")
                     let identityProvider = ip.toSdkType()
-                    let req = try identityRecoveryRequest(
+                    let req = try prepareRecoverIdentity(
                         seed: seed,
                         cryptoParams: cryptoParams,
                         identityProvider: identityProvider,
@@ -436,23 +436,22 @@ struct GrpcCli: AsyncParsableCommand {
                         counter: credentialCounter
                     )
                     print("Deriving credential deployment.")
-                    let accountCredentialGenerator = SeedBasedAccountCredentialGenerator(seed: seed, globalContext: cryptoParams)
-                    let deployment = try accountCredentialGenerator.accountCredentialDeployment(
+                    let accountDerivation = SeedBasedAccountDerivation(seed: seed, globalContext: cryptoParams)
+                    let credential = try accountDerivation.deriveCredential(
                         coordinates: coordinates,
                         identity: identity.value,
                         provider: identityProvider,
                         threshold: 1
                     )
                     print("Deriving account.")
-                    let accountGenerator = SeedBasedAccountGenerator(seed: seed, commitmentKeyHex: cryptoParams.onChainCommitmentKeyHex)
-                    let account = try accountGenerator.generateAccount(credentials: [coordinates])
+                    let account = try accountDerivation.deriveAccount(credentials: [coordinates])
                     print("Signing credential deployment.")
-                    let signedTx = try account.keys.sign(credentialDeployment: deployment, expiry: expiry)
+                    let signedTx = try account.keys.sign(deployment: credential, expiry: expiry)
                     print("Serializing credential deployment.")
                     let serializedTx = try signedTx.serialize()
                     print("Sending credential deployment.")
                     let res = try await withGrpcClient(target: grpcCli.options.target) { client in
-                        try await client.send(credentialDeployment: serializedTx)
+                        try await client.send(deployment: serializedTx)
                     }
                     print(res)
                 }
@@ -566,18 +565,51 @@ func findIdentityProvider(endpoints: WalletProxyEndpoints, index: UInt32) async 
     return res.first { $0.ipInfo.ipIdentity == index } // TODO: correct way to match index?
 }
 
-func identityRecoveryRequest(seed: WalletSeed, cryptoParams: CryptographicParameters, identityProvider: IdentityProvider, identityIndex: UInt32) throws -> IdentityRecoveryRequest {
-    let identityRequestGenerator = SeedBasedIdentityRequestGenerator(
+func issueIdentity(
+    seed: WalletSeed,
+    cryptoParams: CryptographicParameters,
+    identityProvider: IdentityProvider,
+    identityIndex: UInt32,
+    anonymityRevokerThreshold: RevocationThreshold,
+    runIdentityProviderFlow: (_ issuanceStartUrl: URL, _ requestJson: String) throws -> URL
+) throws -> IdentityIssuanceRequest {
+    print("Preparing identity issuance request.")
+    let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
         seed: seed,
         globalContext: cryptoParams
     )
-    let reqJson = try identityRequestGenerator.recoveryRequestJson(
+    let reqJson = try identityRequestBuilder.issuanceRequestJson(
+        provider: identityProvider,
+        index: identityIndex,
+        anonymityRevokerThreshold: anonymityRevokerThreshold
+    )
+
+    print("Start identity provider issuance flow.")
+    let url = try runIdentityProviderFlow(identityProvider.metadata.issuanceStart, reqJson)
+    print("Identity verification process started!")
+    return .init(url: url)
+}
+
+func prepareRecoverIdentity(
+    seed: WalletSeed,
+    cryptoParams: CryptographicParameters,
+    identityProvider: IdentityProvider,
+    identityIndex: UInt32
+) throws -> IdentityRecoverRequest {
+    let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
+        seed: seed,
+        globalContext: cryptoParams
+    )
+    let reqJson = try identityRequestBuilder.recoveryRequestJson(
         provider: identityProvider.info,
         index: identityIndex,
         time: Date.now
     )
-    let urlGenerator = WalletIdentityRequestUrlGenerator(callbackUrl: nil)
-    return try urlGenerator.recoveryRequest(baseUrl: identityProvider.metadata.recoveryStart, requestJson: reqJson)
+    let urlBuilder = WalletIdentityRequestUrlBuilder(callbackUrl: nil)
+    return try urlBuilder.recoveryRequestToFetch(
+        baseUrl: identityProvider.metadata.recoveryStart,
+        requestJson: reqJson
+    )
 }
 
 func withGrpcClient<T>(target: ConnectionTarget, _ f: (NodeClientProtocol) async throws -> T) async throws -> T {
