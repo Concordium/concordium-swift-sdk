@@ -54,10 +54,20 @@ public extension AccountKeysProtocol {
     }
 
     func sign(transaction: PreparedAccountTransaction) throws -> SignedAccountTransaction {
-        try SignedAccountTransaction(
+        try .init(
             transaction: transaction,
             signatures: sign(message: transaction.serialize().hash)
         )
+    }
+
+    func sign(credentialDeployment: AccountCredentialDeployment, expiry: TransactionTime) throws -> SignedAccountCredentialDeployment {
+        try sign(credentialDeployment: credentialDeployment.prepareTransaction(expiry: expiry))
+    }
+
+    func sign(credentialDeployment: PreparedAccountCredentialDeployment) throws -> SignedAccountCredentialDeployment {
+        let signatures = try sign(message: credentialDeployment.hash)
+        let signaturesCred0 = signatures[0]! // account has exactly one credential (the one we're signing)
+        return .init(deployment: credentialDeployment, signatures: signaturesCred0)
     }
 }
 

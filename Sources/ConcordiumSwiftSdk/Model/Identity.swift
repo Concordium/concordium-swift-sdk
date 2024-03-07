@@ -248,3 +248,5 @@ public enum AttributeType: UInt8, CustomStringConvertible, CaseIterable {
         }
     }
 }
+
+public typealias AccountCredentialDeployment = ConcordiumWalletCrypto.AccountCredentialDeployment

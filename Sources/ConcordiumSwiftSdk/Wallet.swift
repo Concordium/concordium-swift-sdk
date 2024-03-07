@@ -47,28 +47,20 @@ public class Wallet {
     }
 
     // TODO: Stored identity object should know its own index?
-    public func prepareCreateAccount(identity: IdentityObject, identityIndex: UInt32, provider: IdentityProvider, index: UInt8) throws -> AccountCredentialDeploymentPayload {
-        let res = try accountCredentialGenerator.accountCredentialDeployment(
-            coordinates: AccountCredentialCoordinates(
-                identity: IdentityCoordinates(providerIndex: provider.info.identity, index: identityIndex),
-                counter: index
-            ),
+    public func prepareCreateAccount(identity: IdentityObject, identityIndex: UInt32, provider: IdentityProvider, index: UInt8) throws -> WalletAccountCredential {
+        let coordinates = AccountCredentialCoordinates(
+            identity: IdentityCoordinates(providerIndex: provider.info.identity, index: identityIndex),
+            counter: index
+        )
+        let deployment = try accountCredentialGenerator.accountCredentialDeployment(
+            coordinates: coordinates,
             identity: identity,
             provider: provider,
             threshold: 1
         )
-        return .init(deployment: res)
+        let account = try accountGenerator.generateAccount(credentials: [coordinates])
+        return .init(deployment: deployment, account: account)
     }
-
-//    public func createAccount(credential: AccountCredentialCoordinates) throws -> AccountAddress {
-//        let account = try accountGenerator.generateAccount(credentials: [credential])
-//        let address = account.address
-//        if try accounts.lookup(address) != nil {
-//            throw WalletError.accountAlreadyExists
-//        }
-//        try accounts.insert(account)
-//        return address
-//    }
 
     public func withAccount<T>(of address: AccountAddress, _ f: (WalletAccount) throws -> T) throws -> T {
         guard let account = try accounts.lookup(address) else {
@@ -88,5 +80,15 @@ public class Wallet {
         try withAccount(of: transaction.sender) {
             try $0.keys.sign(transaction: transaction, sequenceNumber: sequenceNumber, expiry: expiry)
         }
+    }
+}
+
+// TODO: If WalletAccount knew its credentials then this type wouldn't be needed.
+public struct WalletAccountCredential {
+    var deployment: AccountCredentialDeployment
+    var account: WalletAccount
+
+    public func sign(expiry: TransactionTime) throws -> SignedAccountCredentialDeployment {
+        try account.keys.sign(credentialDeployment: deployment, expiry: expiry)
     }
 }

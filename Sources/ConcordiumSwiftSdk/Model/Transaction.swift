@@ -33,7 +33,7 @@ public struct AccountTransaction {
             signatureCount: signatureCount
         ) + payload.cost
 
-        return PreparedAccountTransaction(header: header, serializedPayload: serializedPayload)
+        return .init(header: header, serializedPayload: serializedPayload)
     }
 }
 
@@ -52,7 +52,7 @@ public struct PreparedAccountTransaction {
         var buf = ByteBuffer()
         serializeInto(buffer: &buf)
         let data = Data(buffer: buf)
-        return SerializedAccountTransaction(data: data)
+        return .init(data: data)
     }
 }
 
@@ -68,7 +68,8 @@ public struct SerializedAccountTransaction {
     }
 }
 
-public typealias Signatures = [CredentialIndex: [KeyIndex: Data]]
+public typealias Signatures = [CredentialIndex: CredentialSignatures]
+public typealias CredentialSignatures = [KeyIndex: Data]
 
 public struct SignedAccountTransaction {
     public var transaction: PreparedAccountTransaction
@@ -212,34 +213,64 @@ public struct AccountTransactionHeader {
     }
 }
 
-public struct AccountCredentialDeploymentPayload {
-    public var deployment: AccountCredentialDeployment
+public extension AccountCredentialDeployment {
+    func prepareTransaction(expiry: UInt64) -> PreparedAccountCredentialDeployment {
+        .init(deployment: self, expiry: expiry)
+    }
 }
 
-public struct SignedAccountCredentialDeploymentTransaction {
-    public var payload: AccountCredentialDeploymentPayload
-    public var signatures: Signatures
+public struct PreparedAccountCredentialDeployment {
+    public var deployment: AccountCredentialDeployment
+    public var expiry: TransactionTime
 
-    public init(payload: AccountCredentialDeploymentPayload, signatures: Signatures) {
-        self.payload = payload
+    public var hash: Data {
+        get throws {
+            let hex = try accountCredentialDeploymentHashHex(
+                deployment: deployment,
+                expiryUnix: expiry
+            )
+            return try Data(hex: hex)
+        }
+    }
+}
+
+public struct SignedAccountCredentialDeployment {
+    public var deployment: PreparedAccountCredentialDeployment
+    public var signatures: CredentialSignatures
+
+    public init(deployment: PreparedAccountCredentialDeployment, signatures: CredentialSignatures) {
+        self.deployment = deployment
         self.signatures = signatures
     }
 
-    public func serialize() throws -> SerializedSignedAccountCredentialDeploymentTransaction {
-        SerializedSignedAccountCredentialDeploymentTransaction(payload: Data()) // TODO: ...
+    public func toCryptoType() -> ConcordiumWalletCrypto.SignedAccountCredentialDeployment {
+        .init(
+            deployment: deployment.deployment,
+            signaturesHex: signatures.mapValues { $0.hex }
+        )
+    }
+
+    public func serialize() throws -> SerializedSignedAccountCredentialDeployment {
+        let hex = try accountCredentialDeploymentSignedPayloadHex(deployment: toCryptoType())
+        return try .init(data: Data(hex: hex), expiry: deployment.expiry)
     }
 }
 
-public struct SerializedSignedAccountCredentialDeploymentTransaction {
-    public var payload: Data
+public struct SerializedSignedAccountCredentialDeployment {
+    public var data: Data
+    public var expiry: TransactionTime
 
-    public init(payload: Data) {
-        self.payload = payload
+    public init(data: Data, expiry: TransactionTime) {
+        self.data = data
+        self.expiry = expiry
     }
 
     func toGrpcType() -> Concordium_V2_CredentialDeployment {
+        var x = Concordium_V2_TransactionTime()
+        x.value = expiry
         var d = Concordium_V2_CredentialDeployment()
-        d.rawPayload = payload
+        d.messageExpiry = x
+        d.rawPayload = data
         return d
     }
 }
