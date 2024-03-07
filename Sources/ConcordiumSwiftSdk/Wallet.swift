@@ -7,17 +7,17 @@ public enum WalletError: Error {
 }
 
 public class Wallet {
-    private let accounts: WalletAccountRepositoryProtocol // TODO: add identity repo
+    private let accounts: AccountRepositoryProtocol // TODO: add identity repo
     private let accountDerivation: SeedBasedAccountDerivation // for now we only support the seed based scheme
     private let identityRequestBuilder: SeedBasedIdentityRequestBuilder // for now we only support the seed based scheme
-    private let identityRequestUrlBuilder: WalletIdentityRequestUrlBuilder
+    private let identityRequestUrlBuilder: IdentityRequestUrlBuilder
 
     // TODO: Take identity providers/anonymity revokers (or wrap all this into some identity manager).
-    public init(seed: WalletSeed, cryptoParams: CryptographicParameters, accounts: WalletAccountRepositoryProtocol, identityIssuanceCallback: URL) {
+    public init(seed: WalletSeed, cryptoParams: CryptographicParameters, accounts: AccountRepositoryProtocol, identityIssuanceCallback: URL) {
         self.accounts = accounts
         accountDerivation = SeedBasedAccountDerivation(seed: seed, globalContext: cryptoParams)
         identityRequestBuilder = SeedBasedIdentityRequestBuilder(seed: seed, globalContext: cryptoParams)
-        identityRequestUrlBuilder = WalletIdentityRequestUrlBuilder(callbackUrl: identityIssuanceCallback)
+        identityRequestUrlBuilder = IdentityRequestUrlBuilder(callbackUrl: identityIssuanceCallback)
     }
 
     // TODO: Add method to be called to insert final identity.
@@ -46,21 +46,21 @@ public class Wallet {
 
     // TODO: Stored identity object should know its own index?
     public func prepareCreateAccount(identity: IdentityObject, identityIndex: UInt32, provider: IdentityProvider, index: UInt8) throws -> WalletAccountCredential {
-        let coordinates = AccountCredentialCoordinates(
-            identity: IdentityCoordinates(providerIndex: provider.info.identity, index: identityIndex),
+        let idxs = AccountCredentialSeedIndexes(
+            identity: IdentitySeedIndexes(providerIndex: provider.info.identity, index: identityIndex),
             counter: index
         )
         let deployment = try accountDerivation.deriveCredential(
-            coordinates: coordinates,
+            seedIndexes: idxs,
             identity: identity,
             provider: provider,
             threshold: 1
         )
-        let account = try accountDerivation.deriveAccount(credentials: [coordinates])
+        let account = try accountDerivation.deriveAccount(credentials: [idxs])
         return .init(credential: deployment, account: account)
     }
 
-    public func withAccount<T>(of address: AccountAddress, _ f: (WalletAccount) throws -> T) throws -> T {
+    public func withAccount<T>(of address: AccountAddress, _ f: (Account) throws -> T) throws -> T {
         guard let account = try accounts.lookup(address) else {
             throw WalletError.accountNotFound
         }
@@ -84,7 +84,7 @@ public class Wallet {
 // TODO: If WalletAccount knew its credentials then this type wouldn't be needed.
 public struct WalletAccountCredential {
     var credential: AccountCredential
-    var account: WalletAccount
+    var account: Account
 
     public func sign(expiry: TransactionTime) throws -> SignedAccountCredentialDeployment {
         try account.keys.sign(deployment: credential, expiry: expiry)

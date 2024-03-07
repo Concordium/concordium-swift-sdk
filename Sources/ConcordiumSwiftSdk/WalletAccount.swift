@@ -1,7 +1,8 @@
 import CryptoKit
 import Foundation
 
-public class WalletAccount {
+// TODO: Include credentials?
+public class Account {
     public let address: AccountAddress
     public let keys: AccountKeysProtocol
 
@@ -11,24 +12,24 @@ public class WalletAccount {
     }
 }
 
-public protocol WalletAccountRepositoryProtocol {
-    func lookup(_ address: AccountAddress) throws -> WalletAccount?
-    func insert(_ account: WalletAccount) throws
+public protocol AccountRepositoryProtocol {
+    func lookup(_ address: AccountAddress) throws -> Account?
+    func insert(_ account: Account) throws
     func remove(_ address: AccountAddress) throws
 }
 
-public class WalletAccountStore: WalletAccountRepositoryProtocol {
-    private var dictionary: [AccountAddress: WalletAccount] = [:]
+public class AccountStore: AccountRepositoryProtocol {
+    private var dictionary: [AccountAddress: Account] = [:]
 
-    public init(_ accounts: [WalletAccount] = []) {
+    public init(_ accounts: [Account] = []) {
         accounts.forEach(insert)
     }
 
-    public func lookup(_ address: AccountAddress) -> WalletAccount? {
+    public func lookup(_ address: AccountAddress) -> Account? {
         dictionary[address]
     }
 
-    public func insert(_ account: WalletAccount) {
+    public func insert(_ account: Account) {
         dictionary[account.address] = account
     }
 

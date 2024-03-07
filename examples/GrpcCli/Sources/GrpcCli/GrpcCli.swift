@@ -311,7 +311,7 @@ struct GrpcCli: AsyncParsableCommand {
                                 p.waitUntilExit()
                             }
 
-                            let urlBuilder = WalletIdentityRequestUrlBuilder(callbackUrl: callbackUrl)
+                            let urlBuilder = IdentityRequestUrlBuilder(callbackUrl: callbackUrl)
                             let url = try urlBuilder.issuanceUrlToOpen(baseUrl: issuanceStartUrl, requestJson: requestJson)
                             openURL(url: url)
                         }
@@ -431,20 +431,20 @@ struct GrpcCli: AsyncParsableCommand {
                     print("Recovering identity.")
                     let identity = try await req.response(session: URLSession.shared)
 
-                    let coordinates = AccountCredentialCoordinates(
-                        identity: IdentityCoordinates(providerIndex: identityProviderIndex, index: identityIndex),
+                    let idxs = AccountCredentialSeedIndexes(
+                        identity: IdentitySeedIndexes(providerIndex: identityProviderIndex, index: identityIndex),
                         counter: credentialCounter
                     )
                     print("Deriving credential deployment.")
                     let accountDerivation = SeedBasedAccountDerivation(seed: seed, globalContext: cryptoParams)
                     let credential = try accountDerivation.deriveCredential(
-                        coordinates: coordinates,
+                        seedIndexes: idxs,
                         identity: identity.value,
                         provider: identityProvider,
                         threshold: 1
                     )
                     print("Deriving account.")
-                    let account = try accountDerivation.deriveAccount(credentials: [coordinates])
+                    let account = try accountDerivation.deriveAccount(credentials: [idxs])
                     print("Signing credential deployment.")
                     let signedTx = try account.keys.sign(deployment: credential, expiry: expiry)
                     print("Serializing credential deployment.")
@@ -497,7 +497,7 @@ struct GrpcCli: AsyncParsableCommand {
                 let export = try JSONDecoder().decode(LegacyWalletExportJson.self, from: exportContents)
                 let senderAddress = try walletCli.account.address
                 let receiverAddress = try receiver.address
-                guard let sender = try WalletAccountStore(export.toAccounts()).lookup(senderAddress) else {
+                guard let sender = try AccountStore(export.toSdkType()).lookup(senderAddress) else {
                     print("Account \(senderAddress) not found in export.")
                     return
                 }
@@ -543,7 +543,7 @@ struct GrpcCli: AsyncParsableCommand {
     }
 }
 
-func transfer(client: NodeClientProtocol, sender: WalletAccount, receiver: AccountAddress, amount: MicroCcdAmount, expiry: TransactionTime) async throws -> TransactionHash {
+func transfer(client: NodeClientProtocol, sender: Account, receiver: AccountAddress, amount: MicroCcdAmount, expiry: TransactionTime) async throws -> TransactionHash {
     print("Attempting to send \(amount) uCCD from account '\(sender.address.base58Check)' to '\(receiver.base58Check)'...")
     print("Resolving next sequence number of sender account.")
     let next = try await client.nextAccountSequenceNumber(address: sender.address)
@@ -605,7 +605,7 @@ func prepareRecoverIdentity(
         index: identityIndex,
         time: Date.now
     )
-    let urlBuilder = WalletIdentityRequestUrlBuilder(callbackUrl: nil)
+    let urlBuilder = IdentityRequestUrlBuilder(callbackUrl: nil)
     return try urlBuilder.recoveryRequestToFetch(
         baseUrl: identityProvider.metadata.recoveryStart,
         requestJson: reqJson

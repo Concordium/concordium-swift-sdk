@@ -45,10 +45,10 @@ public struct AccountKeysJson: Decodable {
 public struct LegacyWalletExportJson: Decodable {
     public var value: Value
 
-    public func toAccounts() throws -> [WalletAccount] {
+    public func toSdkType() throws -> [ConcordiumSwiftSdk.Account] {
         try value.identities.flatMap {
             try $0.accounts.map { account in
-                try WalletAccount(
+                try ConcordiumSwiftSdk.Account(
                     address: AccountAddress(base58Check: account.address),
                     keys: account.accountKeys.toSdkType()
                 )

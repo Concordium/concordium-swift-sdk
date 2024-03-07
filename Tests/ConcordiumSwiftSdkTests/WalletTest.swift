@@ -14,10 +14,10 @@ final class WalletTest: XCTestCase {
         let seed = WalletSeed(seedHex: TEST_SEED, network: .testnet)
         let gen = SeedBasedAccountDerivation(seed: seed, globalContext: TESTNET_CONTEXT)
         let account1 = try gen.deriveAccount(
-            credentials: [AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0)]
+            credentials: [AccountCredentialSeedIndexes(identity: IdentitySeedIndexes(providerIndex: 0, index: 0), counter: 0)]
         )
         let account2 = try gen.deriveAccount(
-            credentials: [AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 1)]
+            credentials: [AccountCredentialSeedIndexes(identity: IdentitySeedIndexes(providerIndex: 0, index: 0), counter: 1)]
         )
 
         // Construct transaction.
@@ -38,7 +38,7 @@ final class WalletTest: XCTestCase {
         let signature = signaturesCred0[0]!
         let account1PublicKey = try Curve25519.Signing.PublicKey(
             rawRepresentation: Data(
-                hex: seed.publicKeyHex(of: AccountCredentialCoordinates(identity: IdentityCoordinates(providerIndex: 0, index: 0), counter: 0))
+                hex: seed.publicKeyHex(of: AccountCredentialSeedIndexes(identity: IdentitySeedIndexes(providerIndex: 0, index: 0), counter: 0))
             )
         )
         XCTAssertTrue(account1PublicKey.isValidSignature(signature, for: transactionHash))
