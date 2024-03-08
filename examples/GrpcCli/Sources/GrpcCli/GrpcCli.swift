@@ -281,7 +281,7 @@ struct GrpcCli: AsyncParsableCommand {
                 func run() async throws {
                     let endpoints = WalletProxyEndpoints(baseUrl: identityCli.walletProxyOptions.baseUrl)
                     guard let ip = try await findIdentityProvider(endpoints: endpoints, index: walletCli.identityProviderIndex) else {
-                        print("Cannot find identity with index \(walletCli.identityProviderIndex).")
+                        print("Cannot find identity provider with index \(walletCli.identityProviderIndex).")
                         return
                     }
 
@@ -313,6 +313,7 @@ struct GrpcCli: AsyncParsableCommand {
 
                             let urlBuilder = IdentityRequestUrlBuilder(callbackUrl: callbackUrl)
                             let url = try urlBuilder.issuanceUrlToOpen(baseUrl: issuanceStartUrl, requestJson: requestJson)
+                            // TODO: Consider calling URL first to see if it succeeds (DTS staging returned an error directly without redirecting to the callback).
                             openURL(url: url)
                         }
                         print("Shutting down temporary server.")
