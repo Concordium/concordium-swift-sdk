@@ -40,8 +40,9 @@ func withIdentityIssuanceCallbackServer(port: Int, _ f: @escaping (_ port: Int, 
            .then(() => document.getElementById('content').style.display = 'block');
            </script>
            <body id="content" style="display:none">
-             <h1>Response from Identity Provider sent back to the application</h1>
-             You may close this window.
+             <h1>Identity Submitted for Verification</h1>
+             <p>The handler for observing the verification status has been forwarded to the application.</p>
+             <p>Please close this window.</p>
            </h1>
         """
         let r = Response(status: .ok, body: .init(string: body))
