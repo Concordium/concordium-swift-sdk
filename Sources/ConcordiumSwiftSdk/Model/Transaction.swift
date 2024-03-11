@@ -119,7 +119,7 @@ public enum AccountTransactionPayload {
     var cost: Energy {
         switch self {
         case .transfer:
-            300
+            return 300
         }
     }
 

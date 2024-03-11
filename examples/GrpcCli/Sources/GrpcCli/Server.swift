@@ -29,21 +29,33 @@ func withIdentityIssuanceCallbackServer(port: Int, _ f: @escaping (_ port: Int, 
     // Note that the used format allows us to treat it directly as form data.
     app.get("callback") { _ in
         let body = """
-           <script>
-           const fragment = window.location.hash;
-           const response = fragment.substring(1);
-           fetch('/callback', {
-             method: 'POST',
-             body: response,
-             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-           })
-           .then(() => document.getElementById('content').style.display = 'block');
-           </script>
-           <body id="content" style="display:none">
-             <h1>Identity Submitted for Verification</h1>
-             <p>The handler for observing the verification status has been forwarded to the application.</p>
-             <p>Please close this window.</p>
-           </h1>
+           <html>
+             <head>
+               <title>Callback forwarder</title>
+               <script>
+               const fragment = window.location.hash;
+               const response = fragment.substring(1);
+               fetch('/callback', {
+                 method: 'POST',
+                 body: response,
+                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+               })
+               .then(res => {
+                  if (!response.ok) {
+                    throw new Error(`HTTP: ${response.status}`);
+                  }
+                  return response.blob();
+               })
+               .catch(err => `Error: ${err}`),
+               .then(msg => document.getElementById('status').innerHTML = msg),
+               </script>
+             </head>
+             <body>
+               <h1>Identity Submitted for Verification</h1>
+               <p>Forwarding handler for checking the verification status to the CLI application.</p>
+               <p>Status: <span id="status"><i>Sending...</i></span></p>
+             </body>
+           </html>
         """
         let r = Response(status: .ok, body: .init(string: body))
         r.headers.contentType = .html
