@@ -293,7 +293,6 @@ struct GrpcCli: AsyncParsableCommand {
                     let seedHex = try Mnemonic.deterministicSeedString(from: walletCli.seedPhrase)
                     let seed = try WalletSeed(seedHex: seedHex, network: walletCli.network.network)
 
-                    let callbackServerPort = 3453 // would ideally want the OS to just pick an available port
                     let identityReq = try issueIdentity(
                         seed: seed,
                         cryptoParams: cryptoParams,
@@ -302,7 +301,7 @@ struct GrpcCli: AsyncParsableCommand {
                         anonymityRevokerThreshold: anonymityRevokerThreshold
                     ) { issuanceStartUrl, requestJson in
                         print("Starting temporary server waiting for identity verification to start.")
-                        let res = try withIdentityIssuanceCallbackServer(port: callbackServerPort) { _, callbackUrl in
+                        let res = try withIdentityIssuanceCallbackServer { callbackUrl in
                             func openURL(url: URL) {
                                 let p = Process()
                                 p.launchPath = "/usr/bin/open"

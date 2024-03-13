@@ -9,24 +9,25 @@ struct CallbackRequestParameters: Content {
 enum IdentityIssuanceError: Error {
     case identityProviderError(String)
     case invalidIdentityUrl(String)
+    case cannotResolveServerPort(String)
     case invalidCallbackRequest
 }
 
-func withIdentityIssuanceCallbackServer(port: Int, _ f: @escaping (_ port: Int, _ callbackUrl: URL) throws -> Void) throws -> Result<URL, IdentityIssuanceError> {
+func withIdentityIssuanceCallbackServer(_ f: @escaping (_ callbackUrl: URL) throws -> Void) throws -> Result<URL, IdentityIssuanceError> {
     let lock = DispatchSemaphore(value: 0)
     var res: Result<URL, IdentityIssuanceError>? = nil
 
     // TODO: Disable (or simplify/prettify) logging?
     let app = Application(.production)
-    defer { app.server.shutdown() }
-
-    // TODO: Can't make OS pick available port?
-    app.http.server.configuration.port = port
+    defer { app.shutdown() }
+    app.logger.logLevel = .warning // reduce logging
+    app.http.server.configuration.port = 0 // make OS pick port
 
     // Listen to callback request.
     // Respond with JavaScript snippet for extracting the result from the URL fragment and posting it to '/result/.
     // This is necessary because the browser doesn't send the fragment part to the server.
     // Note that the used format allows us to treat it directly as form data.
+    // TODO: Callback (unless it's DTS!) is also invoked on immediate failure. The header is misleading in that case.
     app.get("callback") { _ in
         let body = """
            <!DOCTYPE html>
@@ -34,22 +35,22 @@ func withIdentityIssuanceCallbackServer(port: Int, _ f: @escaping (_ port: Int, 
              <head>
                <title>Callback forwarder</title>
                <script>
-               const fragment = window.location.hash;
-               const response = fragment.substring(1);
-               fetch('/callback', {
-                 method: 'POST',
-                 body: response,
-                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-               })
-               .then(res => {
-                  if (!res.ok) {
-                    throw new Error(`HTTP: ${res.status}`);
-                  }
-                  return res.blob();
-               })
-               .then(res => res.text())
-               .catch(err => `Error: ${err}`)
-               .then(msg => document.getElementById('status').innerHTML = msg);
+                 const fragment = window.location.hash;
+                 const response = fragment.substring(1);
+                 fetch('/callback', {
+                   method: 'POST',
+                   body: response,
+                   headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                 })
+                 .then(res => {
+                    if (!res.ok) {
+                      throw new Error(`HTTP: ${res.status}`);
+                    }
+                    return res.blob();
+                 })
+                 .then(res => res.text())
+                 .catch(err => `Error: ${err}`)
+                 .then(msg => document.getElementById('status').innerHTML = msg);
                </script>
              </head>
              <body>
@@ -78,9 +79,20 @@ func withIdentityIssuanceCallbackServer(port: Int, _ f: @escaping (_ port: Int, 
         }
         return "OK"
     }
+    // Start temporary server.
     try app.server.start()
-    try f(port, URL(string: "http://127.0.0.1:\(port)/callback")!)
-    lock.wait() // wait for POST callback (without timeout)
+    defer { app.server.shutdown() }
+
+    // Resolve port picked by the OS.
+    guard let port = app.http.server.shared.localAddress?.port else {
+        return .failure(IdentityIssuanceError.cannotResolveServerPort(app.http.server.shared.localAddress.debugDescription))
+    }
+
+    // Invoke callback with the callback URL.
+    try f(URL(string: "http://localhost:\(port)/callback")!)
+
+    // Wait for POST callback.
+    lock.wait()
     guard let res else {
         // POST /callback was called but without 'error' nor 'code_uri' fields.
         return .failure(IdentityIssuanceError.invalidCallbackRequest)
