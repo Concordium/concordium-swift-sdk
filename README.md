@@ -7,9 +7,13 @@ interact with the [Concordium Blockchain](https://concordium.com).
 
 The main purpose of the SDK is to facilitate development of mobile wallet apps for iOS devices.
 
-Once the project is ready for production, it will replace the existing
-[`ConcordiumWalletCrypto`](https://github.com/Concordium/concordium-wallet-crypto-swift) library
-which is currently used in the [iOS reference wallet](https://github.com/Concordium/concordium-reference-wallet-ios/).
+Concordium specific cryptographic functions that are implemented in Rust are exposed as a separate Swift library
+[`ConcordiumWalletCrypto`](https://github.com/Concordium/concordium-wallet-crypto-swift).
+That library [used to](https://github.com/Concordium/concordium-wallet-crypto-swift?tab=readme-ov-file#prior-usage)
+merely host a SwiftPM package for exposing a single binary artifact of an older crypto library
+which is still used in the [iOS reference wallet](https://github.com/Concordium/concordium-reference-wallet-ios/).
+
+Once this SDK is ready for production, it will completely replace this old library.
 
 ### Supported platforms
 
@@ -41,22 +45,21 @@ to the `dependencies` list of the appropriate `target`.
 
 ### Build Rust bindings
 
-Concordium specific cryptographic functions are implemented in Rust and shared between all kinds of Concordium products.
-This SDK includes a thin wrapper for providing bindings to the Rust library
-[`wallet_library`](https://github.com/Concordium/concordium-base/tree/main/rust-src/wallet_library)
-which exposes functions specifically relevant for wallets.
+The Rust bindings are located in [`concordium-wallet-crypto-swift`](https://github.com/Concordium/concordium-wallet-crypto-swift).
+which also hosts the Swift package `ConcordiumWalletCrypto` for exposing the compiled binaries to Swift.
+By default, this precompiled framework is downloaded from GitHub.
+Use the environment variable `CONCORDIUM_WALLET_CRYPTO_PATH` to use a local checkout of this project during development.
+This will also make it resolve the binary framework to the default target location when compiled locally
+(`./generated/ConcordiumWalletCrypto.xcframework` relative to the crypto project root).
+Use the environment variable `CONCORDIUM_WALLET_CRYPTO_FRAMEWORK_PATH` to override this location
+or define the variable with empty value to disable the behavior and not use a local framework.
 
-These bindings are located in `./lib/crypto` and compiled into an
-[XCFramework](https://developer.apple.com/documentation/xcode/distributing-binary-frameworks-as-swift-packages).
-The SDK pulls in this framework from a local path, so the bindings have to built manually before the SDK can be used.
-
-Building is only a matter of invoking the Make target
-
+In conclusion, assuming that `concordium-wallet-crypto-swift` is checkout out right next to this project
+(and `make framework` has been run), then the command
 ```shell
-make build-crypto
+CONCORDIUM_WALLET_CRYPTO_PATH=../concordium-wallet-crypto-swift swift test
 ```
-
-This will place the target framework in `./lib/crypto/ConcordiumWalletCrypto`.
+will build and test the project using the local crypto package and the binary framework compiled locally from it.
 
 ### Build and test SDK
 
@@ -65,17 +68,12 @@ It's not necessary to build the project in order to use it in other projects:
 Just declare a dependency as explained in [usage](#usage).
 The SDK will get compiled as part of the build process of the executable.
 
-TODO: This means that we'll either have to add steps in `Package.swift` for automatically building the binaries (if possible)
-or push them to some specific location
-(like we did with [`concordium-wallet-crypto-swift`](https://github.com/Concordium/concordium-wallet-crypto-swift)).
-This could be a GitHub release/package or S3.
-
 ### Source code formatting
 
 The source code is formatted according to the default rules of [`SwiftFormat`](https://github.com/nicklockwood/SwiftFormat).
 
 The CI workflow [`Build and test`](https://github.com/Concordium/concordium-swift-sdk/blob/main/.github/workflows/build%2Btest.yml)
-checks that the code base is correctly formated before PRs are merged.
+checks that the code base is correctly formatted before PRs are merged.
 
 The formatter has been integrated as a
 [Swift Package Manger plugin](https://github.com/nicklockwood/SwiftFormat#swift-package-manager-plugin).
