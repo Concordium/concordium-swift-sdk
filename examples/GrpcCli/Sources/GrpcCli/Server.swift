@@ -17,7 +17,7 @@ func withIdentityIssuanceCallbackServer(port: Int, _ f: @escaping (_ port: Int, 
     var res: Result<URL, IdentityIssuanceError>? = nil
 
     // TODO: Disable (or simplify/prettify) logging?
-    let app = Application()
+    let app = Application(.production)
     defer { app.server.shutdown() }
 
     // TODO: Can't make OS pick available port?
@@ -29,6 +29,7 @@ func withIdentityIssuanceCallbackServer(port: Int, _ f: @escaping (_ port: Int, 
     // Note that the used format allows us to treat it directly as form data.
     app.get("callback") { _ in
         let body = """
+           <!DOCTYPE html>
            <html>
              <head>
                <title>Callback forwarder</title>
@@ -41,13 +42,14 @@ func withIdentityIssuanceCallbackServer(port: Int, _ f: @escaping (_ port: Int, 
                  headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                })
                .then(res => {
-                  if (!response.ok) {
-                    throw new Error(`HTTP: ${response.status}`);
+                  if (!res.ok) {
+                    throw new Error(`HTTP: ${res.status}`);
                   }
-                  return response.blob();
+                  return res.blob();
                })
-               .catch(err => `Error: ${err}`),
-               .then(msg => document.getElementById('status').innerHTML = msg),
+               .then(res => res.text())
+               .catch(err => `Error: ${err}`)
+               .then(msg => document.getElementById('status').innerHTML = msg);
                </script>
              </head>
              <body>
