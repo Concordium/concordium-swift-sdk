@@ -227,7 +227,7 @@ public struct PreparedAccountCredentialDeployment {
         get throws {
             let hex = try accountCredentialDeploymentHashHex(
                 credential: credential,
-                expiryUnix: expiry
+                expiryUnixSecs: expiry
             )
             return try Data(hex: hex)
         }

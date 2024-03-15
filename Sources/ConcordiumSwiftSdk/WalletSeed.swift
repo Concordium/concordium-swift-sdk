@@ -180,10 +180,16 @@ public class SeedBasedAccountDerivation {
         let prfKeyHex = try seed.prfKeyHex(identityIndexes: seedIndexes.identity)
         let blindingRandomnessHex = try seed.signatureBlindingRandomnessHex(identityIndexes: seedIndexes.identity)
         let attributeRandomnessHex = try AttributeType.allCases.reduce(into: [:]) { res, attr in
-            res["\(attr)"] = try seed.attributeCommitmentRandomnessHex(accountCredentialIndexes: seedIndexes, attribute: attr.rawValue)
+            res["\(attr)"] = try seed.attributeCommitmentRandomnessHex(
+                accountCredentialIndexes: seedIndexes,
+                attribute: attr.rawValue
+            )
         }
-        let keys_hex = try [KeyIndex(0): seed.publicKeyHex(accountCredentialIndexes: seedIndexes)]
-        let credentialPublicKeysHex = CredentialPublicKeysHex(keys: keys_hex, threshold: threshold)
+        let keyHex = try seed.publicKeyHex(accountCredentialIndexes: seedIndexes)
+        let credentialPublicKeys = CredentialPublicKeys(
+            keys: [KeyIndex(0): VerifyKey(ed25519KeyHex: keyHex)],
+            threshold: threshold
+        )
         let res = try ConcordiumWalletCrypto.accountCredential(
             params: AccountCredentialParameters(
                 ipInfo: provider.info,
@@ -196,7 +202,7 @@ public class SeedBasedAccountDerivation {
                 prfKeyHex: prfKeyHex,
                 blindingRandomnessHex: blindingRandomnessHex,
                 attributeRandomnessHex: attributeRandomnessHex,
-                credentialPublicKeysHex: credentialPublicKeysHex
+                credentialPublicKeys: credentialPublicKeys
             )
         )
         return res.credential

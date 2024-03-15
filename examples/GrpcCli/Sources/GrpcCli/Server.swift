@@ -17,11 +17,9 @@ func withIdentityIssuanceCallbackServer(_ f: @escaping (_ callbackUrl: URL) thro
     let lock = DispatchSemaphore(value: 0)
     var res: Result<URL, IdentityIssuanceError>? = nil
 
-    // TODO: Disable (or simplify/prettify) logging?
     let app = Application(.production)
     defer { app.shutdown() }
     app.logger.logLevel = .warning // reduce logging
-    app.http.server.configuration.port = 0 // make OS pick port
 
     // Listen to callback request.
     // Respond with JavaScript snippet for extracting the result from the URL fragment and posting it to '/result/.
@@ -79,8 +77,8 @@ func withIdentityIssuanceCallbackServer(_ f: @escaping (_ callbackUrl: URL) thro
         }
         return "OK"
     }
-    // Start temporary server.
-    try app.server.start()
+    // Start temporary server using port picked by the OS.
+    try app.server.start(hostname: nil, port: 0)
     defer { app.server.shutdown() }
 
     // Resolve port picked by the OS.

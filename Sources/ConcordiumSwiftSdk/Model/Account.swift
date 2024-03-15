@@ -183,30 +183,30 @@ public struct ReleaseSchedule {
 }
 
 enum VerifyKeyGrpc {
-    case Ed25519VerifyKey(String)
+    case Ed25519(hex: String)
 
     static func fromGrpcType(_ grpc: Concordium_V2_AccountVerifyKey) -> Self? {
         switch grpc.key {
         case nil:
             return nil
         case let .ed25519Key(d):
-            return .Ed25519VerifyKey(d.hex)
+            return .Ed25519(hex: d.hex)
         }
     }
 
-    func toSdkType() -> String {
+    func toSdkType() -> VerifyKey {
         switch self {
-        case let .Ed25519VerifyKey(key):
-            return key
+        case let .Ed25519(hex):
+            return VerifyKey(schemeId: "Ed25519", keyHex: hex)
         }
     }
 }
 
 /// Public credential keys currently on the account, together with the threshold
 /// needed for a valid signature on a transaction.
-public typealias CredentialPublicKeysHex = ConcordiumWalletCrypto.CredentialPublicKeysHex
+public typealias CredentialPublicKeys = ConcordiumWalletCrypto.CredentialPublicKeys
 
-extension CredentialPublicKeysHex {
+extension CredentialPublicKeys {
     static func fromGrpcType(_ grpc: Concordium_V2_CredentialPublicKeys) throws -> Self {
         try .init(
             keys: grpc.keys.reduce(into: [:]) { res, e in
@@ -217,14 +217,13 @@ extension CredentialPublicKeysHex {
             threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GrpcError.valueOutOfBounds
         )
     }
+}
 
-    func toWithSchemeType() -> CredentialPublicKeysWithScheme {
-        .init(
-            keys: keys.mapValues {
-                VerifyKeyWithScheme(schemeId: "Ed25519", keyHex: $0)
-            },
-            threshold: threshold
-        )
+public typealias VerifyKey = ConcordiumWalletCrypto.VerifyKey
+
+public extension VerifyKey {
+    init(ed25519KeyHex: String) {
+        self.init(schemeId: "Ed25519", keyHex: ed25519KeyHex)
     }
 }
 
@@ -253,7 +252,7 @@ extension Policy {
 
 public struct CredentialDeploymentValuesInitial {
     /// Credential keys (i.e. account holder keys).
-    public var credentialPublicKeys: CredentialPublicKeysHex
+    public var credentialPublicKeys: CredentialPublicKeys
     /// Credential registration id of the credential.
     public var credId: CredentialRegistrationId
     /// Identity of the identity provider who signed the identity object from which this credential is derived.
@@ -305,7 +304,7 @@ public struct CredentialDeploymentValuesNormal {
         .init(
             arData: arData,
             credIdHex: initial.credId.hex,
-            credentialPublicKeys: initial.credentialPublicKeys.toWithSchemeType(),
+            credentialPublicKeys: initial.credentialPublicKeys,
             ipIdentity: initial.ipIdentity,
             policy: initial.policy,
             proofs: proofs,
