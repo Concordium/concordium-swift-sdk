@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		A10E85302B5574B70063B079 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10E852F2B5574B70063B079 /* MainView.swift */; };
 		A10E85322B56A6110063B079 /* SeedPhraseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10E85312B56A6110063B079 /* SeedPhraseView.swift */; };
+		A11895DE2B67DC120091AC42 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11895DD2B67DC120091AC42 /* AccountView.swift */; };
 		A16C9F8F2B5D2CAF0009AD77 /* SeedPhraseValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16C9F8E2B5D2CAF0009AD77 /* SeedPhraseValidator.swift */; };
 		A16C9FBC2B5D370C0009AD77 /* SeedPhraseValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16C9FBB2B5D370C0009AD77 /* SeedPhraseValidatorTests.swift */; };
 		A17E071D2B57E8DE00F7BFFC /* IssueIdentityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17E071C2B57E8DE00F7BFFC /* IssueIdentityView.swift */; };
@@ -20,6 +21,7 @@
 		A1CD79DC2B556FD300F1CAA5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1CD79DB2B556FD300F1CAA5 /* Assets.xcassets */; };
 		A1CD79DF2B556FD300F1CAA5 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1CD79DE2B556FD300F1CAA5 /* Preview Assets.xcassets */; };
 		CD0E4E142B6116CA00E62FF1 /* ConcordiumSwiftSdk in Frameworks */ = {isa = PBXBuildFile; productRef = CD0E4E132B6116CA00E62FF1 /* ConcordiumSwiftSdk */; };
+		CD9DD5852B8947AF00120BD5 /* NodeClientService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9DD5842B8947AF00120BD5 /* NodeClientService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,6 +37,7 @@
 /* Begin PBXFileReference section */
 		A10E852F2B5574B70063B079 /* MainView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		A10E85312B56A6110063B079 /* SeedPhraseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedPhraseView.swift; sourceTree = "<group>"; };
+		A11895DD2B67DC120091AC42 /* AccountView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		A16C9F8E2B5D2CAF0009AD77 /* SeedPhraseValidator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeedPhraseValidator.swift; sourceTree = "<group>"; };
 		A16C9FB92B5D370C0009AD77 /* ExampleWalletTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ExampleWalletTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A16C9FBB2B5D370C0009AD77 /* SeedPhraseValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedPhraseValidatorTests.swift; sourceTree = "<group>"; };
@@ -46,6 +49,7 @@
 		A1CD79D72B556FD200F1CAA5 /* ExampleWalletApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleWalletApp.swift; sourceTree = "<group>"; };
 		A1CD79DB2B556FD300F1CAA5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1CD79DE2B556FD300F1CAA5 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		CD9DD5842B8947AF00120BD5 /* NodeClientService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NodeClientService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,6 +75,8 @@
 		A16C9F8C2B5D28740009AD77 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				CD9DD5842B8947AF00120BD5 /* NodeClientService.swift */,
+				A11895DD2B67DC120091AC42 /* AccountView.swift */,
 				A17E071C2B57E8DE00F7BFFC /* IssueIdentityView.swift */,
 				A10E852F2B5574B70063B079 /* MainView.swift */,
 				A17E07232B57F7C600F7BFFC /* RecoverIdentityView.swift */,
@@ -251,12 +257,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CD9DD5852B8947AF00120BD5 /* NodeClientService.swift in Sources */,
 				A10E85302B5574B70063B079 /* MainView.swift in Sources */,
 				A17E07222B57F12400F7BFFC /* BlueTextStyle.swift in Sources */,
 				A10E85322B56A6110063B079 /* SeedPhraseView.swift in Sources */,
 				A1CD79D82B556FD200F1CAA5 /* ExampleWalletApp.swift in Sources */,
 				A17E071D2B57E8DE00F7BFFC /* IssueIdentityView.swift in Sources */,
 				A17E07202B57EE8E00F7BFFC /* BlueButton.swift in Sources */,
+				A11895DE2B67DC120091AC42 /* AccountView.swift in Sources */,
 				A16C9F8F2B5D2CAF0009AD77 /* SeedPhraseValidator.swift in Sources */,
 				A17E07242B57F7C600F7BFFC /* RecoverIdentityView.swift in Sources */,
 			);
