@@ -78,7 +78,7 @@ func withIdentityIssuanceCallbackServer(_ f: @escaping (_ callbackUrl: URL) thro
         return "OK"
     }
     // Start temporary server using port picked by the OS.
-    try app.server.start(hostname: nil, port: 0)
+    try app.server.start(address: .hostname(nil, port: 0))
     defer { app.server.shutdown() }
 
     // Resolve port picked by the OS.
