@@ -50,7 +50,7 @@ which also hosts the Swift package `ConcordiumWalletCrypto` for exposing the com
 By default, this precompiled framework is downloaded from GitHub.
 Use the environment variable `CONCORDIUM_WALLET_CRYPTO_PATH` to use a local checkout of this project during development.
 This will also make it resolve the binary framework to the default target location when compiled locally
-(`./generated/ConcordiumWalletCrypto.xcframework` relative to the crypto project root).
+(`./generated/ConcordiumWalletCryptoUniffi.xcframework` relative to the crypto project root).
 Use the environment variable `CONCORDIUM_WALLET_CRYPTO_FRAMEWORK_PATH` to override this location
 or define the variable with empty value to disable the behavior and not use a local framework.
 
