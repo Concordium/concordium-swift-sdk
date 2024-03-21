@@ -1,5 +1,6 @@
 import ArgumentParser
 import ConcordiumSwiftSdk
+import Foundation
 import GRPC
 import NIOPosix
 
@@ -22,7 +23,7 @@ struct BlockOption: ParsableArguments {
     var block: BlockIdentifier {
         get throws {
             if let blockHash {
-                return try .hash(BlockHash(fromHexString: blockHash))
+                return try .hash(BlockHash(hex: blockHash))
             }
             return .lastFinal
         }
@@ -63,15 +64,15 @@ struct GrpcCli: AsyncParsableCommand {
         )
 
         @OptionGroup
-        var root: GrpcCli
+        var grpcCli: GrpcCli
 
         @OptionGroup
         var block: BlockOption
 
         func run() async throws {
-            let res = try await withClient(target: root.options.target) {
-                try await $0.getCryptographicParameters(
-                    at: block.block
+            let res = try await withGrpcClient(target: grpcCli.options.target) {
+                try await $0.cryptographicParameters(
+                    block: block.block
                 )
             }
             print(res)
@@ -93,15 +94,15 @@ struct GrpcCli: AsyncParsableCommand {
             )
 
             @OptionGroup
-            var root: GrpcCli
+            var grpcCli: GrpcCli
 
             @OptionGroup
-            var account: Account
+            var accountCli: Account
 
             func run() async throws {
-                let res = try await withClient(target: root.options.target) {
-                    try await $0.getNextAccountSequenceNumber(
-                        of: account.account.address
+                let res = try await withGrpcClient(target: grpcCli.options.target) {
+                    try await $0.nextAccountSequenceNumber(
+                        address: accountCli.account.address
                     )
                 }
                 print(res)
@@ -114,19 +115,19 @@ struct GrpcCli: AsyncParsableCommand {
             )
 
             @OptionGroup
-            var root: GrpcCli
+            var grpcCli: GrpcCli
 
             @OptionGroup
             var block: BlockOption
 
             @OptionGroup
-            var account: Account
+            var accountCli: Account
 
             func run() async throws {
-                let res = try await withClient(target: root.options.target) {
-                    try await $0.getAccountInfo(
-                        of: account.account.identifier,
-                        at: block.block
+                let res = try await withGrpcClient(target: grpcCli.options.target) {
+                    try await $0.info(
+                        account: accountCli.account.identifier,
+                        block: block.block
                     )
                 }
                 print(res)
@@ -135,7 +136,7 @@ struct GrpcCli: AsyncParsableCommand {
     }
 }
 
-func withClient<T>(target: ConnectionTarget, _ cmd: (ConcordiumNodeClient) async throws -> T) async throws -> T {
+func withGrpcClient<T>(target: ConnectionTarget, _ f: (NodeClientProtocol) async throws -> T) async throws -> T {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
         try! group.syncShutdownGracefully()
@@ -148,6 +149,6 @@ func withClient<T>(target: ConnectionTarget, _ cmd: (ConcordiumNodeClient) async
     defer {
         try! channel.close().wait()
     }
-    let client = ConcordiumNodeGrpcClient(channel: channel)
-    return try await cmd(client)
+    let client = GrpcNodeClient(channel: channel)
+    return try await f(client)
 }
