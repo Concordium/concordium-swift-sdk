@@ -97,7 +97,7 @@ public enum AccountIdentifier {
 }
 
 /// Address of an account as raw bytes.
-public struct AccountAddress {
+public struct AccountAddress: Hashable {
     private static let base58CheckVersion: UInt8 = 1
 
     public var data: Data // 32 bytes

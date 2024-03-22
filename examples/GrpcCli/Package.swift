@@ -6,10 +6,12 @@ import PackageDescription
 let package = Package(
     name: "GrpcCli",
     platforms: [
-        .macOS(.v10_15),
+        .macOS(.v12),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.2.0"),
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
+        .package(url: "https://github.com/Electric-Coin-Company/MnemonicSwift", from: "2.2.4"),
+        .package(url: "https://github.com/vapor/vapor", from: "4.92.4"),
         overridableSdkDependency(
             url: "https://github.com/Concordium/concordium-swift-sdk.git",
             branch: "main"
@@ -21,6 +23,8 @@ let package = Package(
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "ConcordiumSwiftSdk", package: "concordium-swift-sdk"),
+                "MnemonicSwift",
+                .product(name: "Vapor", package: "vapor"),
             ]
         ),
     ]

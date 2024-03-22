@@ -9,3 +9,18 @@ public struct Versioned<V> {
         self.value = value
     }
 }
+
+extension Versioned: Decodable where V: Decodable {
+    enum CodingKeys: CodingKey {
+        case v
+        case value
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            version: container.decode(UInt32.self, forKey: .v),
+            value: container.decode(V.self, forKey: .value)
+        )
+    }
+}
