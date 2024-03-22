@@ -1,7 +1,14 @@
+import ConcordiumWalletCrypto
 import Foundation
 
-public struct CryptographicParameters {
-    var onChainCommitmentKey: String
-    var bulletproofGenerators: String
-    var genesisString: String
+public typealias CryptographicParameters = ConcordiumWalletCrypto.GlobalContext
+
+extension CryptographicParameters {
+    static func fromGrpcType(_ grpc: Concordium_V2_CryptographicParameters) -> Self {
+        .init(
+            onChainCommitmentKeyHex: grpc.onChainCommitmentKey.hex,
+            bulletproofGeneratorsHex: grpc.bulletproofGenerators.hex,
+            genesisString: grpc.genesisString
+        )
+    }
 }

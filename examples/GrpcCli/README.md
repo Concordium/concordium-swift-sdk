@@ -27,3 +27,9 @@ This will reveal if any of the commands exit with failure.
 Note, however, that it only "checks" if the commands exit successfully;
 it does not make assertions about the outputs.
 Use the environment variables `HOST` and `IP` to specify the gRPC endpoint to use in the script.
+
+By default, the CLI uses the SDK currently on the `main` branch.
+Set the environment variable `CONCORDIUM_SDK_PATH` to the path of a local copy of the SDK (presumably `../..`)
+to use that instead.
+
+See the SDK's readme for an explanation of the variables to set if you need to use a local crypto library as well.
