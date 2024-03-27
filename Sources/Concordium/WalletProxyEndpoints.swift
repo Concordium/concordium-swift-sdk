@@ -47,7 +47,7 @@ public struct IdentityProviderJson: Decodable {
         public var ipCdiVerifyKey: String
         public var ipVerifyKey: String
 
-        public func toSdkType() -> ConcordiumSwiftSdk.IdentityProviderInfo {
+        public func toSDKType() -> Concordium.IdentityProviderInfo {
             .init(
                 identity: ipIdentity,
                 description: ipDescription,
@@ -62,7 +62,7 @@ public struct IdentityProviderJson: Decodable {
         public var arDescription: Description
         public var arPublicKey: String
 
-        public func toSdkType() -> ConcordiumSwiftSdk.AnonymityRevokerInfo {
+        public func toSDKType() -> Concordium.AnonymityRevokerInfo {
             .init(
                 identity: arIdentity,
                 description: arDescription,
@@ -71,11 +71,11 @@ public struct IdentityProviderJson: Decodable {
         }
     }
 
-    public func toSdkType() -> IdentityProvider {
+    public func toSDKType() -> IdentityProvider {
         .init(
-            info: ipInfo.toSdkType(),
+            info: ipInfo.toSDKType(),
             metadata: metadata,
-            anonymityRevokers: arsInfos.mapValues { $0.toSdkType() }
+            anonymityRevokers: arsInfos.mapValues { $0.toSDKType() }
         )
     }
 }

@@ -4,4 +4,4 @@ fmt:
 
 .PHONY: generate-grpc
 generate-grpc:
-	protoc --proto_path=./concordium-grpc-api --grpc-swift_opt='Client=true,Server=false' --grpc-swift_out=./Sources/ConcordiumSwiftSdk/Generated/Grpc --swift_out=./Sources/ConcordiumSwiftSdk/Generated/Grpc ./concordium-grpc-api/v2/concordium/*.proto
+	protoc --proto_path=./concordium-grpc-api --grpc-swift_opt='Client=true,Server=false' --grpc-swift_out=./Sources/Concordium/Generated/GRPC --swift_out=./Sources/Concordium/Generated/GRPC ./concordium-grpc-api/v2/concordium/*.proto

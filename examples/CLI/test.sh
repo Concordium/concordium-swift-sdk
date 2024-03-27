@@ -26,7 +26,7 @@ some_account_address="35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh"
 # Build CLI.
 swift build
 dir_path="$(swift build --show-bin-path)"
-cli_path="${dir_path}/GrpcCli"
+cli_path="${dir_path}/concordium"
 
 # Execute "tests".
 "${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters

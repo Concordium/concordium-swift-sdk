@@ -72,7 +72,7 @@ public enum AccountIdentifier {
     /// Identify an account by its account index.
     case index(AccountIndex)
 
-    func toGrpcType() -> Concordium_V2_AccountIdentifierInput {
+    func toGRPCType() -> Concordium_V2_AccountIdentifierInput {
         switch self {
         case let .address(addr):
             var a = Concordium_V2_AccountAddress()
@@ -118,7 +118,7 @@ public struct AccountAddress: Hashable {
         var data = try Base58Check().decode(string: base58Check)
         let version = data.removeFirst()
         if version != AccountAddress.base58CheckVersion {
-            throw GrpcError.missingBase58CheckVersion(expected: AccountAddress.base58CheckVersion, actual: version)
+            throw GRPCError.missingBase58CheckVersion(expected: AccountAddress.base58CheckVersion, actual: version)
         }
         self.init(data) // excludes initial version byte
     }
@@ -133,7 +133,7 @@ public struct NextAccountSequenceNumber {
     public var sequenceNumber: SequenceNumber
     public var allFinal: Bool
 
-    static func fromGrpcType(_ grpc: Concordium_V2_NextAccountSequenceNumber) -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_NextAccountSequenceNumber) -> Self {
         .init(
             sequenceNumber: grpc.sequenceNumber.value,
             allFinal: grpc.allFinal
@@ -154,7 +154,7 @@ public struct Release {
     /// List of transaction hashes that contribute a balance to this release.
     public var transactions: [TransactionHash]
 
-    static func fromGrpcType(_ grpc: Concordium_V2_Release) -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_Release) -> Self {
         .init(
             timestamp: dateFromUnixTimeMillis(grpc.timestamp.value),
             amount: grpc.amount.value,
@@ -171,30 +171,10 @@ public struct ReleaseSchedule {
     /// List of timestamped releases in increasing order of timestamps.
     public var schedule: [Release]
 
-    static func fromGrpcType(_ grpc: Concordium_V2_ReleaseSchedule) -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_ReleaseSchedule) -> Self {
         .init(total: grpc.total.value, schedule: grpc.schedules.map {
-            .fromGrpcType($0)
+            .fromGRPCType($0)
         })
-    }
-}
-
-enum VerifyKeyGrpc {
-    case Ed25519(hex: String)
-
-    static func fromGrpcType(_ grpc: Concordium_V2_AccountVerifyKey) -> Self? {
-        switch grpc.key {
-        case nil:
-            return nil
-        case let .ed25519Key(d):
-            return .Ed25519(hex: d.hex)
-        }
-    }
-
-    func toSdkType() -> VerifyKey {
-        switch self {
-        case let .Ed25519(hex):
-            return VerifyKey(schemeId: "Ed25519", keyHex: hex)
-        }
     }
 }
 
@@ -203,23 +183,32 @@ enum VerifyKeyGrpc {
 public typealias CredentialPublicKeys = ConcordiumWalletCrypto.CredentialPublicKeys
 
 extension CredentialPublicKeys {
-    static func fromGrpcType(_ grpc: Concordium_V2_CredentialPublicKeys) throws -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_CredentialPublicKeys) throws -> Self {
         try .init(
             keys: grpc.keys.reduce(into: [:]) { res, e in
-                let idx = try KeyIndex(exactly: e.key) ?! GrpcError.valueOutOfBounds
-                let key = try VerifyKeyGrpc.fromGrpcType(e.value) ?! GrpcError.missingRequiredValue("credential public keys")
-                res[idx] = key.toSdkType()
+                let idx = try KeyIndex(exactly: e.key) ?! GRPCError.valueOutOfBounds
+                let key = try VerifyKey.fromGRPCType(e.value) // TODO: !!!
+                res[idx] = key
             },
-            threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GrpcError.valueOutOfBounds
+            threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GRPCError.valueOutOfBounds
         )
     }
 }
 
 public typealias VerifyKey = ConcordiumWalletCrypto.VerifyKey
 
-public extension VerifyKey {
-    init(ed25519KeyHex: String) {
+extension VerifyKey {
+    public init(ed25519KeyHex: String) {
         self.init(schemeId: "Ed25519", keyHex: ed25519KeyHex)
+    }
+
+    static func fromGRPCType(_ grpc: Concordium_V2_AccountVerifyKey) throws -> Self {
+        switch grpc.key {
+        case nil:
+            throw GRPCError.missingRequiredValue("verify key")
+        case let .ed25519Key(d):
+            return .init(ed25519KeyHex: d.hex)
+        }
     }
 }
 
@@ -232,14 +221,14 @@ func yearMonthString(year: UInt32, month: UInt32) -> String {
 public typealias Policy = ConcordiumWalletCrypto.Policy
 
 extension Policy {
-    static func fromGrpcType(_ grpc: Concordium_V2_Policy) throws -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_Policy) throws -> Self {
         try .init(
             createdAtYearMonth: yearMonthString(year: grpc.createdAt.year, month: grpc.createdAt.month),
             validToYearMonth: yearMonthString(year: grpc.validTo.year, month: grpc.validTo.month),
             revealedAttributes: grpc.attributes.reduce(into: [:]) { res, e in
                 let attr = try UInt8(exactly: e.key)
                     .flatMap { AttributeType(rawValue: $0) }
-                    ?! GrpcError.valueOutOfBounds
+                    ?! GRPCError.valueOutOfBounds
                 res["\(attr)"] = String(data: e.value, encoding: .utf8) // TODO: correct to treat attribute value as UTF-8?
             }
         )
@@ -256,12 +245,12 @@ public struct CredentialDeploymentValuesInitial {
     /// Policy of this credential object.
     public var policy: Policy
 
-    static func fromGrpcType(_ grpc: Concordium_V2_InitialCredentialValues) throws -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_InitialCredentialValues) throws -> Self {
         try .init(
-            credentialPublicKeys: .fromGrpcType(grpc.keys),
+            credentialPublicKeys: .fromGRPCType(grpc.keys),
             credId: grpc.credID.value,
             ipIdentity: grpc.ipID.value,
-            policy: .fromGrpcType(grpc.policy)
+            policy: .fromGRPCType(grpc.policy)
         )
     }
 }
@@ -269,7 +258,7 @@ public struct CredentialDeploymentValuesInitial {
 public typealias ChainArData = ConcordiumWalletCrypto.ChainArData
 
 extension ChainArData {
-    static func fromGrpcType(_ grpc: Concordium_V2_ChainArData) -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_ChainArData) -> Self {
         .init(endIdCredPubShareHex: grpc.encIDCredPubShare.hex)
     }
 }
@@ -283,16 +272,16 @@ public struct CredentialDeploymentValuesNormal {
     ///  and permuting the list will invalidate the signature from the identity provider.
     public var arData: [ArIdentity: ChainArData]
 
-    static func fromGrpcType(_ grpc: Concordium_V2_NormalCredentialValues) throws -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_NormalCredentialValues) throws -> Self {
         try .init(
             initial: CredentialDeploymentValuesInitial(
-                credentialPublicKeys: .fromGrpcType(grpc.keys),
+                credentialPublicKeys: .fromGRPCType(grpc.keys),
                 credId: grpc.credID.value,
                 ipIdentity: grpc.ipID.value,
-                policy: .fromGrpcType(grpc.policy)
+                policy: .fromGRPCType(grpc.policy)
             ),
-            revocationThreshold: SignatureThreshold(exactly: grpc.arThreshold.value) ?! GrpcError.valueOutOfBounds,
-            arData: grpc.arData.mapValues { .fromGrpcType($0) }
+            revocationThreshold: SignatureThreshold(exactly: grpc.arThreshold.value) ?! GRPCError.valueOutOfBounds,
+            arData: grpc.arData.mapValues { .fromGRPCType($0) }
         )
     }
 
@@ -314,14 +303,14 @@ public enum AccountCredentialDeploymentValues {
     case initial(CredentialDeploymentValuesInitial)
     case normal(CredentialDeploymentValuesNormal)
 
-    static func fromGrpcType(_ grpc: Concordium_V2_AccountCredential) throws -> Self? {
+    static func fromGRPCType(_ grpc: Concordium_V2_AccountCredential) throws -> Self {
         switch grpc.credentialValues {
         case nil:
-            return nil
+            throw GRPCError.missingRequiredValue("credential values")
         case let .initial(v):
-            return try .initial(.fromGrpcType(v))
+            return try .initial(.fromGRPCType(v))
         case let .normal(v):
-            return try .normal(.fromGrpcType(v))
+            return try .normal(.fromGRPCType(v))
         }
     }
 }
@@ -351,7 +340,7 @@ public struct AccountEncryptedAmount {
     /// After that aggregation kicks in.
     public var incomingAmounts: [EncryptedAmount]
 
-    static func fromGrpcType(_ grpc: Concordium_V2_EncryptedBalance) -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_EncryptedBalance) -> Self {
         .init(
             selfAmount: grpc.selfAmount.value,
             startIndex: grpc.startIndex,
@@ -373,7 +362,7 @@ public struct BakerInfo {
     /// This is only used if the baker has sufficient stake to participate in finalization.
     public var bakerAggregationVerifyKey: BakerAggregationVerifyKey
 
-    static func fromGrpcType(_ grpc: Concordium_V2_BakerInfo) -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_BakerInfo) -> Self {
         .init(
             bakerId: grpc.bakerID.value,
             bakerElectionVerifyKey: grpc.electionKey.value.hex,
@@ -390,10 +379,10 @@ public enum StakePendingChange {
     /// The baker will be removed at the end of the given epoch.
     case removeStake(effectiveTime: Date)
 
-    static func fromGrpcType(_ grpc: Concordium_V2_StakePendingChange) -> Self? {
+    static func fromGRPCType(_ grpc: Concordium_V2_StakePendingChange) throws -> Self {
         switch grpc.change {
         case nil:
-            return nil
+            throw GRPCError.missingRequiredValue("stake pending change")
         case let .reduce(r):
             return .reduceStake(newStake: r.newStake.value, effectiveTime: dateFromUnixTimeMillis(r.effectiveTime.value))
         case let .remove(r):
@@ -406,7 +395,7 @@ public enum StakePendingChange {
 public struct AmountFraction {
     public var partsPerHundredThousand: UInt32
 
-    static func fromGrpcType(_ grpc: Concordium_V2_AmountFraction) -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_AmountFraction) -> Self {
         .init(partsPerHundredThousand: grpc.partsPerHundredThousand)
     }
 }
@@ -420,8 +409,8 @@ public enum OpenStatus: Int {
     /// No delegators are allowed.
     case closedForAll = 2
 
-    static func fromGrpcType(_ grpc: Concordium_V2_OpenStatus) throws -> Self {
-        try .init(rawValue: grpc.rawValue) ?! GrpcError.unsupportedValue("open status '\(grpc.rawValue)'")
+    static func fromGRPCType(_ grpc: Concordium_V2_OpenStatus) throws -> Self {
+        try .init(rawValue: grpc.rawValue) ?! GRPCError.unsupportedValue("open status '\(grpc.rawValue)'")
     }
 }
 
@@ -433,11 +422,11 @@ public struct CommissionRates {
     /// Fraction of transaction rewards charged by the pool owner.
     public var transaction: AmountFraction?
 
-    static func fromGrpcType(_ grpc: Concordium_V2_CommissionRates) -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_CommissionRates) -> Self {
         .init(
-            finalization: grpc.hasFinalization ? .fromGrpcType(grpc.finalization) : nil,
-            baking: grpc.hasBaking ? .fromGrpcType(grpc.baking) : nil,
-            transaction: grpc.hasTransaction ? .fromGrpcType(grpc.transaction) : nil
+            finalization: grpc.hasFinalization ? .fromGRPCType(grpc.finalization) : nil,
+            baking: grpc.hasBaking ? .fromGRPCType(grpc.baking) : nil,
+            transaction: grpc.hasTransaction ? .fromGRPCType(grpc.transaction) : nil
         )
     }
 }
@@ -452,11 +441,11 @@ public struct BakerPoolInfo {
     /// The commission rates charged by the pool owner.
     public var commissionRates: CommissionRates
 
-    static func fromGrpcType(_ grpc: Concordium_V2_BakerPoolInfo) throws -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_BakerPoolInfo) throws -> Self {
         try .init(
-            openStatus: .fromGrpcType(grpc.openStatus),
+            openStatus: .fromGRPCType(grpc.openStatus),
             metadataUrl: grpc.url,
-            commissionRates: .fromGrpcType(grpc.commissionRates)
+            commissionRates: .fromGRPCType(grpc.commissionRates)
         )
     }
 }
@@ -468,10 +457,10 @@ public enum DelegationTarget {
     /// Delegate to a specific baker.
     case baker(BakerId)
 
-    static func fromGrpcType(_ grpc: Concordium_V2_DelegationTarget) -> Self? {
+    static func fromGRPCType(_ grpc: Concordium_V2_DelegationTarget) throws -> Self {
         switch grpc.target {
         case nil:
-            return nil
+            throw GRPCError.missingRequiredValue("delegation target")
         case .passive:
             return .passive
         case let .baker(b):
@@ -497,24 +486,24 @@ public enum AccountStakingInfo {
         pendingChange: StakePendingChange?
     )
 
-    static func fromGrpcType(_ grpc: Concordium_V2_AccountStakingInfo) throws -> Self? {
+    static func fromGRPCType(_ grpc: Concordium_V2_AccountStakingInfo) throws -> Self {
         switch grpc.stakingInfo {
         case nil:
-            return nil
+            throw GRPCError.missingRequiredValue("account staking info")
         case let .baker(b):
             return try .baker(
                 stakedAmount: b.stakedAmount.value,
                 restakeEarnings: b.restakeEarnings,
-                bakerInfo: .fromGrpcType(b.bakerInfo),
-                pendingChange: .fromGrpcType(b.pendingChange),
-                poolInfo: b.hasPoolInfo ? .fromGrpcType(b.poolInfo) : nil
+                bakerInfo: .fromGRPCType(b.bakerInfo),
+                pendingChange: b.hasPendingChange ? .fromGRPCType(b.pendingChange) : nil,
+                poolInfo: b.hasPoolInfo ? .fromGRPCType(b.poolInfo) : nil
             )
         case let .delegator(d):
             return try .delegated(
                 stakedAmount: d.stakedAmount.value,
                 restakeEarnings: d.restakeEarnings,
-                delegationTarget: .fromGrpcType(d.target) ?! GrpcError.missingRequiredValue("delegation target"),
-                pendingChange: .fromGrpcType(d.pendingChange)
+                delegationTarget: .fromGRPCType(d.target),
+                pendingChange: d.hasPendingChange ? .fromGRPCType(d.pendingChange) : nil
             )
         }
     }
@@ -553,22 +542,22 @@ public struct AccountInfo {
     /// This is derived from the first credential that created the account.
     public var address: AccountAddress
 
-    static func fromGrpcType(_ grpc: Concordium_V2_AccountInfo) throws -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_AccountInfo) throws -> Self {
         try .init(
             sequenceNumber: grpc.sequenceNumber.value,
             amount: grpc.amount.value,
-            releaseSchedule: .fromGrpcType(grpc.schedule),
+            releaseSchedule: .fromGRPCType(grpc.schedule),
             credentials: grpc.creds.mapValues {
                 try Versioned(
                     version: 0, // mirroring Rust SDK
-                    value: .fromGrpcType($0) ?! GrpcError.missingRequiredValue("credential values")
+                    value: .fromGRPCType($0)
                 )
             },
-            threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GrpcError.valueOutOfBounds,
-            encryptedAmount: .fromGrpcType(grpc.encryptedBalance),
+            threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GRPCError.valueOutOfBounds,
+            encryptedAmount: .fromGRPCType(grpc.encryptedBalance),
             encryptionKey: grpc.encryptionKey.value.hex,
             index: grpc.index.value,
-            stake: .fromGrpcType(grpc.stake),
+            stake: grpc.hasStake ? .fromGRPCType(grpc.stake) : nil,
             address: AccountAddress(grpc.address.value)
         )
     }

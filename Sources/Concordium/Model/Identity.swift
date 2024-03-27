@@ -23,10 +23,10 @@ public typealias ArData = ConcordiumWalletCrypto.ArData
 public typealias PreIdentityObject = ConcordiumWalletCrypto.PreIdentityObject
 
 extension IdentityProviderInfo {
-    static func fromGrpcType(_ grpc: Concordium_V2_IpInfo) -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_IpInfo) -> Self {
         .init(
             identity: grpc.identity.value,
-            description: .fromGrpcType(grpc.description_p),
+            description: .fromGRPCType(grpc.description_p),
             verifyKeyHex: grpc.verifyKey.value.hex,
             cdiVerifyKeyHex: grpc.cdiVerifyKey.value.hex
         )
@@ -34,10 +34,10 @@ extension IdentityProviderInfo {
 }
 
 extension AnonymityRevokerInfo {
-    static func fromGrpcType(_ grpc: Concordium_V2_ArInfo) -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_ArInfo) -> Self {
         .init(
             identity: grpc.identity.value,
-            description: .fromGrpcType(grpc.description_p),
+            description: .fromGRPCType(grpc.description_p),
             publicKeyHex: grpc.publicKey.value.hex
         )
     }
@@ -140,7 +140,7 @@ extension AttributeList: Decodable {
 }
 
 extension Description {
-    static func fromGrpcType(_ grpc: Concordium_V2_Description) -> Self {
+    static func fromGRPCType(_ grpc: Concordium_V2_Description) -> Self {
         .init(name: grpc.name, url: grpc.url, description: grpc.description_p)
     }
 }

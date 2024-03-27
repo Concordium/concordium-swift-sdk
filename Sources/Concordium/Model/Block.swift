@@ -9,7 +9,7 @@ public enum BlockIdentifier {
     case absoluteHeight(UInt64)
     case relativeHeight(genesisIndex: UInt32, height: UInt64, restrictedToGenesisIndex: Bool)
 
-    func toGrpcType() -> Concordium_V2_BlockHashInput {
+    func toGRPCType() -> Concordium_V2_BlockHashInput {
         switch self {
         case .lastFinal:
             var b = Concordium_V2_BlockHashInput()

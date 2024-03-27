@@ -1,4 +1,4 @@
-# GrpcCli
+# CLI
 
 *Disclaimer: This tool is for testing/illustration purposes only.
 Secrets are not handled with care.*
@@ -6,16 +6,16 @@ Secrets are not handled with care.*
 A small tool for demonstrating how to integrate the SDK as well as exercising the gRPC client
 which is otherwise hard to cover with unit tests.
 
-The CLI is organized into subcommands such as
+The interface is organized into subcommands such as
 
 ```shell
-GrpcCli cryptographic-parameters
+concordium cryptographic-parameters
 ```
 
 for retrieving the cryptographic parameters of the chain and
 
 ```shell
-GrpcCli account <account-address> info --block-hash=<block-hash>
+concordium account <account-address> info --block-hash=<block-hash>
 ```
 
 for retrieving information about the account `<account-address>` as of block `<block-hash>`.
@@ -23,7 +23,7 @@ for retrieving information about the account `<account-address>` as of block `<b
 By default, the tool attempts to query the gRPC interface of a node running on `localhost:20000`.
 Use the options `--host` and `--port` (or a relay tool such as `socat`) to point it somewhere else.
 
-Use `GrpcCli --help` to explore the full command interface.
+Use `concordium --help` to explore the full command interface.
 
 The script [`./test.sh`](./test.sh) invokes all read-only commands.
 This will reveal if any of the commands exit with failure.

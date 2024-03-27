@@ -4,7 +4,7 @@ import Foundation
 import PackageDescription
 
 let package = Package(
-    name: "ConcordiumSwiftSdk",
+    name: "Concordium",
     platforms: [
         // To be kept in sync with README.
         .iOS(.v15),
@@ -12,15 +12,15 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "ConcordiumSwiftSdk",
-            targets: ["ConcordiumSwiftSdk"]
+            name: "Concordium",
+            targets: ["Concordium"]
         ),
     ],
     dependencies: [
         .package(url: "https://github.com/anquii/Base58Check.git", from: "1.0.0"),
         .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.15.0"),
         .package(url: "https://github.com/nicklockwood/SwiftFormat.git", exact: "0.53.0"),
-        .package(url: "https://github.com/bisgardo/swift-hextension.git", from: "1.0.0"),
+        .package(url: "https://github.com/bisgardo/Hextension.git", from: "1.0.0"),
         overridableCryptoDependency(
             url: "https://github.com/Concordium/concordium-wallet-crypto-swift.git",
             from: "2.0.0"
@@ -28,19 +28,19 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "ConcordiumSwiftSdk",
+            name: "Concordium",
             dependencies: [
                 "Base58Check",
-                .product(name: "ConcordiumWalletCrypto", package: "concordium-wallet-crypto-swift"),
-                .product(name: "Hextension", package: "swift-hextension"),
-                .product(name: "GRPC", package: "grpc-swift"),
+                "Hextension",
                 "SwiftFormat",
+                .product(name: "ConcordiumWalletCrypto", package: "concordium-wallet-crypto-swift"),
+                .product(name: "GRPC", package: "grpc-swift"),
             ]
         ),
         .testTarget(
-            name: "ConcordiumSwiftSdkTests",
+            name: "ConcordiumTests",
             dependencies: [
-                "ConcordiumSwiftSdk",
+                "Concordium",
             ]
         ),
     ]

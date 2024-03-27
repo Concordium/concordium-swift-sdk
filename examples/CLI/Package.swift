@@ -4,25 +4,28 @@ import Foundation
 import PackageDescription
 
 let package = Package(
-    name: "GrpcCli",
+    name: "concordium",
     platforms: [
         .macOS(.v12),
+    ],
+    products: [
+        .executable(name: "concordium", targets: ["CLI"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
         .package(url: "https://github.com/Electric-Coin-Company/MnemonicSwift", from: "2.2.4"),
         .package(url: "https://github.com/vapor/vapor", from: "4.92.4"),
-        overridableSdkDependency(
+        overridableSDKDependency(
             url: "https://github.com/Concordium/concordium-swift-sdk.git",
             branch: "main"
         ),
     ],
     targets: [
         .executableTarget(
-            name: "GrpcCli",
+            name: "CLI",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
-                .product(name: "ConcordiumSwiftSdk", package: "concordium-swift-sdk"),
+                .product(name: "Concordium", package: "concordium-swift-sdk"),
                 "MnemonicSwift",
                 .product(name: "Vapor", package: "vapor"),
             ]
@@ -30,7 +33,7 @@ let package = Package(
     ]
 )
 
-func overridableSdkDependency(url: String, branch: String) -> Package.Dependency {
+func overridableSDKDependency(url: String, branch: String) -> Package.Dependency {
     if let p = providedSdkPath(), !p.isEmpty {
         return .package(path: p)
     }

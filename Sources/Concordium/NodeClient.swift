@@ -4,7 +4,7 @@ import GRPC
 import NIOCore
 import NIOPosix
 
-public protocol NodeClientProtocol {
+public protocol NodeClient {
     func cryptographicParameters(block: BlockIdentifier) async throws -> CryptographicParameters
     func identityProviders(block: BlockIdentifier) async throws -> [IdentityProviderInfo]
     func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevokerInfo]
@@ -14,7 +14,7 @@ public protocol NodeClientProtocol {
     func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash
 }
 
-public class GrpcNodeClient: NodeClientProtocol {
+public class GRPCNodeClient: NodeClient {
     let grpc: Concordium_V2_QueriesClientProtocol
 
     init(_ grpc: Concordium_V2_QueriesClientProtocol) {
@@ -26,26 +26,26 @@ public class GrpcNodeClient: NodeClientProtocol {
     }
 
     public func cryptographicParameters(block: BlockIdentifier) async throws -> CryptographicParameters {
-        let req = block.toGrpcType()
+        let req = block.toGRPCType()
         let res = try await grpc.getCryptographicParameters(req).response.get()
-        return .fromGrpcType(res)
+        return .fromGRPCType(res)
     }
 
     public func identityProviders(block: BlockIdentifier) async throws -> [IdentityProviderInfo] {
-        let req = block.toGrpcType()
+        let req = block.toGRPCType()
         var res: [IdentityProviderInfo] = []
         let call = grpc.getIdentityProviders(req) {
-            res.append(.fromGrpcType($0))
+            res.append(.fromGRPCType($0))
         }
         _ = try await call.status.get()
         return res
     }
 
     public func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevokerInfo] {
-        let req = block.toGrpcType()
+        let req = block.toGRPCType()
         var res: [AnonymityRevokerInfo] = []
         let call = grpc.getAnonymityRevokers(req) {
-            res.append(.fromGrpcType($0))
+            res.append(.fromGRPCType($0))
         }
         _ = try await call.status.get()
         return res
@@ -55,27 +55,27 @@ public class GrpcNodeClient: NodeClientProtocol {
         var req = Concordium_V2_AccountAddress()
         req.value = address.data
         let res = try await grpc.getNextAccountSequenceNumber(req).response.get()
-        return .fromGrpcType(res)
+        return .fromGRPCType(res)
     }
 
     public func info(account: AccountIdentifier, block: BlockIdentifier) async throws -> AccountInfo {
         var req = Concordium_V2_AccountInfoRequest()
-        req.accountIdentifier = account.toGrpcType()
-        req.blockHash = block.toGrpcType()
+        req.accountIdentifier = account.toGRPCType()
+        req.blockHash = block.toGRPCType()
         let res = try await grpc.getAccountInfo(req).response.get()
-        return try .fromGrpcType(res)
+        return try .fromGRPCType(res)
     }
 
     public func send(transaction: SignedAccountTransaction) async throws -> TransactionHash {
         var req = Concordium_V2_SendBlockItemRequest()
-        req.accountTransaction = transaction.toGrpcType()
+        req.accountTransaction = transaction.toGRPCType()
         let res = try await grpc.sendBlockItem(req).response.get()
         return res.value
     }
 
     public func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash {
         var req = Concordium_V2_SendBlockItemRequest()
-        req.credentialDeployment = deployment.toGrpcType()
+        req.credentialDeployment = deployment.toGRPCType()
         let res = try await grpc.sendBlockItem(req).response.get()
         return res.value
     }

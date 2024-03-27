@@ -80,7 +80,7 @@ public struct SignedAccountTransaction {
         self.signatures = signatures
     }
 
-    func toGrpcType() -> Concordium_V2_AccountTransaction {
+    func toGRPCType() -> Concordium_V2_AccountTransaction {
         var p = Concordium_V2_AccountTransactionPayload()
         p.rawPayload = transaction.serializedPayload
         var s = Concordium_V2_AccountTransactionSignature()
@@ -94,9 +94,9 @@ public struct SignedAccountTransaction {
             return m
         }
         var t = Concordium_V2_AccountTransaction()
-        t.header = transaction.header.toGrpcType()
+        t.header = transaction.header.toGRPCType()
         t.payload = p
-//        t.payload = transaction.payload.toGrpcType()
+//        t.payload = transaction.payload.toGRPCType()
         t.signature = s
         return t
     }
@@ -140,7 +140,7 @@ public enum AccountTransactionPayload {
         return Data(buffer: buf)
     }
 
-    func toGrpcType() -> Concordium_V2_AccountTransactionPayload {
+    func toGRPCType() -> Concordium_V2_AccountTransactionPayload {
         switch self {
         case let .transfer(amount, receiver):
             var a = Concordium_V2_Amount()
@@ -195,7 +195,7 @@ public struct AccountTransactionHeader {
         return Data(buffer: buf)
     }
 
-    func toGrpcType() -> Concordium_V2_AccountTransactionHeader {
+    func toGRPCType() -> Concordium_V2_AccountTransactionHeader {
         var s = Concordium_V2_AccountAddress()
         s.value = sender.data
         var n = Concordium_V2_SequenceNumber()
@@ -265,7 +265,7 @@ public struct SerializedSignedAccountCredentialDeployment {
         self.expiry = expiry
     }
 
-    func toGrpcType() -> Concordium_V2_CredentialDeployment {
+    func toGRPCType() -> Concordium_V2_CredentialDeployment {
         var x = Concordium_V2_TransactionTime()
         x.value = expiry
         var d = Concordium_V2_CredentialDeployment()

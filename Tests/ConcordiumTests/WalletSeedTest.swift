@@ -1,4 +1,4 @@
-@testable import ConcordiumSwiftSdk
+@testable import Concordium
 import CryptoKit
 import XCTest
 
