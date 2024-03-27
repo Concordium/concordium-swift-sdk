@@ -36,7 +36,7 @@ To include it as a dependency, add the following
 and adding
 
 ```swift
-.product(name: "ConcordiumSwiftSDK", package: "concordium-swift-sdk")
+.product(name: "Concordium", package: "concordium-swift-sdk")
 ```
 
 to the `dependencies` list of the appropriate `target`.
