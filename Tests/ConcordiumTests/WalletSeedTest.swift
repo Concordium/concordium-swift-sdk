@@ -9,7 +9,7 @@ final class WalletSeedTest: XCTestCase {
         let seed = WalletSeed(seedHex: TEST_SEED, network: .mainnet)
         XCTAssertEqual(
             try seed.credSecHex(
-                identityIndexes: IdentitySeedIndexes(providerIndex: 2, index: 115)
+                identityIndexes: IdentitySeedIndexes(providerID: 2, index: 115)
             ),
             "33b9d19b2496f59ed853eb93b9d374482d2e03dd0a12e7807929d6ee54781bb1"
         )
@@ -19,7 +19,7 @@ final class WalletSeedTest: XCTestCase {
         let seed = WalletSeed(seedHex: TEST_SEED, network: .mainnet)
         XCTAssertEqual(
             try seed.prfKeyHex(
-                identityIndexes: IdentitySeedIndexes(providerIndex: 3, index: 35)
+                identityIndexes: IdentitySeedIndexes(providerID: 3, index: 35)
             ),
             "4409e2e4acffeae641456b5f7406ecf3e1e8bd3472e2df67a9f1e8574f211bc5"
         )
@@ -29,7 +29,7 @@ final class WalletSeedTest: XCTestCase {
         let seed = WalletSeed(seedHex: TEST_SEED, network: .mainnet)
         XCTAssertEqual(
             try seed.signatureBlindingRandomnessHex(
-                identityIndexes: IdentitySeedIndexes(providerIndex: 4, index: 5713)
+                identityIndexes: IdentitySeedIndexes(providerID: 4, index: 5713)
             ),
             "1e3633af2b1dbe5600becfea0324bae1f4fa29f90bdf419f6fba1ff520cb3167"
         )
@@ -40,7 +40,7 @@ final class WalletSeedTest: XCTestCase {
         XCTAssertEqual(
             try seed.signingKeyHex(
                 accountCredentialIndexes: AccountCredentialSeedIndexes(
-                    identity: IdentitySeedIndexes(providerIndex: 0, index: 55),
+                    identity: IdentitySeedIndexes(providerID: 0, index: 55),
                     counter: 7
                 )
             ),
@@ -53,7 +53,7 @@ final class WalletSeedTest: XCTestCase {
         XCTAssertEqual(
             try seed.publicKeyHex(
                 accountCredentialIndexes: AccountCredentialSeedIndexes(
-                    identity: IdentitySeedIndexes(providerIndex: 1, index: 341),
+                    identity: IdentitySeedIndexes(providerID: 1, index: 341),
                     counter: 9
                 )
             ),
@@ -65,13 +65,13 @@ final class WalletSeedTest: XCTestCase {
         let seed = WalletSeed(seedHex: TEST_SEED, network: .mainnet)
         let privateKey = try seed.signingKeyHex(
             accountCredentialIndexes: AccountCredentialSeedIndexes(
-                identity: IdentitySeedIndexes(providerIndex: 0, index: 0),
+                identity: IdentitySeedIndexes(providerID: 0, index: 0),
                 counter: 0
             )
         )
         let publicKey = try seed.publicKeyHex(
             accountCredentialIndexes: AccountCredentialSeedIndexes(
-                identity: IdentitySeedIndexes(providerIndex: 0, index: 0),
+                identity: IdentitySeedIndexes(providerID: 0, index: 0),
                 counter: 0
             )
         )
@@ -90,7 +90,7 @@ final class WalletSeedTest: XCTestCase {
         XCTAssertEqual(
             try seed.idHex(
                 accountCredentialIndexes: AccountCredentialSeedIndexes(
-                    identity: IdentitySeedIndexes(providerIndex: 10, index: 50),
+                    identity: IdentitySeedIndexes(providerID: 10, index: 50),
                     counter: 5
                 ),
                 commitmentKey: "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac"
@@ -104,7 +104,7 @@ final class WalletSeedTest: XCTestCase {
         XCTAssertEqual(
             try seed.attributeCommitmentRandomnessHex(
                 accountCredentialIndexes: AccountCredentialSeedIndexes(
-                    identity: IdentitySeedIndexes(providerIndex: 5, index: 0),
+                    identity: IdentitySeedIndexes(providerID: 5, index: 0),
                     counter: 4
                 ),
                 attribute: 0
@@ -117,7 +117,7 @@ final class WalletSeedTest: XCTestCase {
         let seed = WalletSeed(seedHex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
             try seed.credSecHex(
-                identityIndexes: IdentitySeedIndexes(providerIndex: 2, index: 115)
+                identityIndexes: IdentitySeedIndexes(providerID: 2, index: 115)
             ),
             "33c9c538e362c5ac836afc08210f4b5d881ba65a0a45b7e353586dad0a0f56df"
         )
@@ -127,7 +127,7 @@ final class WalletSeedTest: XCTestCase {
         let seed = WalletSeed(seedHex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
             try seed.prfKeyHex(
-                identityIndexes: IdentitySeedIndexes(providerIndex: 3, index: 35)
+                identityIndexes: IdentitySeedIndexes(providerID: 3, index: 35)
             ),
             "41d794d0b06a7a31fb79bb76c44e6b87c63e78f9afe8a772fc64d20f3d9e8e82"
         )
@@ -137,7 +137,7 @@ final class WalletSeedTest: XCTestCase {
         let seed = WalletSeed(seedHex: TEST_SEED, network: .testnet)
         XCTAssertEqual(
             try seed.signatureBlindingRandomnessHex(
-                identityIndexes: IdentitySeedIndexes(providerIndex: 4, index: 5713)
+                identityIndexes: IdentitySeedIndexes(providerID: 4, index: 5713)
             ),
             "079eb7fe4a2e89007f411ede031543bd7f687d50341a5596e015c9f2f4c1f39b"
         )
@@ -148,7 +148,7 @@ final class WalletSeedTest: XCTestCase {
         XCTAssertEqual(
             try seed.signingKeyHex(
                 accountCredentialIndexes: AccountCredentialSeedIndexes(
-                    identity: IdentitySeedIndexes(providerIndex: 0, index: 55),
+                    identity: IdentitySeedIndexes(providerID: 0, index: 55),
                     counter: 7
                 )
             ),
@@ -161,7 +161,7 @@ final class WalletSeedTest: XCTestCase {
         XCTAssertEqual(
             try seed.publicKeyHex(
                 accountCredentialIndexes: AccountCredentialSeedIndexes(
-                    identity: IdentitySeedIndexes(providerIndex: 1, index: 341),
+                    identity: IdentitySeedIndexes(providerID: 1, index: 341),
                     counter: 9
                 )
             ),
@@ -173,13 +173,13 @@ final class WalletSeedTest: XCTestCase {
         let seed = WalletSeed(seedHex: TEST_SEED, network: .testnet)
         let privateKey = try seed.signingKeyHex(
             accountCredentialIndexes: AccountCredentialSeedIndexes(
-                identity: IdentitySeedIndexes(providerIndex: 0, index: 0),
+                identity: IdentitySeedIndexes(providerID: 0, index: 0),
                 counter: 0
             )
         )
         let publicKey = try seed.publicKeyHex(
             accountCredentialIndexes: AccountCredentialSeedIndexes(
-                identity: IdentitySeedIndexes(providerIndex: 0, index: 0),
+                identity: IdentitySeedIndexes(providerID: 0, index: 0),
                 counter: 0
             )
         )
@@ -198,7 +198,7 @@ final class WalletSeedTest: XCTestCase {
         XCTAssertEqual(
             try seed.idHex(
                 accountCredentialIndexes: AccountCredentialSeedIndexes(
-                    identity: IdentitySeedIndexes(providerIndex: 10, index: 50),
+                    identity: IdentitySeedIndexes(providerID: 10, index: 50),
                     counter: 5
                 ),
                 commitmentKey: "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac"
@@ -212,7 +212,7 @@ final class WalletSeedTest: XCTestCase {
         XCTAssertEqual(
             try seed.attributeCommitmentRandomnessHex(
                 accountCredentialIndexes: AccountCredentialSeedIndexes(
-                    identity: IdentitySeedIndexes(providerIndex: 5, index: 0),
+                    identity: IdentitySeedIndexes(providerID: 5, index: 0),
                     counter: 4
                 ),
                 attribute: 0
