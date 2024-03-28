@@ -1,6 +1,6 @@
 import Foundation
 
-public struct HttpRequest<Response: Decodable> {
+public struct HTTPRequest<Response: Decodable> {
     public var request: URLRequest
 
     public init(request: URLRequest) {
@@ -12,7 +12,7 @@ public struct HttpRequest<Response: Decodable> {
     }
 }
 
-public extension HttpRequest {
+public extension HTTPRequest {
     func decodeResponse(data: Data) throws -> Response {
         try JSONDecoder().decode(Response.self, from: data)
     }

@@ -11,9 +11,9 @@ public class WalletProxyEndpoints {
         self.baseUrl = baseUrl
     }
 
-    public var getIdentityProviders: HttpRequest<[IdentityProviderJson]> {
+    public var getIdentityProviders: HTTPRequest<[IdentityProviderJson]> {
         get throws {
-            try HttpRequest(url: URL(string: "/v1/ip_info", relativeTo: baseUrl) ?! WalletProxyEndpointError.cannotConstructUrl)
+            try HTTPRequest(url: URL(string: "/v1/ip_info", relativeTo: baseUrl) ?! WalletProxyEndpointError.cannotConstructUrl)
         }
     }
 }

@@ -55,7 +55,7 @@ public typealias BLSPublicKey = String
 public typealias ElgamalPublicKey = String
 
 /// A public key that corresponds to ``BakerElectionSignKey``.
-public typealias BakerElectionVerifyKey = VRFPublicKey // til proof of stake (verifiable random function)
+public typealias BakerElectionVerifyKey = VRFPublicKey
 
 /// A public key that corresponds to ``BakerSignatureSignKey``.
 public typealias BakerSignatureVerifyKey = Ed25519PublicKey
@@ -187,8 +187,7 @@ extension CredentialPublicKeys {
         try .init(
             keys: grpc.keys.reduce(into: [:]) { res, e in
                 let idx = try KeyIndex(exactly: e.key) ?! GRPCError.valueOutOfBounds
-                let key = try VerifyKey.fromGRPCType(e.value) // TODO: !!!
-                res[idx] = key
+                res[idx] = try .fromGRPCType(e.value)
             },
             threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GRPCError.valueOutOfBounds
         )

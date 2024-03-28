@@ -6,8 +6,8 @@ public enum IdentityRequestError: Error {
     case cannotConstructRecoveryUrl
 }
 
-public typealias IdentityIssuanceRequest = HttpRequest<IdentityIssuanceResponse>
-public typealias IdentityRecoverRequest = HttpRequest<Versioned<IdentityObject>>
+public typealias IdentityIssuanceRequest = HTTPRequest<IdentityIssuanceResponse>
+public typealias IdentityRecoverRequest = HTTPRequest<Versioned<IdentityObject>>
 
 public class IdentityRequestUrlBuilder {
     private let callbackUrl: URL? // In Android example wallet: concordiumwallet-example://identity-issuer/callback
@@ -42,7 +42,7 @@ public class IdentityRequestUrlBuilder {
 
     public func recoveryRequestToFetch(baseUrl: URL, requestJson: String) throws -> IdentityRecoverRequest {
         let url = try recoveryRequestUrl(baseUrl: baseUrl, requestJson: requestJson) ?! IdentityRequestError.cannotConstructRecoveryUrl
-        return HttpRequest(url: url)
+        return HTTPRequest(url: url)
     }
 
     private func recoveryRequestUrl(baseUrl: URL, requestJson: String) -> URL? {
