@@ -213,7 +213,7 @@ struct Root: AsyncParsableCommand {
             var receiver: AccountOption
 
             @Option(help: "Amount of uCCD to send.")
-            var amount: MicroCcdAmount
+            var amount: MicroCCDAmount
 
             @Option(help: "Timestamp in Unix time of transaction expiry.")
             var expiry: TransactionTime = 9_999_999_999
@@ -232,7 +232,7 @@ struct Root: AsyncParsableCommand {
                     ).deriveAccount(
                         credentials: [
                             .init(
-                                identity: .init(providerIndex: walletCmd.identityProviderIndex, index: walletCmd.identityIndex),
+                                identity: .init(providerID: walletCmd.identityProviderIndex, index: walletCmd.identityIndex),
                                 counter: walletCmd.credentialCounter
                             ),
                         ]
@@ -432,7 +432,7 @@ struct Root: AsyncParsableCommand {
                     let identity = try await req.response(session: URLSession.shared)
 
                     let idxs = AccountCredentialSeedIndexes(
-                        identity: IdentitySeedIndexes(providerIndex: identityProviderIndex, index: identityIndex),
+                        identity: IdentitySeedIndexes(providerID: identityProviderIndex, index: identityIndex),
                         counter: credentialCounter
                     )
                     print("Deriving credential deployment.")
@@ -486,7 +486,7 @@ struct Root: AsyncParsableCommand {
             var receiver: AccountOption
 
             @Option(help: "Amount of uCCD to send")
-            var amount: MicroCcdAmount
+            var amount: MicroCCDAmount
 
             @Option(help: "Timestamp in Unix time of transaction expiry")
             var expiry: TransactionTime = 9_999_999_999
@@ -543,7 +543,7 @@ struct Root: AsyncParsableCommand {
     }
 }
 
-func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amount: MicroCcdAmount, expiry: TransactionTime) async throws -> TransactionHash {
+func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amount: MicroCCDAmount, expiry: TransactionTime) async throws -> TransactionHash {
     print("Attempting to send \(amount) uCCD from account '\(sender.address.base58Check)' to '\(receiver.base58Check)'...")
     print("Resolving next sequence number of sender account.")
     let next = try await client.nextAccountSequenceNumber(address: sender.address)

@@ -114,7 +114,7 @@ public typealias Memo = Data
 
 /// The payload for an account transaction (only transfer is supported for now).
 public enum AccountTransactionPayload {
-    case transfer(amount: MicroCcdAmount, receiver: AccountAddress)
+    case transfer(amount: MicroCCDAmount, receiver: AccountAddress)
 
     var cost: Energy {
         switch self {

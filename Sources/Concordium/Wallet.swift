@@ -22,7 +22,7 @@ public class Wallet {
 
     // TODO: Add method to be called to insert final identity.
     // TODO: Add abstraction for opening the URL and then intercepting the callback.
-    public func prepareCreateIdentity(provider: IdentityProvider, index: UInt32, anonymityRevokerThreshold: UInt8) throws -> URL {
+    public func prepareCreateIdentity(provider: IdentityProvider, index: IdentityIndex, anonymityRevokerThreshold: RevocationThreshold) throws -> URL {
         try identityRequestUrlBuilder.issuanceUrlToOpen(
             baseUrl: provider.metadata.issuanceStart,
             requestJson: identityRequestBuilder.issuanceRequestJson(
@@ -33,7 +33,7 @@ public class Wallet {
         )
     }
 
-    public func prepareRecoverIdentity(provider: IdentityProvider, index: UInt32) throws -> IdentityRecoverRequest {
+    public func prepareRecoverIdentity(provider: IdentityProvider, index: IdentityIndex) throws -> IdentityRecoverRequest {
         try identityRequestUrlBuilder.recoveryRequestToFetch(
             baseUrl: provider.metadata.recoveryStart,
             requestJson: identityRequestBuilder.recoveryRequestJson(
@@ -45,9 +45,9 @@ public class Wallet {
     }
 
     // TODO: Stored identity object should know its own index?
-    public func prepareCreateAccount(identity: IdentityObject, identityIndex: UInt32, provider: IdentityProvider, index: UInt8) throws -> WalletAccountCredential {
+    public func prepareCreateAccount(identity: IdentityObject, identityIndex: IdentityIndex, provider: IdentityProvider, index: CredentialCounter) throws -> WalletAccountCredential {
         let idxs = AccountCredentialSeedIndexes(
-            identity: IdentitySeedIndexes(providerIndex: provider.info.identity, index: identityIndex),
+            identity: IdentitySeedIndexes(providerID: provider.info.identity, index: identityIndex),
             counter: index
         )
         let deployment = try accountDerivation.deriveCredential(

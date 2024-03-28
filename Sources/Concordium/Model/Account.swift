@@ -8,7 +8,7 @@ import Foundation
 public typealias AccountIndex = UInt64
 
 /// Internal short ID of the baker/validator.
-public typealias BakerId = AccountIndex
+public typealias BakerID = AccountIndex
 
 /// Index of the credential that is to be used.
 public typealias CredentialIndex = UInt32
@@ -18,17 +18,17 @@ public typealias KeyIndex = UInt8
 
 /// A registration ID of a credential.
 /// This ID is generated from the user's PRF key and a sequential counter.
-/// ``CredentialRegistrationId``'s generated from the same PRF key,
+/// ``CredentialRegistrationID``'s generated from the same PRF key,
 /// but different counter values cannot easily be linked together.
-public typealias CredentialRegistrationId = Data // 48 bytes
+public typealias CredentialRegistrationID = Data // 48 bytes
 
 /// A succinct identifier of an identity provider on the chain.
 /// In credential deployments and other interactions with the chain, this is used to identify which identity provider is meant.
-public typealias IpIdentity = UInt32
+public typealias IdentityProviderID = UInt32
 
 /// Identity of an anonymity revoker on the chain.
 /// This defines their evaluation point for secret sharing, and thus it cannot be 0.
-public typealias ArIdentity = UInt32
+public typealias AnonymnityRevokerID = UInt32
 
 /// The minimum number of signatures on a credential that need to sign any transaction coming from an associated account.
 public typealias SignatureThreshold = UInt8
@@ -38,37 +38,37 @@ public typealias SignatureThreshold = UInt8
 public typealias RevocationThreshold = UInt8
 
 /// Amount of uCCD.
-public typealias MicroCcdAmount = UInt64
+public typealias MicroCCDAmount = UInt64
 
 public typealias EncryptedAmount = Data
 
 public typealias AggregatedAmount = Data // in Rust/Java SDK this is (EncryptedAmount<ArCurve>, UInt32)
 
 /// An Ed25519-like public key.
-public typealias VrfPublicKey = String
+public typealias VRFPublicKey = String
 
 public typealias Ed25519PublicKey = String
 
-public typealias BlsPublicKey = String
+public typealias BLSPublicKey = String
 
 /// Elgamal public key.
 public typealias ElgamalPublicKey = String
 
 /// A public key that corresponds to ``BakerElectionSignKey``.
-public typealias BakerElectionVerifyKey = VrfPublicKey
+public typealias BakerElectionVerifyKey = VRFPublicKey // til proof of stake (verifiable random function)
 
 /// A public key that corresponds to ``BakerSignatureSignKey``.
 public typealias BakerSignatureVerifyKey = Ed25519PublicKey
 
 /// Public key corresponding to ``BakerAggregationSignKey``.
-public typealias BakerAggregationVerifyKey = BlsPublicKey
+public typealias BakerAggregationVerifyKey = BLSPublicKey
 
 /// An account identifier used in queries.
 public enum AccountIdentifier {
     /// Identify an account by an address.
     case address(AccountAddress)
     /// Identify an account by the credential registration id.
-    case credentialRegistrationId(CredentialRegistrationId)
+    case credentialRegistrationID(CredentialRegistrationID)
     /// Identify an account by its account index.
     case index(AccountIndex)
 
@@ -80,7 +80,7 @@ public enum AccountIdentifier {
             var i = Concordium_V2_AccountIdentifierInput()
             i.address = a
             return i
-        case let .credentialRegistrationId(id):
+        case let .credentialRegistrationID(id):
             var c = Concordium_V2_CredentialRegistrationId()
             c.value = id
             var i = Concordium_V2_AccountIdentifierInput()
@@ -150,7 +150,7 @@ public struct Release {
     /// Effective time of release.
     public var timestamp: Date
     /// Amount to be released.
-    public var amount: MicroCcdAmount
+    public var amount: MicroCCDAmount
     /// List of transaction hashes that contribute a balance to this release.
     public var transactions: [TransactionHash]
 
@@ -167,7 +167,7 @@ public struct Release {
 /// This is the balance of the account that is owned by the account, but cannot be used until the release point.
 public struct ReleaseSchedule {
     /// Total amount that is locked up in releases.
-    public var total: MicroCcdAmount
+    public var total: MicroCCDAmount
     /// List of timestamped releases in increasing order of timestamps.
     public var schedule: [Release]
 
@@ -239,9 +239,9 @@ public struct CredentialDeploymentValuesInitial {
     /// Credential keys (i.e. account holder keys).
     public var credentialPublicKeys: CredentialPublicKeys
     /// Credential registration id of the credential.
-    public var credId: CredentialRegistrationId
+    public var credId: CredentialRegistrationID
     /// Identity of the identity provider who signed the identity object from which this credential is derived.
-    public var ipIdentity: IpIdentity
+    public var ipIdentity: IdentityProviderID
     /// Policy of this credential object.
     public var policy: Policy
 
@@ -270,7 +270,7 @@ public struct CredentialDeploymentValuesNormal {
     /// Anonymity revocation data. List of anonymity revokers which can revoke identity.
     /// NB: The order is important since it is the same order as that signed by the identity provider,
     ///  and permuting the list will invalidate the signature from the identity provider.
-    public var arData: [ArIdentity: ChainArData]
+    public var arData: [AnonymnityRevokerID: ChainArData]
 
     static func fromGRPCType(_ grpc: Concordium_V2_NormalCredentialValues) throws -> Self {
         try .init(
@@ -353,7 +353,7 @@ public struct AccountEncryptedAmount {
 /// Information about a baker/validator.
 public struct BakerInfo {
     /// Identity of the baker. This is actually the account index of the account controlling the baker.
-    public var bakerId: BakerId
+    public var bakerId: BakerID
     /// Baker's public key used to check whether they won the lottery or not.
     public var bakerElectionVerifyKey: BakerElectionVerifyKey
     /// Baker's public key used to check that they are indeed the ones who produced the block.
@@ -375,7 +375,7 @@ public struct BakerInfo {
 /// Pending change in the baker's stake.
 public enum StakePendingChange {
     /// The stake is being reduced. The new stake will take affect in the given epoch.
-    case reduceStake(newStake: MicroCcdAmount, effectiveTime: Date)
+    case reduceStake(newStake: MicroCCDAmount, effectiveTime: Date)
     /// The baker will be removed at the end of the given epoch.
     case removeStake(effectiveTime: Date)
 
@@ -455,7 +455,7 @@ public enum DelegationTarget {
     /// Delegate passively, i.e., to no specific baker.
     case passive
     /// Delegate to a specific baker.
-    case baker(BakerId)
+    case baker(BakerID)
 
     static func fromGRPCType(_ grpc: Concordium_V2_DelegationTarget) throws -> Self {
         switch grpc.target {
@@ -472,7 +472,7 @@ public enum DelegationTarget {
 public enum AccountStakingInfo {
     /// The account is a baker.
     case baker(
-        stakedAmount: MicroCcdAmount,
+        stakedAmount: MicroCCDAmount,
         restakeEarnings: Bool,
         bakerInfo: BakerInfo,
         pendingChange: StakePendingChange?,
@@ -480,7 +480,7 @@ public enum AccountStakingInfo {
     )
     /// The account is delegating stake to a baker.
     case delegated(
-        stakedAmount: MicroCcdAmount,
+        stakedAmount: MicroCCDAmount,
         restakeEarnings: Bool,
         delegationTarget: DelegationTarget,
         pendingChange: StakePendingChange?
@@ -514,7 +514,7 @@ public struct AccountInfo {
     /// Next sequence number to be used for transactions signed from this account.
     public var sequenceNumber: SequenceNumber
     /// Current (unencrypted) balance of the account.
-    public var amount: MicroCcdAmount
+    public var amount: MicroCCDAmount
     /// Release schedule for any locked up amount. This could be an empty release schedule.
     public var releaseSchedule: ReleaseSchedule
     /// Map of all currently active credentials on the account.

@@ -14,10 +14,10 @@ final class WalletTest: XCTestCase {
         let seed = WalletSeed(seedHex: TEST_SEED, network: .testnet)
         let gen = SeedBasedAccountDerivation(seed: seed, globalContext: TESTNET_CONTEXT)
         let account1 = try gen.deriveAccount(
-            credentials: [AccountCredentialSeedIndexes(identity: IdentitySeedIndexes(providerIndex: 0, index: 0), counter: 0)]
+            credentials: [AccountCredentialSeedIndexes(identity: IdentitySeedIndexes(providerID: 0, index: 0), counter: 0)]
         )
         let account2 = try gen.deriveAccount(
-            credentials: [AccountCredentialSeedIndexes(identity: IdentitySeedIndexes(providerIndex: 0, index: 0), counter: 1)]
+            credentials: [AccountCredentialSeedIndexes(identity: IdentitySeedIndexes(providerID: 0, index: 0), counter: 1)]
         )
 
         // Construct transaction.
@@ -40,7 +40,7 @@ final class WalletTest: XCTestCase {
             rawRepresentation: Data(
                 hex: seed.publicKeyHex(
                     accountCredentialIndexes: AccountCredentialSeedIndexes(
-                        identity: IdentitySeedIndexes(providerIndex: 0, index: 0),
+                        identity: IdentitySeedIndexes(providerID: 0, index: 0),
                         counter: 0
                     )
                 )
