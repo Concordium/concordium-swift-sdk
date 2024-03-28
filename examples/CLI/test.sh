@@ -9,7 +9,7 @@
 
 set -eux
 
-# Location of the gRPC interface of a Concordium Node running on mainnet.
+# Location of the gRPC interface of a Concordium Node running on testnet.
 #
 # Override via environment variables or use the following command to
 # forward traffic for the default target (localhost:20000) to <HOST>:<PORT>:
@@ -19,14 +19,14 @@ set -eux
 host="${HOST-localhost}"
 port="${PORT-20000}"
 
-# Test data (picked randomly from mainnet).
-some_block_hash="a21c1c18b70c64680a4eceea655ab68d164e8f1c82b8b8566388391d8da81e41"
-some_account_address="35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh"
+# Test data (picked randomly from testnet).
+some_block_hash="970112d640a183b317f79ca9cc4db8cac3f1e263c68fca8c19d14b9fd2041a74"
+some_account_address="33Po4Z5v4DaAHo9Gz9Afc9LRzbZmYikus4Q7gqMaXHtdS17khz"
 
 # Build CLI.
 swift build
 dir_path="$(swift build --show-bin-path)"
-cli_path="${dir_path}/concordium"
+cli_path="${dir_path}/concordium-example-client"
 
 # Execute "tests".
 "${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters

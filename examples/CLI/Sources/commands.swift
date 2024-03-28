@@ -50,7 +50,7 @@ struct AccountOption: ParsableArguments {
 @main
 struct Root: AsyncParsableCommand {
     @OptionGroup
-    var options: GRPCOptions
+    var opts: GRPCOptions
 
     static var configuration = CommandConfiguration(
         abstract: "A CLI for demonstrating and testing use of the gRPC client of the SDK.",
@@ -64,13 +64,13 @@ struct Root: AsyncParsableCommand {
         )
 
         @OptionGroup
-        var root: Root
+        var rootCmd: Root
 
         @OptionGroup
         var block: BlockOption
 
         func run() async throws {
-            let res = try await withGRPCClient(target: root.options.target) {
+            let res = try await withGRPCClient(target: rootCmd.opts.target) {
                 try await $0.cryptographicParameters(
                     block: block.block
                 )
@@ -94,13 +94,13 @@ struct Root: AsyncParsableCommand {
             )
 
             @OptionGroup
-            var root: Root
+            var rootCmd: Root
 
             @OptionGroup
             var accountCmd: Account
 
             func run() async throws {
-                let res = try await withGRPCClient(target: root.options.target) {
+                let res = try await withGRPCClient(target: rootCmd.opts.target) {
                     try await $0.nextAccountSequenceNumber(
                         address: accountCmd.account.address
                     )
@@ -115,7 +115,7 @@ struct Root: AsyncParsableCommand {
             )
 
             @OptionGroup
-            var root: Root
+            var rootCmd: Root
 
             @OptionGroup
             var block: BlockOption
@@ -124,7 +124,7 @@ struct Root: AsyncParsableCommand {
             var accountCmd: Account
 
             func run() async throws {
-                let res = try await withGRPCClient(target: root.options.target) {
+                let res = try await withGRPCClient(target: rootCmd.opts.target) {
                     try await $0.info(
                         account: accountCmd.account.identifier,
                         block: block.block
