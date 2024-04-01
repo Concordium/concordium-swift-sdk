@@ -67,13 +67,13 @@ func deriveKeyAES256(password: Data, salt: Data, rounds: Int) throws -> Data {
             res.withUnsafeMutableBytes { resBytes in
                 CCKeyDerivationPBKDF(
                     CCPBKDFAlgorithm(kCCPBKDF2),
-                    passwordBytes.baseAddress!,
+                    passwordBytes.baseAddress,
                     passwordBytes.count,
-                    saltBytes.baseAddress!,
+                    saltBytes.baseAddress,
                     saltBytes.count,
                     CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
                     UInt32(rounds),
-                    resBytes,
+                    resBytes.baseAddress,
                     kCCKeySizeAES256
                 )
             }
