@@ -12,13 +12,13 @@ public class Account {
     }
 }
 
-public protocol AccountRepositoryProtocol {
+public protocol AccountRepository {
     func lookup(_ address: AccountAddress) throws -> Account?
     func insert(_ account: Account) throws
     func remove(_ address: AccountAddress) throws
 }
 
-public class AccountStore: AccountRepositoryProtocol {
+public class AccountStore: AccountRepository {
     private var dictionary: [AccountAddress: Account] = [:]
 
     public init(_ accounts: [Account] = []) {

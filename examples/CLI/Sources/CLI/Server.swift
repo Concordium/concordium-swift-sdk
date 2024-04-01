@@ -14,10 +14,10 @@ struct CallbackRequestContent: Content {
     var code_uri: String?
 
     func toResult() -> Result<URL, IdentityIssuanceError> {
-        if let errMsg = content.error {
+        if let errMsg = error {
             return .failure(IdentityIssuanceError.identityProviderError(errMsg))
         }
-        guard let url = content.code_uri else {
+        guard let url = code_uri else {
             // Neither 'error' nor 'code_uri' fields were provided.
             return .failure(IdentityIssuanceError.invalidCallbackRequest)
         }
@@ -90,7 +90,9 @@ func withIdentityIssuanceCallbackServer(_ f: (_ callbackURL: URL) throws -> Void
 
     // Resolve port picked by the OS.
     guard let port = app.http.server.shared.localAddress?.port else {
-        return .failure(IdentityIssuanceError.cannotResolveServerPort(app.http.server.shared.localAddress.debugDescription))
+        return .failure(
+            IdentityIssuanceError.cannotResolveServerPort(app.http.server.shared.localAddress.debugDescription)
+        )
     }
 
     // Invoke callback with the callback URL.

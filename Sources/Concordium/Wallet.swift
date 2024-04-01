@@ -7,17 +7,17 @@ public enum WalletError: Error {
 }
 
 public class Wallet {
-    private let accounts: AccountRepositoryProtocol // TODO: add identity repo
+    private let accounts: AccountRepository // TODO: add identity repo
     private let accountDerivation: SeedBasedAccountDerivation // for now we only support the seed based scheme
     private let identityRequestBuilder: SeedBasedIdentityRequestBuilder // for now we only support the seed based scheme
     private let identityRequestURLBuilder: IdentityRequestURLBuilder
 
     // TODO: Take identity providers/anonymity revokers (or wrap all this into some identity manager).
-    public init(seed: WalletSeed, cryptoParams: CryptographicParameters, accounts: AccountRepositoryProtocol, identityIssuanceCallback: URL) {
+    public init(seed: WalletSeed, cryptoParams: CryptographicParameters, accounts: AccountRepository, identityIssuanceCallbackURL: URL) {
         self.accounts = accounts
         accountDerivation = SeedBasedAccountDerivation(seed: seed, cryptoParams: cryptoParams)
         identityRequestBuilder = SeedBasedIdentityRequestBuilder(seed: seed, cryptoParams: cryptoParams)
-        identityRequestURLBuilder = IdentityRequestURLBuilder(callbackURL: identityIssuanceCallback)
+        identityRequestURLBuilder = IdentityRequestURLBuilder(callbackURL: identityIssuanceCallbackURL)
     }
 
     // TODO: Add method to be called to insert final identity.

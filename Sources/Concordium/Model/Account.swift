@@ -103,7 +103,7 @@ public struct AccountAddress: Hashable {
     public var data: Data // 32 bytes
 
     public var base58Check: String {
-        var versionedData = Data([AccountAddress.base58CheckVersion])
+        var versionedData = Data([Self.base58CheckVersion])
         versionedData.append(data)
         return Base58Check().encode(data: versionedData)
     }
@@ -117,8 +117,8 @@ public struct AccountAddress: Hashable {
     public init(base58Check: String) throws {
         var data = try Base58Check().decode(string: base58Check)
         let version = data.removeFirst()
-        if version != AccountAddress.base58CheckVersion {
-            throw GRPCError.missingBase58CheckVersion(expected: AccountAddress.base58CheckVersion, actual: version)
+        if version != Self.base58CheckVersion {
+            throw GRPCError.unexpectedBase58CheckVersion(expected: Self.base58CheckVersion, actual: version)
         }
         self.init(data) // excludes initial version byte
     }

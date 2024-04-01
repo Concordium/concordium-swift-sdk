@@ -228,7 +228,7 @@ struct Root: AsyncParsableCommand {
                     print("Deriving account address and keys.")
                     let account = try SeedBasedAccountDerivation(
                         seed: WalletSeed(seedHex: seedHex, network: walletCmd.network.network),
-                        globalContext: cryptoParams
+                        cryptoParams: cryptoParams
                     ).deriveAccount(
                         credentials: [
                             .init(
@@ -432,7 +432,7 @@ struct Root: AsyncParsableCommand {
                         counter: walletCmd.credentialCounter
                     )
                     print("Deriving credential deployment.")
-                    let accountDerivation = SeedBasedAccountDerivation(seed: seed, globalContext: cryptoParams)
+                    let accountDerivation = SeedBasedAccountDerivation(seed: seed, cryptoParams: cryptoParams)
                     let credential = try accountDerivation.deriveCredential(
                         seedIndexes: idxs,
                         identity: identity.value,
@@ -579,7 +579,7 @@ func issueIdentity(
     print("Preparing identity issuance request.")
     let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
         seed: seed,
-        globalContext: cryptoParams
+        cryptoParams: cryptoParams
     )
     let reqJSON = try identityRequestBuilder.issuanceRequestJSON(
         provider: identityProvider,
@@ -601,7 +601,7 @@ func prepareRecoverIdentity(
 ) throws -> IdentityRecoverRequest {
     let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
         seed: seed,
-        globalContext: cryptoParams
+        cryptoParams: cryptoParams
     )
     let reqJSON = try identityRequestBuilder.recoveryRequestJSON(
         provider: identityProvider.info,
