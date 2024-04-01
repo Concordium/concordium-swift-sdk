@@ -2,12 +2,12 @@ import CommonCrypto
 import Foundation
 
 public struct EncryptedExportJSON: Decodable {
-    var cipherText: String
+    var cipherText: String // base64
     var metadata: Metadata
 
     public struct Metadata: Decodable {
         var encryptionMethod: String
-        var initializationVector: String
+        var initializationVector: String // base64
         var iterations: Int
         var keyDerivationMethod: String
         var salt: String // base64
@@ -17,16 +17,22 @@ public struct EncryptedExportJSON: Decodable {
 enum DecryptExportError: Error {
     case keyGenerationFailed(status: Int)
     case decryptionFailed(status: CCCryptorStatus)
+    case unsupportedEncryptionMethod(String)
     case unsupportedKeyDerivationMethod(String)
     case unsupportedKeyLength
     case unsupportedInputVectorLength
     case invalidCipher(String)
     case invalidSalt(String)
     case invalidInitializationVector(String)
+    case invalidPasswordOrCorrupted
 }
 
 public func decryptLegacyWalletExport(export: EncryptedExportJSON, password: Data) throws -> LegacyWalletExportJSON {
     let data = try decryptLegacyWalletExport(cipher: export.cipherText, metadata: export.metadata, password: password)
+    guard String(data: data, encoding: .utf8) != nil else {
+        // Decrypted payload is not valid UTF-8.
+        throw DecryptExportError.invalidPasswordOrCorrupted
+    }
     return try JSONDecoder().decode(LegacyWalletExportJSON.self, from: data)
 }
 
@@ -34,11 +40,14 @@ func decryptLegacyWalletExport(cipher: String, metadata: EncryptedExportJSON.Met
     guard metadata.keyDerivationMethod == "PBKDF2WithHmacSHA256" else {
         throw DecryptExportError.unsupportedKeyDerivationMethod(metadata.keyDerivationMethod)
     }
+    guard metadata.encryptionMethod == "AES-256" else {
+        throw DecryptExportError.unsupportedEncryptionMethod(metadata.encryptionMethod)
+    }
     return try decryptLegacyWalletExport(
-        cipher: cipher.data(using: .ascii) ?! DecryptExportError.invalidCipher(cipher),
-        salt: metadata.salt.data(using: .ascii) ?! DecryptExportError.invalidSalt(metadata.salt),
+        cipher: Data(base64Encoded: cipher) ?! DecryptExportError.invalidCipher(cipher),
+        salt: Data(base64Encoded: metadata.salt) ?! DecryptExportError.invalidSalt(metadata.salt),
         iterations: metadata.iterations,
-        iv: metadata.initializationVector.data(using: .ascii) ?! DecryptExportError.invalidInitializationVector(metadata.initializationVector),
+        iv: Data(base64Encoded: metadata.initializationVector) ?! DecryptExportError.invalidInitializationVector(metadata.initializationVector),
         password: password
     )
 }

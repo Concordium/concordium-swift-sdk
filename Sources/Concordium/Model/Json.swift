@@ -43,6 +43,9 @@ public struct AccountKeysJSON: Decodable {
 }
 
 public struct LegacyWalletExportJSON: Decodable {
+    public var v: Int // TODO: let decoding fail if `v` differs from '1'.
+    public var type: String // TODO: let decoding fail if `type` differs from "concordium-mobile-wallet-data"
+    public var environment: String
     public var value: Value
 
     public func toSDKType() throws -> [Concordium.Account] {
