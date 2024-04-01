@@ -1,22 +1,34 @@
 import Foundation
 import Vapor
 
-struct CallbackRequestParameters: Content {
-    var error: String?
-    var code_uri: String?
-}
-
 enum IdentityIssuanceError: Error {
     case identityProviderError(String)
     case invalidIdentityURL(String)
     case cannotResolveServerPort(String)
     case invalidCallbackRequest
+    case callbackFailed
+}
+
+struct CallbackRequestContent: Content {
+    var error: String?
+    var code_uri: String?
+
+    func toResult() -> Result<URL, IdentityIssuanceError> {
+        if let errMsg = content.error {
+            return .failure(IdentityIssuanceError.identityProviderError(errMsg))
+        }
+        guard let url = content.code_uri else {
+            // Neither 'error' nor 'code_uri' fields were provided.
+            return .failure(IdentityIssuanceError.invalidCallbackRequest)
+        }
+        guard let identityURL = URL(string: url) else {
+            return .failure(IdentityIssuanceError.invalidIdentityURL(url))
+        }
+        return .success(identityURL)
+    }
 }
 
 func withIdentityIssuanceCallbackServer(_ f: (_ callbackURL: URL) throws -> Void) throws -> Result<URL, IdentityIssuanceError> {
-    let lock = DispatchSemaphore(value: 0)
-    var res: Result<URL, IdentityIssuanceError>? = nil
-
     let app = Application(.production)
     defer { app.shutdown() }
     app.logger.logLevel = .warning // reduce logging
@@ -62,19 +74,14 @@ func withIdentityIssuanceCallbackServer(_ f: (_ callbackURL: URL) throws -> Void
         r.headers.contentType = .html
         return r
     }
+
     // Listen for result shipped by JavaScript snippet above.
+    let lock = DispatchSemaphore(value: 0)
+    var res: Result<URL, IdentityIssuanceError>? = nil
     app.post("callback") { req in
         defer { lock.signal() } // unblock main thread after handling request
-        let content = try req.content.decode(CallbackRequestParameters.self)
-        if let errMsg = content.error {
-            res = .failure(IdentityIssuanceError.identityProviderError(errMsg))
-        } else if let url = content.code_uri {
-            if let identityURL = URL(string: url) {
-                res = .success(identityURL)
-            } else {
-                res = .failure(IdentityIssuanceError.invalidIdentityURL(url))
-            }
-        }
+        let content = try req.content.decode(CallbackRequestContent.self)
+        res = content.toResult()
         return "OK"
     }
     // Start temporary server using port picked by the OS.
@@ -92,8 +99,7 @@ func withIdentityIssuanceCallbackServer(_ f: (_ callbackURL: URL) throws -> Void
     // Wait for POST callback.
     lock.wait()
     guard let res else {
-        // POST /callback was called but without 'error' nor 'code_uri' fields.
-        return .failure(IdentityIssuanceError.invalidCallbackRequest)
+        return .failure(IdentityIssuanceError.callbackFailed)
     }
     return res
 }

@@ -166,11 +166,11 @@ public enum AccountDerivationError: Error {
 
 public class SeedBasedAccountDerivation {
     public let seed: WalletSeed
-    private let globalContext: GlobalContext
+    private let cryptoParams: CryptographicParameters
 
-    public init(seed: WalletSeed, globalContext: GlobalContext) {
+    public init(seed: WalletSeed, cryptoParams: CryptographicParameters) {
         self.seed = seed
-        self.globalContext = globalContext
+        self.cryptoParams = cryptoParams
     }
 
     public func deriveCredential(
@@ -196,10 +196,10 @@ public class SeedBasedAccountDerivation {
             keys: [KeyIndex(0): VerifyKey(ed25519KeyHex: keyHex)],
             threshold: threshold
         )
-        let res = try ConcordiumWalletCrypto.accountCredential(
+        let res = try accountCredential(
             params: AccountCredentialParameters(
                 ipInfo: provider.info,
-                globalContext: globalContext,
+                globalContext: cryptoParams,
                 arsInfos: anonymityRevokers,
                 idObject: identity,
                 revealedAttributes: revealedAttributes,
@@ -225,7 +225,7 @@ public class SeedBasedAccountDerivation {
     }
 
     public func deriveAccountAddress(firstCredential: AccountCredentialSeedIndexes) throws -> AccountAddress {
-        let id = try seed.idHex(accountCredentialIndexes: firstCredential, commitmentKey: globalContext.onChainCommitmentKeyHex)
+        let id = try seed.idHex(accountCredentialIndexes: firstCredential, commitmentKey: cryptoParams.onChainCommitmentKeyHex)
         let hash = try SHA256.hash(data: Data(hex: id))
         return AccountAddress(Data(hash))
     }
@@ -245,11 +245,11 @@ public class SeedBasedAccountDerivation {
 
 public class SeedBasedIdentityRequestBuilder {
     private let seed: WalletSeed
-    private let globalContext: GlobalContext
+    private let cryptoParams: CryptographicParameters
 
-    public init(seed: WalletSeed, globalContext: GlobalContext) {
+    public init(seed: WalletSeed, cryptoParams: CryptographicParameters) {
         self.seed = seed
-        self.globalContext = globalContext
+        self.cryptoParams = cryptoParams
     }
 
     public func recoveryRequestJSON(provider: IdentityProviderInfo, index: IdentityIndex, time: Date) throws -> String {
@@ -258,7 +258,7 @@ public class SeedBasedIdentityRequestBuilder {
         return try identityRecoveryRequestJson(
             params: IdentityRecoveryRequestParameters(
                 ipInfo: provider,
-                globalContext: globalContext,
+                globalContext: cryptoParams,
                 timestamp: UInt64(time.timeIntervalSince1970),
                 idCredSecHex: idCredSec
             )
@@ -273,7 +273,7 @@ public class SeedBasedIdentityRequestBuilder {
         return try identityIssuanceRequestJson(
             params: IdentityIssuanceRequestParameters(
                 ipInfo: provider.info,
-                globalContext: globalContext,
+                globalContext: cryptoParams,
                 arsInfos: provider.anonymityRevokers,
                 arThreshold: anonymityRevokerThreshold,
                 prfKeyHex: prfKeyHex,

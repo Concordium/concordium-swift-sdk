@@ -85,17 +85,19 @@ func decryptAES256(key: Data, iv: Data, _ input: Data) throws -> Data {
     }
     var data = [UInt8](repeating: 0, count: input.count + kCCBlockSizeAES128)
     var count = 0
-    let status = CCCrypt(CCOperation(kCCDecrypt),
-                         CCAlgorithm(kCCAlgorithmAES),
-                         CCOptions(kCCOptionPKCS7Padding),
-                         [UInt8](key),
-                         key.count,
-                         [UInt8](iv),
-                         [UInt8](input),
-                         input.count,
-                         &data,
-                         data.count,
-                         &count)
+    let status = CCCrypt(
+        CCOperation(kCCDecrypt),
+        CCAlgorithm(kCCAlgorithmAES),
+        CCOptions(kCCOptionPKCS7Padding),
+        [UInt8](key),
+        key.count,
+        [UInt8](iv),
+        [UInt8](input),
+        input.count,
+        &data,
+        data.count,
+        &count
+    )
     guard status == kCCSuccess else {
         throw DecryptExportError.decryptionFailed(status: status)
     }

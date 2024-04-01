@@ -15,8 +15,8 @@ public class Wallet {
     // TODO: Take identity providers/anonymity revokers (or wrap all this into some identity manager).
     public init(seed: WalletSeed, cryptoParams: CryptographicParameters, accounts: AccountRepositoryProtocol, identityIssuanceCallback: URL) {
         self.accounts = accounts
-        accountDerivation = SeedBasedAccountDerivation(seed: seed, globalContext: cryptoParams)
-        identityRequestBuilder = SeedBasedIdentityRequestBuilder(seed: seed, globalContext: cryptoParams)
+        accountDerivation = SeedBasedAccountDerivation(seed: seed, cryptoParams: cryptoParams)
+        identityRequestBuilder = SeedBasedIdentityRequestBuilder(seed: seed, cryptoParams: cryptoParams)
         identityRequestURLBuilder = IdentityRequestURLBuilder(callbackURL: identityIssuanceCallback)
     }
 

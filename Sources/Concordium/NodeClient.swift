@@ -1,4 +1,3 @@
-import ConcordiumWalletCrypto
 import Foundation
 import GRPC
 import NIOCore
