@@ -1,26 +1,26 @@
 import Foundation
 
 public enum WalletProxyEndpointError: Error {
-    case cannotConstructUrl
+    case cannotConstructURL
 }
 
 public class WalletProxyEndpoints {
-    let baseUrl: URL
+    let baseURL: URL
 
-    public init(baseUrl: URL) {
-        self.baseUrl = baseUrl
+    public init(baseURL: URL) {
+        self.baseURL = baseURL
     }
 
-    public var getIdentityProviders: HTTPRequest<[IdentityProviderJson]> {
+    public var getIdentityProviders: HTTPRequest<[IdentityProviderJSON]> {
         get throws {
-            try HTTPRequest(url: URL(string: "/v1/ip_info", relativeTo: baseUrl) ?! WalletProxyEndpointError.cannotConstructUrl)
+            try HTTPRequest(url: URL(string: "/v1/ip_info", relativeTo: baseURL) ?! WalletProxyEndpointError.cannotConstructURL)
         }
     }
 }
 
-public struct IdentityProviderJson: Decodable {
+public struct IdentityProviderJSON: Decodable {
     public var ipInfo: IdentityProviderInfo
-    public var arsInfos: [UInt32: AnonymityRevokerInfo]
+    public var arsInfos: [AnonymityRevokerID: AnonymityRevokerInfo]
     public var metadata: Metadata
 
     enum CodingKeys: CodingKey {
@@ -42,7 +42,7 @@ public struct IdentityProviderJson: Decodable {
     }
 
     public struct IdentityProviderInfo: Decodable {
-        public var ipIdentity: UInt32
+        public var ipIdentity: IdentityProviderID
         public var ipDescription: Description
         public var ipCdiVerifyKey: String
         public var ipVerifyKey: String
@@ -58,7 +58,7 @@ public struct IdentityProviderJson: Decodable {
     }
 
     public struct AnonymityRevokerInfo: Decodable {
-        public var arIdentity: UInt32
+        public var arIdentity: AnonymityRevokerID
         public var arDescription: Description
         public var arPublicKey: String
 

@@ -252,7 +252,7 @@ public class SeedBasedIdentityRequestBuilder {
         self.globalContext = globalContext
     }
 
-    public func recoveryRequestJson(provider: IdentityProviderInfo, index: IdentityIndex, time: Date) throws -> String {
+    public func recoveryRequestJSON(provider: IdentityProviderInfo, index: IdentityIndex, time: Date) throws -> String {
         let identityIdxs = IdentitySeedIndexes(providerID: provider.identity, index: index)
         let idCredSec = try seed.credSecHex(identityIndexes: identityIdxs)
         return try identityRecoveryRequestJson(
@@ -265,7 +265,7 @@ public class SeedBasedIdentityRequestBuilder {
         )
     }
 
-    public func issuanceRequestJson(provider: IdentityProvider, index: IdentityIndex, anonymityRevokerThreshold: RevocationThreshold) throws -> String {
+    public func issuanceRequestJSON(provider: IdentityProvider, index: IdentityIndex, anonymityRevokerThreshold: RevocationThreshold) throws -> String {
         let identityIdxs = IdentitySeedIndexes(providerID: provider.info.identity, index: index)
         let prfKeyHex = try seed.prfKeyHex(identityIndexes: identityIdxs)
         let credSecHex = try seed.credSecHex(identityIndexes: identityIdxs)

@@ -32,7 +32,6 @@ public struct AccountTransaction {
             payloadByteCount: serializedPayload.count,
             signatureCount: signatureCount
         ) + payload.cost
-
         return .init(header: header, serializedPayload: serializedPayload)
     }
 }
@@ -214,7 +213,7 @@ public struct AccountTransactionHeader {
 }
 
 public extension AccountCredential {
-    func prepareDeployment(expiry: UInt64) -> PreparedAccountCredentialDeployment {
+    func prepareDeployment(expiry: TransactionTime) -> PreparedAccountCredentialDeployment {
         .init(credential: self, expiry: expiry)
     }
 }
@@ -243,7 +242,7 @@ public struct SignedAccountCredentialDeployment {
         self.signatures = signatures
     }
 
-    public func toCryptoType() -> ConcordiumWalletCrypto.SignedAccountCredential {
+    public func toCryptoType() -> SignedAccountCredential {
         .init(
             credential: deployment.credential,
             signaturesHex: signatures.mapValues { $0.hex }

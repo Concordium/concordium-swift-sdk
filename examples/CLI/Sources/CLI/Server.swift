@@ -8,12 +8,12 @@ struct CallbackRequestParameters: Content {
 
 enum IdentityIssuanceError: Error {
     case identityProviderError(String)
-    case invalidIdentityUrl(String)
+    case invalidIdentityURL(String)
     case cannotResolveServerPort(String)
     case invalidCallbackRequest
 }
 
-func withIdentityIssuanceCallbackServer(_ f: @escaping (_ callbackUrl: URL) throws -> Void) throws -> Result<URL, IdentityIssuanceError> {
+func withIdentityIssuanceCallbackServer(_ f: (_ callbackURL: URL) throws -> Void) throws -> Result<URL, IdentityIssuanceError> {
     let lock = DispatchSemaphore(value: 0)
     var res: Result<URL, IdentityIssuanceError>? = nil
 
@@ -69,10 +69,10 @@ func withIdentityIssuanceCallbackServer(_ f: @escaping (_ callbackUrl: URL) thro
         if let errMsg = content.error {
             res = .failure(IdentityIssuanceError.identityProviderError(errMsg))
         } else if let url = content.code_uri {
-            if let identityUrl = URL(string: url) {
-                res = .success(identityUrl)
+            if let identityURL = URL(string: url) {
+                res = .success(identityURL)
             } else {
-                res = .failure(IdentityIssuanceError.invalidIdentityUrl(url))
+                res = .failure(IdentityIssuanceError.invalidIdentityURL(url))
             }
         }
         return "OK"

@@ -4,9 +4,9 @@ import Foundation
 public struct IdentityProvider {
     public var info: IdentityProviderInfo
     public var metadata: Metadata
-    public var anonymityRevokers: [UInt32: AnonymityRevokerInfo]
+    public var anonymityRevokers: [AnonymityRevokerID: AnonymityRevokerInfo]
 
-    public init(info: IdentityProviderInfo, metadata: Metadata, anonymityRevokers: [UInt32: AnonymityRevokerInfo]) {
+    public init(info: IdentityProviderInfo, metadata: Metadata, anonymityRevokers: [AnonymityRevokerID: AnonymityRevokerInfo]) {
         self.info = info
         self.metadata = metadata
         self.anonymityRevokers = anonymityRevokers
@@ -114,8 +114,8 @@ extension ChoiceArParameters: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
-            arIdentities: container.decode([UInt32].self, forKey: .arIdentities),
-            threshold: container.decode(UInt32.self, forKey: .threshold)
+            arIdentities: container.decode([AnonymityRevokerID].self, forKey: .arIdentities),
+            threshold: UInt32(container.decode(RevocationThreshold.self, forKey: .threshold)) // TODO: remove conversion
         )
     }
 }
@@ -216,7 +216,7 @@ public struct IdentityIssuanceResponse: Decodable {
         let detail = try container.decodeIfPresent(String.self, forKey: .detail)
         switch status {
         case "done":
-            let token = try container.decode(TokenJson.self, forKey: .token)
+            let token = try container.decode(TokenJSON.self, forKey: .token)
             result = .success(identity: token.identityObject, detail: detail)
         case "error":
             result = .failure(detail: detail)
@@ -227,7 +227,7 @@ public struct IdentityIssuanceResponse: Decodable {
         }
     }
 
-    struct TokenJson: Decodable {
+    struct TokenJSON: Decodable {
         public var identityObject: Versioned<IdentityObject>
 
         public init(identityObject: Versioned<IdentityObject>) {
@@ -236,7 +236,7 @@ public struct IdentityIssuanceResponse: Decodable {
     }
 }
 
-// public struct IdentityIssuedResponseJson: Decodable {
+// public struct IdentityIssuedResponseJSON: Decodable {
 //    public var status: String
 //    public var token: Token?
 //    public var details: String?

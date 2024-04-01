@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-public struct AccountKeysJson: Decodable {
+public struct AccountKeysJSON: Decodable {
     public var keys: [String: CredentialKeys]
 
     public func toSDKType() throws -> AccountKeysCurve25519 {
@@ -42,7 +42,7 @@ public struct AccountKeysJson: Decodable {
     }
 }
 
-public struct LegacyWalletExportJson: Decodable {
+public struct LegacyWalletExportJSON: Decodable {
     public var value: Value
 
     public func toSDKType() throws -> [Concordium.Account] {
@@ -66,6 +66,6 @@ public struct LegacyWalletExportJson: Decodable {
 
     public struct Account: Decodable {
         public var address: String
-        public var accountKeys: AccountKeysJson
+        public var accountKeys: AccountKeysJSON
     }
 }

@@ -10,22 +10,22 @@ public class Wallet {
     private let accounts: AccountRepositoryProtocol // TODO: add identity repo
     private let accountDerivation: SeedBasedAccountDerivation // for now we only support the seed based scheme
     private let identityRequestBuilder: SeedBasedIdentityRequestBuilder // for now we only support the seed based scheme
-    private let identityRequestUrlBuilder: IdentityRequestUrlBuilder
+    private let identityRequestURLBuilder: IdentityRequestURLBuilder
 
     // TODO: Take identity providers/anonymity revokers (or wrap all this into some identity manager).
     public init(seed: WalletSeed, cryptoParams: CryptographicParameters, accounts: AccountRepositoryProtocol, identityIssuanceCallback: URL) {
         self.accounts = accounts
         accountDerivation = SeedBasedAccountDerivation(seed: seed, globalContext: cryptoParams)
         identityRequestBuilder = SeedBasedIdentityRequestBuilder(seed: seed, globalContext: cryptoParams)
-        identityRequestUrlBuilder = IdentityRequestUrlBuilder(callbackUrl: identityIssuanceCallback)
+        identityRequestURLBuilder = IdentityRequestURLBuilder(callbackURL: identityIssuanceCallback)
     }
 
     // TODO: Add method to be called to insert final identity.
     // TODO: Add abstraction for opening the URL and then intercepting the callback.
     public func prepareCreateIdentity(provider: IdentityProvider, index: IdentityIndex, anonymityRevokerThreshold: RevocationThreshold) throws -> URL {
-        try identityRequestUrlBuilder.issuanceUrlToOpen(
-            baseUrl: provider.metadata.issuanceStart,
-            requestJson: identityRequestBuilder.issuanceRequestJson(
+        try identityRequestURLBuilder.issuanceURLToOpen(
+            baseURL: provider.metadata.issuanceStart,
+            requestJSON: identityRequestBuilder.issuanceRequestJSON(
                 provider: provider,
                 index: index,
                 anonymityRevokerThreshold: anonymityRevokerThreshold
@@ -34,9 +34,9 @@ public class Wallet {
     }
 
     public func prepareRecoverIdentity(provider: IdentityProvider, index: IdentityIndex) throws -> IdentityRecoverRequest {
-        try identityRequestUrlBuilder.recoveryRequestToFetch(
-            baseUrl: provider.metadata.recoveryStart,
-            requestJson: identityRequestBuilder.recoveryRequestJson(
+        try identityRequestURLBuilder.recoveryRequestToFetch(
+            baseURL: provider.metadata.recoveryStart,
+            requestJSON: identityRequestBuilder.recoveryRequestJSON(
                 provider: provider.info,
                 index: index,
                 time: Date() // FUTURE: Use 'Date.now' once platform restrictions allow it

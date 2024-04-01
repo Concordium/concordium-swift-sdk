@@ -5,9 +5,9 @@ import GRPC
 import MnemonicSwift
 import NIOPosix
 
-enum GRPCCLIError: Error {
+enum CLIError: Error {
     case unsupportedNetwork(String)
-    case invalidIdentityUrl
+    case invalidLegacyWalletExportPassword
 }
 
 struct GRPCOptions: ParsableArguments {
@@ -26,7 +26,7 @@ struct WalletProxyOptions: ParsableArguments {
     @Option(help: "Base URL of WalletProxy instance.")
     var url: String = "https://wallet-proxy.testnet.concordium.com"
 
-    var baseUrl: URL {
+    var baseURL: URL {
         URL(string: url)!
     }
 }
@@ -82,7 +82,7 @@ struct NetworkOption: ExpressibleByArgument {
     var network: Network {
         get throws {
             guard let res = Network(rawValue: string) else {
-                throw GRPCCLIError.unsupportedNetwork(string)
+                throw CLIError.unsupportedNetwork(string)
             }
             return res
         }
@@ -92,7 +92,7 @@ struct NetworkOption: ExpressibleByArgument {
 @main
 struct Root: AsyncParsableCommand {
     @OptionGroup
-    var options: GRPCOptions
+    var opts: GRPCOptions
 
     static var configuration = CommandConfiguration(
         abstract: "A CLI for demonstrating and testing use of the gRPC client of the SDK.",
@@ -112,7 +112,7 @@ struct Root: AsyncParsableCommand {
         var block: BlockOption
 
         func run() async throws {
-            let res = try await withGRPCClient(target: rootCmd.options.target) {
+            let res = try await withGRPCClient(target: rootCmd.opts.target) {
                 try await $0.cryptographicParameters(
                     block: block.block
                 )
@@ -142,7 +142,7 @@ struct Root: AsyncParsableCommand {
             var accountCmd: Account
 
             func run() async throws {
-                let res = try await withGRPCClient(target: rootCmd.options.target) {
+                let res = try await withGRPCClient(target: rootCmd.opts.target) {
                     try await $0.nextAccountSequenceNumber(
                         address: accountCmd.account.address
                     )
@@ -166,7 +166,7 @@ struct Root: AsyncParsableCommand {
             var accountCmd: Account
 
             func run() async throws {
-                let res = try await withGRPCClient(target: rootCmd.options.target) {
+                let res = try await withGRPCClient(target: rootCmd.opts.target) {
                     try await $0.info(
                         account: accountCmd.account.identifier,
                         block: block.block
@@ -190,13 +190,13 @@ struct Root: AsyncParsableCommand {
         var network: NetworkOption = .init(argument: "Testnet")!
 
         @Option(help: "Index of IP that issued identity.")
-        var identityProviderIndex: UInt32
+        var identityProviderID: IdentityProviderID
 
         @Option(help: "Index of identity issued by IP.")
-        var identityIndex: UInt32
+        var identityIndex: IdentityIndex
 
         @Option(help: "Index of credential derived from identity used to generate the account.")
-        var credentialCounter: UInt8
+        var credentialCounter: CredentialCounter
 
         struct Transfer: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
@@ -219,25 +219,25 @@ struct Root: AsyncParsableCommand {
             var expiry: TransactionTime = 9_999_999_999
 
             func run() async throws {
-                // Derive account and put it into wallet.
                 let seedHex = try Mnemonic.deterministicSeedString(from: walletCmd.seedPhrase)
                 print("Resolved seed hex '\(seedHex)'.")
 
                 print("Fetching crypto parameters (for commitment key).")
-                let hash = try await withGRPCClient(target: rootCmd.options.target) { client in
+                let hash = try await withGRPCClient(target: rootCmd.opts.target) { client in
                     let cryptoParams = try await client.cryptographicParameters(block: BlockIdentifier.lastFinal)
+                    print("Deriving account address and keys.")
                     let account = try SeedBasedAccountDerivation(
                         seed: WalletSeed(seedHex: seedHex, network: walletCmd.network.network),
                         globalContext: cryptoParams
                     ).deriveAccount(
                         credentials: [
                             .init(
-                                identity: .init(providerID: walletCmd.identityProviderIndex, index: walletCmd.identityIndex),
+                                identity: .init(providerID: walletCmd.identityProviderID, index: walletCmd.identityIndex),
                                 counter: walletCmd.credentialCounter
                             ),
                         ]
                     )
-                    print("Resolved address \(account.address.base58Check) from credential \(walletCmd.credentialCounter) of identity \(walletCmd.identityProviderIndex):\(walletCmd.identityIndex).")
+                    print("Resolved address \(account.address.base58Check) from credential \(walletCmd.credentialCounter) of identity \(walletCmd.identityProviderID):\(walletCmd.identityIndex).")
 
                     // Construct and send transaction.
                     return try await transfer(
@@ -259,7 +259,7 @@ struct Root: AsyncParsableCommand {
             )
 
             @OptionGroup
-            var walletProxyOptions: WalletProxyOptions
+            var walletProxyOpts: WalletProxyOptions
 
             struct Issue: AsyncParsableCommand {
                 static var configuration = CommandConfiguration(
@@ -279,14 +279,14 @@ struct Root: AsyncParsableCommand {
                 var anonymityRevokerThreshold: UInt8 = 2
 
                 func run() async throws {
-                    let endpoints = WalletProxyEndpoints(baseUrl: identityCmd.walletProxyOptions.baseUrl)
-                    guard let ip = try await findIdentityProvider(endpoints: endpoints, index: walletCmd.identityProviderIndex) else {
-                        print("Cannot find identity provider with index \(walletCmd.identityProviderIndex).")
+                    let endpoints = WalletProxyEndpoints(baseURL: identityCmd.walletProxyOpts.baseURL)
+                    guard let ip = try await findIdentityProvider(endpoints: endpoints, id: walletCmd.identityProviderID) else {
+                        print("Cannot find identity provider with ID \(walletCmd.identityProviderID).")
                         return
                     }
 
                     print("Fetching crypto parameters.")
-                    let cryptoParams = try await withGRPCClient(target: rootCmd.options.target) {
+                    let cryptoParams = try await withGRPCClient(target: rootCmd.opts.target) {
                         try await $0.cryptographicParameters(block: .lastFinal)
                     }
 
@@ -299,9 +299,9 @@ struct Root: AsyncParsableCommand {
                         identityProvider: ip.toSDKType(),
                         identityIndex: walletCmd.identityIndex,
                         anonymityRevokerThreshold: anonymityRevokerThreshold
-                    ) { issuanceStartUrl, requestJson in
+                    ) { issuanceStartURL, requestJSON in
                         print("Starting temporary server waiting for identity verification to start.")
-                        let res = try withIdentityIssuanceCallbackServer { callbackUrl in
+                        let res = try withIdentityIssuanceCallbackServer { callbackURL in
                             func openURL(url: URL) {
                                 let p = Process()
                                 p.launchPath = "/usr/bin/open"
@@ -310,8 +310,8 @@ struct Root: AsyncParsableCommand {
                                 p.waitUntilExit()
                             }
 
-                            let urlBuilder = IdentityRequestUrlBuilder(callbackUrl: callbackUrl)
-                            let url = try urlBuilder.issuanceUrlToOpen(baseUrl: issuanceStartUrl, requestJson: requestJson)
+                            let urlBuilder = IdentityRequestURLBuilder(callbackURL: callbackURL)
+                            let url = try urlBuilder.issuanceURLToOpen(baseURL: issuanceStartURL, requestJSON: requestJSON)
                             // TODO: Consider calling URL first to see if it succeeds (DTS staging returned an error directly without redirecting to the callback).
                             openURL(url: url)
                         }
@@ -358,14 +358,14 @@ struct Root: AsyncParsableCommand {
                 var identityCmd: Identity
 
                 func run() async throws {
-                    let endpoints = WalletProxyEndpoints(baseUrl: identityCmd.walletProxyOptions.baseUrl)
-                    guard let ip = try await findIdentityProvider(endpoints: endpoints, index: walletCmd.identityProviderIndex) else {
-                        print("Cannot find identity with index \(walletCmd.identityProviderIndex).")
+                    let endpoints = WalletProxyEndpoints(baseURL: identityCmd.walletProxyOpts.baseURL)
+                    guard let ip = try await findIdentityProvider(endpoints: endpoints, id: walletCmd.identityProviderID) else {
+                        print("Cannot find identity with index \(walletCmd.identityProviderID).")
                         return
                     }
 
                     print("Fetching crypto parameters.")
-                    let cryptoParams = try await withGRPCClient(target: rootCmd.options.target) {
+                    let cryptoParams = try await withGRPCClient(target: rootCmd.opts.target) {
                         try await $0.cryptographicParameters(block: .lastFinal)
                     }
 
@@ -403,18 +403,14 @@ struct Root: AsyncParsableCommand {
                 var expiry: TransactionTime = 9_999_999_999
 
                 func run() async throws {
-                    let identityIndex = walletCmd.identityIndex
-                    let identityProviderIndex = walletCmd.identityProviderIndex
-                    let credentialCounter = walletCmd.credentialCounter
-
-                    let endpoints = WalletProxyEndpoints(baseUrl: identityCmd.walletProxyOptions.baseUrl)
-                    guard let ip = try await findIdentityProvider(endpoints: endpoints, index: identityProviderIndex) else {
-                        print("Cannot find identity with index \(identityProviderIndex).")
+                    let endpoints = WalletProxyEndpoints(baseURL: identityCmd.walletProxyOpts.baseURL)
+                    guard let ip = try await findIdentityProvider(endpoints: endpoints, id: walletCmd.identityProviderID) else {
+                        print("Cannot find identity with index \(walletCmd.identityProviderID).")
                         return
                     }
 
                     print("Fetching crypto parameters.")
-                    let cryptoParams = try await withGRPCClient(target: rootCmd.options.target) {
+                    let cryptoParams = try await withGRPCClient(target: rootCmd.opts.target) {
                         try await $0.cryptographicParameters(block: .lastFinal)
                     }
 
@@ -432,8 +428,8 @@ struct Root: AsyncParsableCommand {
                     let identity = try await req.response(session: URLSession.shared)
 
                     let idxs = AccountCredentialSeedIndexes(
-                        identity: IdentitySeedIndexes(providerID: identityProviderIndex, index: identityIndex),
-                        counter: credentialCounter
+                        identity: IdentitySeedIndexes(providerID: walletCmd.identityProviderID, index: walletCmd.identityIndex),
+                        counter: walletCmd.credentialCounter
                     )
                     print("Deriving credential deployment.")
                     let accountDerivation = SeedBasedAccountDerivation(seed: seed, globalContext: cryptoParams)
@@ -450,7 +446,7 @@ struct Root: AsyncParsableCommand {
                     print("Serializing credential deployment.")
                     let serializedTx = try signedTx.serialize()
                     print("Sending credential deployment.")
-                    let res = try await withGRPCClient(target: rootCmd.options.target) { client in
+                    let res = try await withGRPCClient(target: rootCmd.opts.target) { client in
                         try await client.send(deployment: serializedTx)
                     }
                     print(res)
@@ -467,6 +463,9 @@ struct Root: AsyncParsableCommand {
 
         @Option
         var exportFile: String
+
+        @Option
+        var exportFilePassword: String
 
         @Option(help: "Address of account to interact with.")
         var account: AccountOption
@@ -494,7 +493,11 @@ struct Root: AsyncParsableCommand {
             func run() async throws {
                 // Load account from Legacy Wallet export.
                 let exportContents = try Data(contentsOf: URL(fileURLWithPath: walletCmd.exportFile))
-                let export = try JSONDecoder().decode(LegacyWalletExportJson.self, from: exportContents)
+                let encryptedExport = try JSONDecoder().decode(EncryptedExportJSON.self, from: exportContents)
+                guard let password = walletCmd.exportFilePassword.data(using: .utf8) else {
+                    throw CLIError.invalidLegacyWalletExportPassword
+                }
+                let export = try decryptLegacyWalletExport(export: encryptedExport, password: password)
                 let senderAddress = try walletCmd.account.address
                 let receiverAddress = try receiver.address
                 guard let sender = try AccountStore(export.toSDKType()).lookup(senderAddress) else {
@@ -503,7 +506,7 @@ struct Root: AsyncParsableCommand {
                 }
 
                 // Construct and send transaction.
-                let hash = try await withGRPCClient(target: rootCmd.options.target) { client in
+                let hash = try await withGRPCClient(target: rootCmd.opts.target) { client in
                     try await transfer(client: client, sender: sender, receiver: receiverAddress, amount: amount, expiry: expiry)
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
@@ -520,7 +523,7 @@ struct Root: AsyncParsableCommand {
         var walletProxyOptions: WalletProxyOptions
 
         func run() async throws {
-            let endpoints = WalletProxyEndpoints(baseUrl: walletProxyOptions.baseUrl)
+            let endpoints = WalletProxyEndpoints(baseURL: walletProxyOptions.baseURL)
             let res = try await endpoints.getIdentityProviders.response(session: URLSession.shared)
             print(res)
         }
@@ -535,7 +538,7 @@ struct Root: AsyncParsableCommand {
         var rootCmd: Root
 
         func run() async throws {
-            let res = try await withGRPCClient(target: rootCmd.options.target) { client in
+            let res = try await withGRPCClient(target: rootCmd.opts.target) { client in
                 try await client.anonymityRevokers(block: .lastFinal)
             }
             print(res)
@@ -560,32 +563,32 @@ func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amo
     return try await client.send(transaction: tx)
 }
 
-func findIdentityProvider(endpoints: WalletProxyEndpoints, index: UInt32) async throws -> IdentityProviderJson? {
+func findIdentityProvider(endpoints: WalletProxyEndpoints, id: IdentityProviderID) async throws -> IdentityProviderJSON? {
     let res = try await endpoints.getIdentityProviders.response(session: URLSession.shared)
-    return res.first { $0.ipInfo.ipIdentity == index } // TODO: correct way to match index?
+    return res.first { $0.ipInfo.ipIdentity == id }
 }
 
 func issueIdentity(
     seed: WalletSeed,
     cryptoParams: CryptographicParameters,
     identityProvider: IdentityProvider,
-    identityIndex: UInt32,
+    identityIndex: IdentityIndex,
     anonymityRevokerThreshold: RevocationThreshold,
-    runIdentityProviderFlow: (_ issuanceStartUrl: URL, _ requestJson: String) throws -> URL
+    runIdentityProviderFlow: (_ issuanceStartURL: URL, _ requestJSON: String) throws -> URL
 ) throws -> IdentityIssuanceRequest {
     print("Preparing identity issuance request.")
     let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
         seed: seed,
         globalContext: cryptoParams
     )
-    let reqJson = try identityRequestBuilder.issuanceRequestJson(
+    let reqJSON = try identityRequestBuilder.issuanceRequestJSON(
         provider: identityProvider,
         index: identityIndex,
         anonymityRevokerThreshold: anonymityRevokerThreshold
     )
 
     print("Start identity provider issuance flow.")
-    let url = try runIdentityProviderFlow(identityProvider.metadata.issuanceStart, reqJson)
+    let url = try runIdentityProviderFlow(identityProvider.metadata.issuanceStart, reqJSON)
     print("Identity verification process started!")
     return .init(url: url)
 }
@@ -594,21 +597,21 @@ func prepareRecoverIdentity(
     seed: WalletSeed,
     cryptoParams: CryptographicParameters,
     identityProvider: IdentityProvider,
-    identityIndex: UInt32
+    identityIndex: IdentityIndex
 ) throws -> IdentityRecoverRequest {
     let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
         seed: seed,
         globalContext: cryptoParams
     )
-    let reqJson = try identityRequestBuilder.recoveryRequestJson(
+    let reqJSON = try identityRequestBuilder.recoveryRequestJSON(
         provider: identityProvider.info,
         index: identityIndex,
         time: Date.now
     )
-    let urlBuilder = IdentityRequestUrlBuilder(callbackUrl: nil)
+    let urlBuilder = IdentityRequestURLBuilder(callbackURL: nil)
     return try urlBuilder.recoveryRequestToFetch(
-        baseUrl: identityProvider.metadata.recoveryStart,
-        requestJson: reqJson
+        baseURL: identityProvider.metadata.recoveryStart,
+        requestJSON: reqJSON
     )
 }
 

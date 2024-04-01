@@ -28,7 +28,7 @@ public typealias IdentityProviderID = UInt32
 
 /// Identity of an anonymity revoker on the chain.
 /// This defines their evaluation point for secret sharing, and thus it cannot be 0.
-public typealias AnonymnityRevokerID = UInt32
+public typealias AnonymityRevokerID = UInt32
 
 /// The minimum number of signatures on a credential that need to sign any transaction coming from an associated account.
 public typealias SignatureThreshold = UInt8
@@ -269,7 +269,7 @@ public struct CredentialDeploymentValuesNormal {
     /// Anonymity revocation data. List of anonymity revokers which can revoke identity.
     /// NB: The order is important since it is the same order as that signed by the identity provider,
     ///  and permuting the list will invalidate the signature from the identity provider.
-    public var arData: [AnonymnityRevokerID: ChainArData]
+    public var arData: [AnonymityRevokerID: ChainArData]
 
     static func fromGRPCType(_ grpc: Concordium_V2_NormalCredentialValues) throws -> Self {
         try .init(
@@ -436,14 +436,14 @@ public struct BakerPoolInfo {
     /// Whether the pool allows delegators.
     public var openStatus: OpenStatus
     /// The URL that links to the metadata about the pool.
-    public var metadataUrl: String
+    public var metadataURL: String
     /// The commission rates charged by the pool owner.
     public var commissionRates: CommissionRates
 
     static func fromGRPCType(_ grpc: Concordium_V2_BakerPoolInfo) throws -> Self {
         try .init(
             openStatus: .fromGRPCType(grpc.openStatus),
-            metadataUrl: grpc.url,
+            metadataURL: grpc.url,
             commissionRates: .fromGRPCType(grpc.commissionRates)
         )
     }

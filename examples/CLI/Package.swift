@@ -4,12 +4,12 @@ import Foundation
 import PackageDescription
 
 let package = Package(
-    name: "concordium",
+    name: "CLI",
     platforms: [
         .macOS(.v12),
     ],
     products: [
-        .executable(name: "concordium", targets: ["CLI"]),
+        .executable(name: "concordium-example-client", targets: ["CLI"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
