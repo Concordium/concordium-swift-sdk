@@ -20,7 +20,7 @@ jobs:
     - name: Check out sources
       uses: actions/checkout@v4
     - name: Check formatting
-      run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
+      run: swift package plugin --allow-writing-to-package-directory swiftformat ./examples --lint
     - name: Build project
       run: swift build
     - name: Run tests

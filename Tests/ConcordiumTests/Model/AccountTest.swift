@@ -25,7 +25,7 @@ final class AddressTest: XCTestCase {
     func testCannotParseAddressStringWithInvalidVersionByte() {
         // Same address as above but with Base58Check version byte 2.
         XCTAssertThrowsError(try AccountAddress(base58Check: "51wUd1qZ9UKhiJQwab17sb5F3XgEy6vravJ2GPEHNYjHpncAjG")) { err in
-            XCTAssertEqual(err as! GRPCError, GRPCError.missingBase58CheckVersion(expected: 1, actual: 2))
+            XCTAssertEqual(err as! GRPCError, GRPCError.unexpectedBase58CheckVersion(expected: 1, actual: 2))
         }
     }
 
