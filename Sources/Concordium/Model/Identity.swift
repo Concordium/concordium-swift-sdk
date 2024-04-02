@@ -19,7 +19,7 @@ public typealias Description = ConcordiumWalletCrypto.Description
 public typealias IdentityObject = ConcordiumWalletCrypto.IdentityObject
 public typealias AttributeList = ConcordiumWalletCrypto.AttributeList
 public typealias ChoiceArParameters = ConcordiumWalletCrypto.ChoiceArParameters
-public typealias ArData = ConcordiumWalletCrypto.ArData
+public typealias AnonymityRevokerData = ConcordiumWalletCrypto.ArData
 public typealias PreIdentityObject = ConcordiumWalletCrypto.PreIdentityObject
 
 extension IdentityProviderInfo {
@@ -75,7 +75,7 @@ extension PreIdentityObject: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
             idCredPubHex: container.decode(String.self, forKey: .idCredPub),
-            ipArData: container.decode([String: ArData].self, forKey: .ipArData).reduce(into: [:]) { res, e in
+            ipArData: container.decode([String: AnonymityRevokerData].self, forKey: .ipArData).reduce(into: [:]) { res, e in
                 guard let key = UInt32(e.key) else {
                     throw DecodingError.dataCorruptedError(forKey: .ipArData, in: container, debugDescription: "invalid key index")
                 }
@@ -90,7 +90,7 @@ extension PreIdentityObject: Decodable {
     }
 }
 
-extension ArData: Decodable {
+extension AnonymityRevokerData: Decodable {
     enum CodingKeys: CodingKey {
         case encPrfKeyShare
         case proofComEncEq

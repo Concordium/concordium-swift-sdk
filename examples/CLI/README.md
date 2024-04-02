@@ -26,7 +26,7 @@ Due to the way the argument parser works, these options must be provided before 
 ```shell
 concordium-example-client --host=<host> --port=<port> cryptographic-parameters
 ```
-This applies generally; i.e. all arguments to a given subcommand must be provided before the next subcommand.
+This applies generally: all arguments to a given subcommand must be provided before the next subcommand.
 
 Use `concordium-example-client --help` to explore the full set of commands and arguments.
 
@@ -37,7 +37,7 @@ it does not make assertions about the outputs.
 Use the environment variables `HOST` and `PORT` to specify the gRPC endpoint to use in the script.
 
 By default, the CLI depends on the SDK as the local package on path `../..`.
-Flip the comment in `Package.swift` to use the `main` branch of the GitHub repository instead.
+Flip the commented out dependency in `Package.swift` to use the `main` branch of the GitHub repository instead.
 
 See the [SDK docs](../../README.md) for details on the variables to use if you need to use a local crypto library
 instead of a released one.
