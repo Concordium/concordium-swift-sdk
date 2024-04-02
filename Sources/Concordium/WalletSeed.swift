@@ -159,3 +159,127 @@ public class WalletSeed {
         )
     }
 }
+
+public enum AccountDerivationError: Error {
+    case noCredentials
+}
+
+public class SeedBasedAccountDerivation {
+    public let seed: WalletSeed
+    private let cryptoParams: CryptographicParameters
+
+    public init(seed: WalletSeed, cryptoParams: CryptographicParameters) {
+        self.seed = seed
+        self.cryptoParams = cryptoParams
+    }
+
+    public func deriveCredential(
+        seedIndexes: AccountCredentialSeedIndexes, // TODO: shouldn't identity know its own indexes?
+        identity: IdentityObject,
+        provider: IdentityProvider,
+        revealedAttributes: [UInt8] = [],
+        threshold: SignatureThreshold
+    ) throws -> AccountCredential {
+        // TODO: Must provide exactly the IP's ARs?
+        let anonymityRevokers = provider.anonymityRevokers
+        let idCredSecHex = try seed.credSecHex(identityIndexes: seedIndexes.identity)
+        let prfKeyHex = try seed.prfKeyHex(identityIndexes: seedIndexes.identity)
+        let blindingRandomnessHex = try seed.signatureBlindingRandomnessHex(identityIndexes: seedIndexes.identity)
+        let attributeRandomnessHex = try AttributeType.allCases.reduce(into: [:]) { res, attr in
+            res["\(attr)"] = try seed.attributeCommitmentRandomnessHex(
+                accountCredentialIndexes: seedIndexes,
+                attribute: attr.rawValue
+            )
+        }
+        let keyHex = try seed.publicKeyHex(accountCredentialIndexes: seedIndexes)
+        let credentialPublicKeys = CredentialPublicKeys(
+            keys: [KeyIndex(0): VerifyKey(ed25519KeyHex: keyHex)],
+            threshold: threshold
+        )
+        let res = try accountCredential(
+            params: AccountCredentialParameters(
+                ipInfo: provider.info,
+                globalContext: cryptoParams,
+                arsInfos: anonymityRevokers,
+                idObject: identity,
+                revealedAttributes: revealedAttributes,
+                credNumber: seedIndexes.counter,
+                idCredSecHex: idCredSecHex,
+                prfKeyHex: prfKeyHex,
+                blindingRandomnessHex: blindingRandomnessHex,
+                attributeRandomnessHex: attributeRandomnessHex,
+                credentialPublicKeys: credentialPublicKeys
+            )
+        )
+        return res.credential
+    }
+
+    public func deriveAccount(credentials: [AccountCredentialSeedIndexes]) throws -> Account {
+        guard let firstCred = credentials.first else {
+            throw AccountDerivationError.noCredentials
+        }
+        return try Account(
+            address: deriveAccountAddress(firstCredential: firstCred),
+            keys: deriveKeys(credentials: credentials)
+        )
+    }
+
+    public func deriveAccountAddress(firstCredential: AccountCredentialSeedIndexes) throws -> AccountAddress {
+        let id = try seed.idHex(accountCredentialIndexes: firstCredential, commitmentKey: cryptoParams.onChainCommitmentKeyHex)
+        let hash = try SHA256.hash(data: Data(hex: id))
+        return AccountAddress(Data(hash))
+    }
+
+    public func deriveKeys(credentials: [AccountCredentialSeedIndexes]) throws -> AccountKeysCurve25519 {
+        try AccountKeysCurve25519(
+            Dictionary(
+                uniqueKeysWithValues: credentials.enumerated().map { idx, cred in
+                    let keyHex = try seed.signingKeyHex(accountCredentialIndexes: cred)
+                    let key = try Curve25519.Signing.PrivateKey(rawRepresentation: Data(hex: keyHex))
+                    return (CredentialIndex(idx), [KeyIndex(0): key])
+                }
+            )
+        )
+    }
+}
+
+public class SeedBasedIdentityRequestBuilder {
+    private let seed: WalletSeed
+    private let cryptoParams: CryptographicParameters
+
+    public init(seed: WalletSeed, cryptoParams: CryptographicParameters) {
+        self.seed = seed
+        self.cryptoParams = cryptoParams
+    }
+
+    public func recoveryRequestJSON(provider: IdentityProviderInfo, index: IdentityIndex, time: Date) throws -> String {
+        let identityIdxs = IdentitySeedIndexes(providerID: provider.identity, index: index)
+        let idCredSec = try seed.credSecHex(identityIndexes: identityIdxs)
+        return try identityRecoveryRequestJson(
+            params: IdentityRecoveryRequestParameters(
+                ipInfo: provider,
+                globalContext: cryptoParams,
+                timestamp: UInt64(time.timeIntervalSince1970),
+                idCredSecHex: idCredSec
+            )
+        )
+    }
+
+    public func issuanceRequestJSON(provider: IdentityProvider, index: IdentityIndex, anonymityRevokerThreshold: RevocationThreshold) throws -> String {
+        let identityIdxs = IdentitySeedIndexes(providerID: provider.info.identity, index: index)
+        let prfKeyHex = try seed.prfKeyHex(identityIndexes: identityIdxs)
+        let credSecHex = try seed.credSecHex(identityIndexes: identityIdxs)
+        let blindingRandomnessHex = try seed.signatureBlindingRandomnessHex(identityIndexes: identityIdxs)
+        return try identityIssuanceRequestJson(
+            params: IdentityIssuanceRequestParameters(
+                ipInfo: provider.info,
+                globalContext: cryptoParams,
+                arsInfos: provider.anonymityRevokers,
+                arThreshold: anonymityRevokerThreshold,
+                prfKeyHex: prfKeyHex,
+                idCredSecHex: credSecHex,
+                blindingRandomnessHex: blindingRandomnessHex
+            )
+        )
+    }
+}
