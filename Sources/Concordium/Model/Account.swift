@@ -235,20 +235,20 @@ extension Policy {
 }
 
 public struct CredentialDeploymentValuesInitial {
-    /// Credential keys (i.e. account holder keys).
+    /// Credential keys.
     public var credentialPublicKeys: CredentialPublicKeys
-    /// Credential registration id of the credential.
-    public var credId: CredentialRegistrationID
+    /// Credential registration ID of the credential.
+    public var credentialID: CredentialRegistrationID
     /// Identity of the identity provider who signed the identity object from which this credential is derived.
-    public var ipIdentity: IdentityProviderID
+    public var identityProviderID: IdentityProviderID
     /// Policy of this credential object.
     public var policy: Policy
 
     static func fromGRPCType(_ grpc: Concordium_V2_InitialCredentialValues) throws -> Self {
         try .init(
             credentialPublicKeys: .fromGRPCType(grpc.keys),
-            credId: grpc.credID.value,
-            ipIdentity: grpc.ipID.value,
+            credentialID: grpc.credID.value,
+            identityProviderID: grpc.ipID.value,
             policy: .fromGRPCType(grpc.policy)
         )
     }
@@ -269,27 +269,27 @@ public struct CredentialDeploymentValuesNormal {
     /// Anonymity revocation data. List of anonymity revokers which can revoke identity.
     /// NB: The order is important since it is the same order as that signed by the identity provider,
     ///  and permuting the list will invalidate the signature from the identity provider.
-    public var arData: [AnonymityRevokerID: ChainArData]
+    public var anonymityRevokerData: [AnonymityRevokerID: ChainArData]
 
     static func fromGRPCType(_ grpc: Concordium_V2_NormalCredentialValues) throws -> Self {
         try .init(
             initial: CredentialDeploymentValuesInitial(
                 credentialPublicKeys: .fromGRPCType(grpc.keys),
-                credId: grpc.credID.value,
-                ipIdentity: grpc.ipID.value,
+                credentialID: grpc.credID.value,
+                identityProviderID: grpc.ipID.value,
                 policy: .fromGRPCType(grpc.policy)
             ),
             revocationThreshold: SignatureThreshold(exactly: grpc.arThreshold.value) ?! GRPCError.valueOutOfBounds,
-            arData: grpc.arData.mapValues { .fromGRPCType($0) }
+            anonymityRevokerData: grpc.arData.mapValues { .fromGRPCType($0) }
         )
     }
 
     public func toCryptoType(proofs: Proofs) -> AccountCredential {
         .init(
-            arData: arData,
-            credIdHex: initial.credId.hex,
+            arData: anonymityRevokerData,
+            credIdHex: initial.credentialID.hex,
             credentialPublicKeys: initial.credentialPublicKeys,
-            ipIdentity: initial.ipIdentity,
+            ipIdentity: initial.identityProviderID,
             policy: initial.policy,
             proofs: proofs,
             revocationThreshold: revocationThreshold
@@ -352,7 +352,7 @@ public struct AccountEncryptedAmount {
 /// Information about a baker/validator.
 public struct BakerInfo {
     /// Identity of the baker. This is actually the account index of the account controlling the baker.
-    public var bakerId: BakerID
+    public var bakerID: BakerID
     /// Baker's public key used to check whether they won the lottery or not.
     public var bakerElectionVerifyKey: BakerElectionVerifyKey
     /// Baker's public key used to check that they are indeed the ones who produced the block.
@@ -363,7 +363,7 @@ public struct BakerInfo {
 
     static func fromGRPCType(_ grpc: Concordium_V2_BakerInfo) -> Self {
         .init(
-            bakerId: grpc.bakerID.value,
+            bakerID: grpc.bakerID.value,
             bakerElectionVerifyKey: grpc.electionKey.value.hex,
             bakerSignatureVerifyKey: grpc.signatureKey.value.hex,
             bakerAggregationVerifyKey: grpc.aggregationKey.value.hex

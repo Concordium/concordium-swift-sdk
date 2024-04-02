@@ -10,7 +10,7 @@ public typealias IdentityIssuanceRequest = HTTPRequest<IdentityIssuanceResponse>
 public typealias IdentityRecoverRequest = HTTPRequest<Versioned<IdentityObject>>
 
 public class IdentityRequestURLBuilder {
-    private let callbackURL: URL? // In Android example wallet: concordiumwallet-example://identity-issuer/callback
+    private let callbackURL: URL? // Android example wallet uses: concordiumwallet-example://identity-issuer/callback
 
     // If callback URL is nil then only recovery is supported.
     public init(callbackURL: URL?) {

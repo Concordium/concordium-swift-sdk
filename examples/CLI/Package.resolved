@@ -46,6 +46,15 @@
       }
     },
     {
+      "identity" : "concordium-swift-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Concordium/concordium-swift-sdk.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "62c652569ba4716d6d66becc29721a403f4414e8"
+      }
+    },
+    {
       "identity" : "concordium-wallet-crypto-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Concordium/concordium-wallet-crypto-swift.git",

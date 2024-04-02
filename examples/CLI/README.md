@@ -29,9 +29,9 @@ The script [`./test.sh`](./test.sh) invokes all read-only commands.
 This will reveal if any of the commands exit with failure.
 Note, however, that it only "checks" if the commands exit successfully;
 it does not make assertions about the outputs.
-Use the environment variables `HOST` and `IP` to specify the gRPC endpoint to use in the script.
+Use the environment variables `HOST` and `PORT` to specify the gRPC endpoint to use in the script.
 
-By default, the CLI uses the SDK currently on the `main` branch.
+By default, the CLI uses the SDK currently on the `main` branch of the GitHub repository.
 Set the environment variable `CONCORDIUM_SDK_PATH` to the path of a local copy of the SDK (presumably `../..`)
 to use that instead.
 

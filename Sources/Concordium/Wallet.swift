@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 
 public enum WalletError: Error {
