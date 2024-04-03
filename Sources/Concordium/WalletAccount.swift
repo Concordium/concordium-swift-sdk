@@ -33,9 +33,13 @@ public protocol AccountKey {
     func signature(for data: Data) throws -> Data
 }
 
-extension Curve25519.Signing.PrivateKey: AccountKey {}
+public typealias AccountKeyCurve25519 = Curve25519.Signing.PrivateKey
 
-public typealias AccountKeysCurve25519 = AccountKeys<Curve25519.Signing.PrivateKey>
+extension AccountKeyCurve25519: AccountKey {
+    // Automatically conforming via `Curve25519.Signing.PrivateKey`.
+}
+
+public typealias AccountKeysCurve25519 = AccountKeys<AccountKeyCurve25519>
 
 public class AccountKeys<Key: AccountKey>: Signer {
     public let keys: [CredentialIndex: [KeyIndex: Key]]

@@ -175,7 +175,7 @@ struct Root: AsyncParsableCommand {
         @Option(help: "Seed phrase.")
         var seedPhrase: String
 
-        @Option(help: "Network: 'mainnet' or 'testnet' (default).")
+        @Option(help: "Network: 'Mainnet' or 'Testnet' (default).")
         var network: NetworkOption = .init(argument: "Testnet")!
 
         @Option(help: "Index of IP that issued identity.")
@@ -381,10 +381,10 @@ struct Root: AsyncParsableCommand {
                     print("Serializing credential deployment.")
                     let serializedTx = try signedTx.serialize()
                     print("Sending credential deployment.")
-                    let res = try await withGRPCClient(target: rootCmd.opts.target) { client in
+                    let hash = try await withGRPCClient(target: rootCmd.opts.target) { client in
                         try await client.send(deployment: serializedTx)
                     }
-                    print(res.hex)
+                    print("Transaction with hash '\(hash.hex)' successfully submitted.")
                 }
             }
         }

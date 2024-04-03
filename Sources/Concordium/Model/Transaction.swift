@@ -5,6 +5,9 @@ import NIO
 /// Transaction time specified as seconds since unix epoch.
 public typealias TransactionTime = UInt64
 
+public typealias Signatures = [CredentialIndex: CredentialSignatures]
+public typealias CredentialSignatures = [KeyIndex: Data]
+
 public extension AccountCredential {
     func prepareDeployment(expiry: TransactionTime) -> PreparedAccountCredentialDeployment {
         .init(credential: self, expiry: expiry)

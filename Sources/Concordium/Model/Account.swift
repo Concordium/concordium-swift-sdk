@@ -561,6 +561,3 @@ public struct AccountInfo {
         )
     }
 }
-
-public typealias Signatures = [CredentialIndex: CredentialSignatures]
-public typealias CredentialSignatures = [KeyIndex: Data]
