@@ -19,6 +19,7 @@
 		CDDC79692BBEA92000883CEE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		CDDC796B2BBEA92100883CEE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		CDDC796E2BBEA92100883CEE /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		CDDC79762BBEAB5600883CEE /* concordium-swift-sdk */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "concordium-swift-sdk"; path = ../..; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,6 +38,7 @@
 			children = (
 				CDDC79662BBEA92000883CEE /* Wallet */,
 				CDDC79652BBEA92000883CEE /* Products */,
+				CDDC79752BBEAB5600883CEE /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -65,6 +67,14 @@
 				CDDC796E2BBEA92100883CEE /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		CDDC79752BBEAB5600883CEE /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				CDDC79762BBEAB5600883CEE /* concordium-swift-sdk */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
