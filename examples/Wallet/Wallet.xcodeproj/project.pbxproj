@@ -8,18 +8,23 @@
 
 /* Begin PBXBuildFile section */
 		CDDC79682BBEA92000883CEE /* WalletApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDDC79672BBEA92000883CEE /* WalletApp.swift */; };
-		CDDC796A2BBEA92000883CEE /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDDC79692BBEA92000883CEE /* ContentView.swift */; };
+		CDDC796A2BBEA92000883CEE /* NodeClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDDC79692BBEA92000883CEE /* NodeClientProvider.swift */; };
 		CDDC796C2BBEA92100883CEE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CDDC796B2BBEA92100883CEE /* Assets.xcassets */; };
 		CDDC796F2BBEA92100883CEE /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CDDC796E2BBEA92100883CEE /* Preview Assets.xcassets */; };
+		CDDC79782BBEAC1700883CEE /* Concordium in Frameworks */ = {isa = PBXBuildFile; productRef = CDDC79772BBEAC1700883CEE /* Concordium */; };
+		CDDC797A2BBEAEA200883CEE /* DisposableNodeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDDC79792BBEAEA200883CEE /* DisposableNodeClient.swift */; };
+		CDDC797C2BBEB3D400883CEE /* AccountDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDDC797B2BBEB3D400883CEE /* AccountDetailsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		CDDC79642BBEA92000883CEE /* Wallet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Wallet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CDDC79672BBEA92000883CEE /* WalletApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletApp.swift; sourceTree = "<group>"; };
-		CDDC79692BBEA92000883CEE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		CDDC79692BBEA92000883CEE /* NodeClientProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NodeClientProvider.swift; sourceTree = "<group>"; };
 		CDDC796B2BBEA92100883CEE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		CDDC796E2BBEA92100883CEE /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		CDDC79762BBEAB5600883CEE /* concordium-swift-sdk */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "concordium-swift-sdk"; path = ../..; sourceTree = "<group>"; };
+		CDDC79792BBEAEA200883CEE /* DisposableNodeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisposableNodeClient.swift; sourceTree = "<group>"; };
+		CDDC797B2BBEB3D400883CEE /* AccountDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDetailsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -27,6 +32,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CDDC79782BBEAC1700883CEE /* Concordium in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -54,9 +60,11 @@
 			isa = PBXGroup;
 			children = (
 				CDDC79672BBEA92000883CEE /* WalletApp.swift */,
-				CDDC79692BBEA92000883CEE /* ContentView.swift */,
+				CDDC79692BBEA92000883CEE /* NodeClientProvider.swift */,
 				CDDC796B2BBEA92100883CEE /* Assets.xcassets */,
 				CDDC796D2BBEA92100883CEE /* Preview Content */,
+				CDDC79792BBEAEA200883CEE /* DisposableNodeClient.swift */,
+				CDDC797B2BBEB3D400883CEE /* AccountDetailsView.swift */,
 			);
 			path = Wallet;
 			sourceTree = "<group>";
@@ -93,6 +101,9 @@
 			dependencies = (
 			);
 			name = Wallet;
+			packageProductDependencies = (
+				CDDC79772BBEAC1700883CEE /* Concordium */,
+			);
 			productName = Wallet;
 			productReference = CDDC79642BBEA92000883CEE /* Wallet.app */;
 			productType = "com.apple.product-type.application";
@@ -147,8 +158,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CDDC796A2BBEA92000883CEE /* ContentView.swift in Sources */,
+				CDDC796A2BBEA92000883CEE /* NodeClientProvider.swift in Sources */,
 				CDDC79682BBEA92000883CEE /* WalletApp.swift in Sources */,
+				CDDC797C2BBEB3D400883CEE /* AccountDetailsView.swift in Sources */,
+				CDDC797A2BBEAEA200883CEE /* DisposableNodeClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -352,6 +365,13 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CDDC79772BBEAC1700883CEE /* Concordium */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Concordium;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CDDC795C2BBEA92000883CEE /* Project object */;
 }

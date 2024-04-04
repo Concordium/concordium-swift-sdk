@@ -14,7 +14,7 @@ set -eux
 # Override via environment variables or use the following command to
 # forward traffic for the default target (localhost:20000) to <HOST>:<PORT>:
 #
-#   socat TCP-LISTEN:20000,fork TCP:[IP]:[port]
+#   socat TCP-LISTEN:20000,fork TCP:<HOST>:<PORT>
 
 host="${HOST-grpc.testnet.concordium.com}"
 port="${PORT-20000}"
