@@ -1,11 +1,14 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 5.6
 
 import PackageDescription
 
 let package = Package(
-    name: "concordium-example-client",
+    name: "ConcordiumExampleClient",
     platforms: [
         .macOS(.v12),
+    ],
+    products: [
+        .executable(name: "concordium-example-client", targets: ["ConcordiumExampleClient"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
@@ -16,7 +19,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "concordium-example-client",
+            name: "ConcordiumExampleClient",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Concordium", package: "concordium-swift-sdk"),
