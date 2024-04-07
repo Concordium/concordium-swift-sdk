@@ -22,7 +22,7 @@ Once this SDK is ready for production, it will completely replace this old libra
 
 ## Usage
 
-*No tags have been added to "publish" a build yet. The following is only going to work once v1.0 has been published.
+*No tags have been added to "publish" a build yet. The following is not going to work until v1.0 has been published.
 To use it in the current, unfinished state, replace `"1.0"` with `"main"`.*
 
 The SDK is available as a [SwiftPM package](https://developer.apple.com/documentation/xcode/swift-packages)
