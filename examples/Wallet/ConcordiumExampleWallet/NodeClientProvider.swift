@@ -13,7 +13,7 @@ let grpcPort = 20000
 struct NodeClientProvider<Content: View>: View {
     @State private var nodeClient: Result<DisposableNodeClient, Error>?
 
-    var child: (DisposableNodeClient) -> Content
+    var content: (DisposableNodeClient) -> Content
 
     var body: some View {
         VStack {
@@ -23,7 +23,7 @@ struct NodeClientProvider<Content: View>: View {
             case let .failure(err):
                 Text("Cannot start NodeClient: \(err.localizedDescription)")
             case let .success(n):
-                child(n)
+                content(n)
             }
         }
         .padding()

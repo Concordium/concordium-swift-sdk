@@ -464,25 +464,34 @@ struct Root: AsyncParsableCommand {
                         identityIndex: walletCmd.identityIndex
                     )
                     print("Recovering identity.")
-                    let res = try await req.send(session: URLSession.shared)
-                    let identity = try res.result.get() // unsafely assume success
-
-                    let idxs = AccountCredentialSeedIndexes(
-                        identity: IdentitySeedIndexes(providerID: walletCmd.identityProviderID, index: walletCmd.identityIndex),
-                        counter: credentialCounter
+                    let identityRes = try await req.send(session: URLSession.shared)
+                    let identity = try SeedBasedIdentityObject(
+                        identity: identityRes.result.get().value, // unsafely assume succes
+                        indexes: .init(
+                            providerID: walletCmd.identityProviderID,
+                            index: walletCmd.identityIndex
+                        )
                     )
+
                     print("Deriving credential deployment.")
                     let accountDerivation = SeedBasedAccountDerivation(seed: seed, cryptoParams: cryptoParams)
                     let credential = try accountDerivation.deriveCredential(
-                        seedIndexes: idxs,
-                        identity: identity.value,
+                        credentialCounter: credentialCounter,
+                        identity: identity,
                         provider: identityProvider,
                         threshold: 1
                     )
                     print("Deriving account.")
-                    let account = try accountDerivation.deriveAccount(credentials: [idxs])
+                    let account = try accountDerivation.deriveAccount(
+                        credentials: [
+                            .init(
+                                identity: identity.indexes,
+                                counter: credentialCounter
+                            ),
+                        ]
+                    )
                     print("Signing credential deployment.")
-                    let signedTx = try account.keys.sign(deployment: credential, expiry: expiry)
+                    let signedTx = try account.keys.sign(deployment: credential.credential, expiry: expiry)
                     print("Serializing credential deployment.")
                     let serializedTx = try signedTx.serialize()
                     print("Sending credential deployment.")

@@ -20,7 +20,10 @@ class DisposableNodeClient {
     }
 
     deinit {
+        print("before shutdown")
         try! group.syncShutdownGracefully()
+        print("mid shutdown")
         try! channel.close().wait()
+        print("after shutdown")
     }
 }

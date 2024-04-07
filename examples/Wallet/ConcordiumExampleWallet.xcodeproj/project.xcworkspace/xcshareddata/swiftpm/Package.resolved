@@ -32,8 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Concordium/concordium-wallet-crypto-swift.git",
       "state" : {
-        "revision" : "3f09508b9e34c935c0b236668b4f4ec4fc41a4a3",
-        "version" : "2.0.0"
+        "revision" : "20577062e21f84c0182134e20dfba453baf5805b",
+        "version" : "3.0.0"
       }
     },
     {
@@ -41,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/grpc/grpc-swift.git",
       "state" : {
-        "revision" : "393b02b1c39cc82fb24e57f24fa446f43e8124c9",
-        "version" : "1.22.0"
+        "revision" : "5d0cf1c7b2e641e3a8961089e7e4672f4fe8abac",
+        "version" : "1.21.1"
       }
     },
     {
@@ -52,6 +52,15 @@
       "state" : {
         "revision" : "ee7e8599e54f17d151fa4559c706ecb4b3d3a70e",
         "version" : "1.0.1"
+      }
+    },
+    {
+      "identity" : "mnemonicswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Electric-Coin-Company/MnemonicSwift",
+      "state" : {
+        "revision" : "716a2c32ac2bbd8a1499ac834077df42b75edc85",
+        "version" : "2.2.4"
       }
     },
     {
@@ -70,6 +79,15 @@
       "state" : {
         "revision" : "94cf62b3ba8d4bed62680a282d4c25f9c63c2efb",
         "version" : "1.1.0"
+      }
+    },
+    {
+      "identity" : "swift-crypto",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-crypto.git",
+      "state" : {
+        "revision" : "60f13f60c4d093691934dc6cfdf5f508ada1f894",
+        "version" : "2.6.0"
       }
     },
     {
@@ -158,8 +176,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/nicklockwood/SwiftFormat.git",
       "state" : {
-        "revision" : "fef156a6135e584985ed26713dd2e9ee41f952cb",
-        "version" : "0.53.0"
+        "revision" : "825b4cdadbcabb91661243a09aeb44c3d4ef459d",
+        "version" : "0.53.7"
       }
     }
   ],
