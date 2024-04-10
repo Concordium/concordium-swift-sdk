@@ -226,7 +226,7 @@ extension Policy {
             validToYearMonth: yearMonthString(year: grpc.validTo.year, month: grpc.validTo.month),
             revealedAttributes: grpc.attributes.reduce(into: [:]) { res, e in
                 let attr = try UInt8(exactly: e.key)
-                    .flatMap { AttributeType(rawValue: $0) }
+                    .flatMap { AttributeTag(rawValue: $0) }
                     ?! GRPCError.valueOutOfBounds
                 res["\(attr)"] = String(data: e.value, encoding: .utf8) // TODO: correct to treat attribute value as UTF-8?
             }

@@ -185,7 +185,7 @@ public class SeedBasedAccountDerivation {
         let idCredSecHex = try seed.credSecHex(identityIndexes: seedIndexes.identity)
         let prfKeyHex = try seed.prfKeyHex(identityIndexes: seedIndexes.identity)
         let blindingRandomnessHex = try seed.signatureBlindingRandomnessHex(identityIndexes: seedIndexes.identity)
-        let attributeRandomnessHex = try AttributeType.allCases.reduce(into: [:]) { res, attr in
+        let attributeRandomnessHex = try AttributeTag.allCases.reduce(into: [:]) { res, attr in
             res["\(attr)"] = try seed.attributeCommitmentRandomnessHex(
                 accountCredentialIndexes: seedIndexes,
                 attribute: attr.rawValue
