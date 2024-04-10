@@ -257,7 +257,27 @@ public enum AttributeTag: UInt8, CustomStringConvertible, CaseIterable {
     case countryOfResidence = 4
     /// Country of nationality (format: ISO3166-1 alpha-2).
     case nationality = 5
-    /// Identity document type (format: na=0, passport=1, national id card=2, driving license=3, immigration card=4, or eID string).
+    /// Identity document type
+    ///
+    /// Format:
+    /// - 0 : na
+    /// - 1 : passport
+    /// - 2 : national ID card
+    /// - 3 : driving license
+    /// - 4 : immigration card
+    /// - eID string (see below)
+    ///
+    /// eID strings as of Apr 2024:
+    /// - DK:MITID	      : Danish MitId
+    /// - SE:BANKID	      : Swedish BankID
+    /// - NO:BANKID	      : Norwegian BankID
+    /// - NO:VIPPS	      : Norwegian Vipps
+    /// - FI:TRUSTNETWORK : Finnish Trust Network
+    /// - NL:DIGID	      : Netherlands DigiD
+    /// - NL:IDIN	      : Netherlands iDIN
+    /// - BE:EID	      : Belgian eID
+    /// - ITSME	          : (Cross-national) ItsME
+    /// - SOFORT	      : (Cross-national) Sofort
     case idDocType = 6
     /// Identity document number (format: string up to 31 bytes).
     case idDocNo = 7
