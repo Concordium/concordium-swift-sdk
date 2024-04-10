@@ -257,21 +257,21 @@ public enum AttributeTag: UInt8, CustomStringConvertible, CaseIterable {
     case countryOfResidence = 4
     /// Country of nationality (format: ISO3166-1 alpha-2).
     case nationality = 5
-    /// Identity Document Type (format: na=0, passport=1, national id card=2, driving license=3, immigration card=4 or eID string).
+    /// Identity document type (format: na=0, passport=1, national id card=2, driving license=3, immigration card=4, or eID string).
     case idDocType = 6
-    /// Identity Document number (format: string up to 31 bytes).
+    /// Identity document number (format: string up to 31 bytes).
     case idDocNo = 7
-    /// Identity Document Issuer (format: ISO3166-1 alpha-2 or ISO3166-2 if applicable).
+    /// Identity document issuer (format: ISO3166-1 alpha-2 or ISO3166-2 if applicable).
     case idDocIssuer = 8
-    /// ID Valid from (format: ISO8601 YYYYMMDD).
+    /// Time from which the ID is valid (format: ISO8601 YYYYMMDD).
     case idDocIssuedAt = 9
-    /// ID Valid to (format: ISO8601 YYYYMMDD).
+    /// Time to which the ID is valid (format: ISO8601 YYYYMMDD).
     case idDocExpiresAt = 10
     /// National ID number (format: string up to 31 bytes).
     case nationalIdNo = 11
     /// Tax ID number (format: string up to 31 bytes).
     case taxIdNo = 12
-    /// LEI-code (Company only) (format: ISO17442).
+    /// LEI-code - companies only (format: ISO17442).
     case legalEntityId = 13
 
     public init?(_ description: String) {
