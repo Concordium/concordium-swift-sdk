@@ -255,7 +255,7 @@ public enum AttributeTag: UInt8, CustomStringConvertible, CaseIterable {
     case dateOfBirth = 3
     /// Country of residence (format: ISO3166-1 alpha-2).
     case countryOfResidence = 4
-    /// Country of nationality (format: ISO3166-1 alpha-2)
+    /// Country of nationality (format: ISO3166-1 alpha-2).
     case nationality = 5
     /// Identity Document Type (format: na=0, passport=1, national id card=2, driving license=3, immigration card=4 or eID string).
     case idDocType = 6
