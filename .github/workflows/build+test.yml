@@ -21,6 +21,7 @@ jobs:
     - name: Check out sources
       uses: actions/checkout@v4
     - name: Check formatting
+      if: runner.name != 'macos-11'
       run: swift package plugin --allow-writing-to-package-directory swiftformat ./examples --lint
     - name: Build project and run tests
       run: swift test
