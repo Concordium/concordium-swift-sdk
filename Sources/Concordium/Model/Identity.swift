@@ -268,16 +268,16 @@ public enum AttributeTag: UInt8, CustomStringConvertible, CaseIterable {
     /// - eID string (see below)
     ///
     /// eID strings as of Apr 2024:
-    /// - DK:MITID	      : Danish MitId
-    /// - SE:BANKID	      : Swedish BankID
-    /// - NO:BANKID	      : Norwegian BankID
-    /// - NO:VIPPS	      : Norwegian Vipps
+    /// - DK:MITID        : Danish MitId
+    /// - SE:BANKID       : Swedish BankID
+    /// - NO:BANKID       : Norwegian BankID
+    /// - NO:VIPPS        : Norwegian Vipps
     /// - FI:TRUSTNETWORK : Finnish Trust Network
-    /// - NL:DIGID	      : Netherlands DigiD
-    /// - NL:IDIN	      : Netherlands iDIN
-    /// - BE:EID	      : Belgian eID
-    /// - ITSME	          : (Cross-national) ItsME
-    /// - SOFORT	      : (Cross-national) Sofort
+    /// - NL:DIGID        : Netherlands DigiD
+    /// - NL:IDIN         : Netherlands iDIN
+    /// - BE:EID          : Belgian eID
+    /// - ITSME           : (Cross-national) ItsME
+    /// - SOFORT          : (Cross-national) Sofort
     case idDocType = 6
     /// Identity document number (format: string up to 31 bytes).
     case idDocNo = 7
