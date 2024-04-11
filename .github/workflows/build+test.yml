@@ -14,16 +14,20 @@ jobs:
         - macos-12 # X64
         - macos-13 # X64
         - macos-14 # ARM64
+        include:
+        - runner: macos-14
+          lint: true
+
 
     runs-on: "${{matrix.runner}}"
 
     steps:
     - name: Check out sources
       uses: actions/checkout@v4
-    - name: "[Debug]: runner.name (${{runner.name}})"
-      run: echo "${{runner.name}}"
+    - name: "[Debug]: lint (${{matrix.lint}})"
+      run: echo
     - name: Check formatting (except macOS 11)
-      if: runner.name != 'macos-11'
+      if: matrix.lint
       run: swift package plugin --allow-writing-to-package-directory swiftformat ./examples --lint
     - name: Build project and run tests
       run: swift test
