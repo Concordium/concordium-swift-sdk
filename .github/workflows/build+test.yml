@@ -20,7 +20,9 @@ jobs:
     steps:
     - name: Check out sources
       uses: actions/checkout@v4
-    - name: Check formatting
+    - name: "[Debug]: runner.name (${{runner.name}})"
+      run: echo "${{runner.name}}"
+    - name: Check formatting (except macOS 11)
       if: runner.name != 'macos-11'
       run: swift package plugin --allow-writing-to-package-directory swiftformat ./examples --lint
     - name: Build project and run tests
