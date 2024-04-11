@@ -10,7 +10,6 @@ jobs:
     strategy:
       matrix:
         runner:
-        - macos-11 # X64
         - macos-12 # X64
         - macos-13 # X64
         - macos-14 # ARM64
@@ -24,9 +23,7 @@ jobs:
     steps:
     - name: Check out sources
       uses: actions/checkout@v4
-    - name: "[Debug]: lint (${{matrix.lint}})"
-      run: echo
-    - name: Check formatting (except macOS 11)
+    - name: Check formatting
       if: matrix.lint
       run: swift package plugin --allow-writing-to-package-directory swiftformat ./examples --lint
     - name: Build project and run tests
