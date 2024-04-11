@@ -10,10 +10,10 @@ jobs:
     strategy:
       matrix:
         runner:
-        - macos-11
-        - macos-12
-        - macos-13
-        - macos-14
+        - macos-11 # X64
+        - macos-12 # X64
+        - macos-13 # X64
+        - macos-14 # ARM64
 
     runs-on: "${{matrix.runner}}"
 
