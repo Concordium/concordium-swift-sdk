@@ -11,11 +11,10 @@ let amount = MicroCCDAmount(1337)
 let receiver = try! AccountAddress(base58Check: "33Po4Z5v4DaAHo9Gz9Afc9LRzbZmYikus4Q7gqMaXHtdS17khz")
 let expiry = TransactionTime(9_999_999_999)
 
-// Run snippet within a context where a gRPC client has been made available.
-try await withGRPCClient(target: .host("localhost", port: 20000)) { client in
+func run(client: NodeClient) async throws {
     let seed = try decodeSeed(seedPhrase, network)
 
-    // Derive seed based account from the given coordinates of a given seed.
+    // Derive seed based account from the given coordinates of the given seed.
     let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
     let accountDerivation = SeedBasedAccountDerivation(seed: seed, cryptoParams: cryptoParams)
     let credentialIndexes = AccountCredentialSeedIndexes(
@@ -30,3 +29,6 @@ try await withGRPCClient(target: .host("localhost", port: 20000)) { client in
     let hash = try await client.send(transaction: tx)
     print("Transaction with hash '\(hash.hex)' successfully submitted.")
 }
+
+// Execute ``run`` within the context of a gRPC client.
+try await withGRPCClient(target: .host("localhost", port: 20000), run)

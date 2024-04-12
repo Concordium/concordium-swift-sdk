@@ -31,25 +31,6 @@ public func issueIdentitySync(_ seed: WalletSeed, _ cryptoParams: CryptographicP
     return .init(url: url)
 }
 
-public func fetchIdentityIssuance(_ request: IdentityIssuanceRequest) async throws -> IdentityIssuanceResult {
-    var delaySecs: UInt64 = 1
-    while true {
-        print("Attempting to fetch identity.")
-        try await Task.sleep(nanoseconds: delaySecs * 1_000_000_000)
-        let res = try await request.response(session: URLSession.shared).result
-        if case let .pending(detail) = res {
-            delaySecs = min(delaySecs * 2, 10) // exponential backoff
-            var msg = ""
-            if let detail, !detail.isEmpty {
-                msg = " (\"\(detail)\")"
-            }
-            print("Verification pending\(msg). Retrying in \(delaySecs) s.")
-            continue
-        }
-        return res
-    }
-}
-
 public func prepareRecoverIdentity(
     _ seed: WalletSeed,
     _ cryptoParams: CryptographicParameters,

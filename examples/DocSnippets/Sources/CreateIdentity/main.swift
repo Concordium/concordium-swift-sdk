@@ -10,8 +10,7 @@ let identityIndex = IdentityIndex(7)
 let walletProxyBaseURL = URL(string: "https://wallet-proxy.testnet.concordium.com")!
 let anonymityRevocationThreshold = RevocationThreshold(2)
 
-// Run snippet within a context where a gRPC client has been made available.
-try await withGRPCClient(target: .host("localhost", port: 20000)) { client in
+func run(client: NodeClient) async throws {
     let seed = try decodeSeed(seedPhrase, network)
     let walletProxy = WalletProxyEndpoints(baseURL: walletProxyBaseURL)
     let identityProvider = try await findIdentityProvider(walletProxy, identityProviderID)!
@@ -29,8 +28,7 @@ try await withGRPCClient(target: .host("localhost", port: 20000)) { client in
         return todoAwaitCallbackWithVerificationPollingURL()
     }
 
-    // Periodically poll verification status for as long as it's pending.
-    let res = try await fetchIdentityIssuance(identityReq)
+    let res = try await todoFetchIdentityIssuance(identityReq)
     if case let .success(identity, _) = res {
         print("Identity issued successfully: \(identity))")
     } else {
@@ -39,7 +37,7 @@ try await withGRPCClient(target: .host("localhost", port: 20000)) { client in
 }
 
 func todoOpenURL(_: URL) {
-    fatalError("TODO: Need to implement method for opening the IP identification page in a web view.")
+    fatalError("'openURL' not implemented")
 }
 
 func todoAwaitCallbackWithVerificationPollingURL() -> URL {
@@ -48,5 +46,16 @@ func todoAwaitCallbackWithVerificationPollingURL() -> URL {
     // In that case, this snippet would be done now and we would expect the handler to be eventually invoked.
     // In either case, the callback is how the IP hands over the verification polling URL.
     // As this is just for documentation, we simply return a dummy value here.
-    URL(string: "http://example.com")!
+    fatalError("'awaitCallbackWithVerificationPollingURL' not implemented")
 }
+
+func todoFetchIdentityIssuance(_ request: IdentityIssuanceRequest) async throws -> IdentityIssuanceResult {
+    // Block the thread, periodically polling for the verification ("identity issuance").
+    // Return the result once it's no longer "pending".
+    // In this example we just assume that it's non-pending right away.
+    let res = try await request.response(session: URLSession.shared)
+    return res.result
+}
+
+// Execute ``run`` within the context of a gRPC client.
+try await withGRPCClient(target: .host("localhost", port: 20000), run)

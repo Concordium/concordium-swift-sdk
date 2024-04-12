@@ -195,6 +195,7 @@ public struct Metadata: Decodable {
     }
 }
 
+// TODO: Should name 'IdentityVerificationStatus'?
 public enum IdentityIssuanceResult {
     case pending(detail: String?)
     case failure(detail: String?)
