@@ -275,7 +275,7 @@ struct Root: AsyncParsableCommand {
                 var identityCmd: Identity
 
                 @Option(help: "Number of anonymity revokers needed to revoke anonymity.")
-                var anonymityRevokerThreshold: UInt8 = 2
+                var anonymityRevocationThreshold: UInt8 = 2
 
                 func run() async throws {
                     let endpoints = WalletProxyEndpoints(baseURL: identityCmd.walletProxyOpts.baseURL)
@@ -297,7 +297,7 @@ struct Root: AsyncParsableCommand {
                         cryptoParams: cryptoParams,
                         identityProvider: ip.toSDKType(),
                         identityIndex: walletCmd.identityIndex,
-                        anonymityRevokerThreshold: anonymityRevokerThreshold
+                        anonymityRevocationThreshold: anonymityRevocationThreshold
                     ) { issuanceStartURL, requestJSON in
                         print("Starting temporary server waiting for identity verification to start.")
                         let res = try withIdentityIssuanceCallbackServer { callbackURL in
@@ -579,7 +579,7 @@ func issueIdentity(
     cryptoParams: CryptographicParameters,
     identityProvider: IdentityProvider,
     identityIndex: IdentityIndex,
-    anonymityRevokerThreshold: RevocationThreshold,
+    anonymityRevocationThreshold: RevocationThreshold,
     runIdentityProviderFlow: (_ issuanceStartURL: URL, _ requestJSON: String) throws -> URL
 ) throws -> IdentityIssuanceRequest {
     print("Preparing identity issuance request.")
@@ -590,7 +590,7 @@ func issueIdentity(
     let reqJSON = try identityRequestBuilder.issuanceRequestJSON(
         provider: identityProvider,
         index: identityIndex,
-        anonymityRevokerThreshold: anonymityRevokerThreshold
+        anonymityRevocationThreshold: anonymityRevocationThreshold
     )
 
     print("Start identity provider issuance flow.")
