@@ -7,14 +7,15 @@ let package = Package(
     platforms: [
         .macOS(.v12),
     ],
-    products: [
-        .executable(name: "concordium-example-sign-and-send-transfer", targets: ["SignAndSendTransfer"]),
-    ],
     dependencies: [
         .package(url: "https://github.com/Electric-Coin-Company/MnemonicSwift.git", from: "2.2.4"),
         .package(path: "../.."),
     ],
     targets: [
+        .executableTarget(
+            name: "IdentityCreation",
+            dependencies: ["Common"]
+        ),
         .executableTarget(
             name: "SignAndSendTransfer",
             dependencies: ["Common"]
