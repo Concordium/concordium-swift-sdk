@@ -13,9 +13,11 @@ let anonymityRevocationThreshold = RevocationThreshold(2)
 // Run snippet within a context where a gRPC client has been made available.
 try await withGRPCClient(target: .host("localhost", port: 20000)) { client in
     let seed = try decodeSeed(seedPhrase, network)
-    let cryptoParams = try await client.cryptographicParameters(block: BlockIdentifier.lastFinal)
     let walletProxy = WalletProxyEndpoints(baseURL: walletProxyBaseURL)
     let identityProvider = try await findIdentityProvider(walletProxy, identityProviderID)!
+
+    // Construct identity creation request and start verification.
+    let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
     let identityReq = try issueIdentitySync(seed, cryptoParams, identityProvider.toSDKType(), identityIndex, anonymityRevocationThreshold) { issuanceStartURL, requestJSON in
         // The URL to be invoked when once the ID verification process has started (i.e. once the data has been filled in).
         let callbackURL = URL(string: "concordiumwallet-example://identity-issuer/callback")!

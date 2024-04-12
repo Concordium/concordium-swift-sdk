@@ -14,8 +14,17 @@ let expiry = TransactionTime(9_999_999_999)
 // Run snippet within a context where a gRPC client has been made available.
 try await withGRPCClient(target: .host("localhost", port: 20000)) { client in
     let seed = try decodeSeed(seedPhrase, network)
+
+    // Derive seed based account from the given coordinates of a given seed.
     let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
-    let account = try deriveAccount(seed, identityProviderID, identityIndex, credentialCounter, cryptoParams)
+    let accountDerivation = SeedBasedAccountDerivation(seed: seed, cryptoParams: cryptoParams)
+    let credentialIndexes = AccountCredentialSeedIndexes(
+        identity: .init(providerID: identityProviderID, index: identityIndex),
+        counter: credentialCounter
+    )
+    let account = try accountDerivation.deriveAccount(credentials: [credentialIndexes])
+
+    // Construct, sign, and send transfer transaction.
     let nextSeq = try await client.nextAccountSequenceNumber(address: account.address)
     let tx = try makeTransfer(account, amount, receiver, nextSeq.sequenceNumber, expiry)
     let hash = try await client.send(transaction: tx)

@@ -13,15 +13,19 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
+            name: "CreateIdentity",
+            dependencies: ["Common"]
+        ),
+        .executableTarget(
+            name: "RecoverIdentity",
+            dependencies: ["Common"]
+        ),
+        .executableTarget(
+            name: "CreateAccount",
+            dependencies: ["Common"]
+        ),
+        .executableTarget(
             name: "SignAndSendTransfer",
-            dependencies: ["Common"]
-        ),
-        .executableTarget(
-            name: "IdentityCreation",
-            dependencies: ["Common"]
-        ),
-        .executableTarget(
-            name: "IdentityRecovery",
             dependencies: ["Common"]
         ),
         .target(
