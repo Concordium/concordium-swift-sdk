@@ -37,6 +37,7 @@ func run(client: NodeClient) async throws {
 }
 
 func todoOpenURL(_: URL) {
+    // Open the URL in a web view to start the identity verification flow with the identity provider.
     fatalError("'openURL' not implemented")
 }
 
@@ -44,8 +45,10 @@ func todoAwaitCallbackWithVerificationPollingURL() -> URL {
     // Block the thread and wait for the callback URL to be invoked (and somehow capture that event).
     // In mobile wallets, the callback URL is probably a deep link that we listen on somewhere else.
     // In that case, this snippet would be done now and we would expect the handler to be eventually invoked.
-    // In either case, the callback is how the IP hands over the verification polling URL.
-    // As this is just for documentation, we simply return a dummy value here.
+    // In either case, the callback is how the IP hands over the URL for polling the verification status -
+    // and for some reason it does so in the *fragment* part of the URL!
+    // See 'server.swift' of the example CLI for a server-based solution that works in a synchronous context.
+    // Warning: It ain't pretty.
     fatalError("'awaitCallbackWithVerificationPollingURL' not implemented")
 }
 
