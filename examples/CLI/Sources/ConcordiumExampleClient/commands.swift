@@ -211,8 +211,8 @@ struct Root: AsyncParsableCommand {
                 var anonymityRevokerThreshold: UInt8 = 2
 
                 func run() async throws {
-                    let endpoints = WalletProxyEndpoints(baseURL: identityCmd.walletProxyOpts.baseURL)
-                    guard let ip = try await findIdentityProvider(endpoints: endpoints, id: walletCmd.identityProviderID) else {
+                    let walletProxy = WalletProxy(baseURL: identityCmd.walletProxyOpts.baseURL)
+                    guard let ip = try await findIdentityProvider(walletProxy: walletProxy, id: walletCmd.identityProviderID) else {
                         print("Cannot find identity provider with ID \(walletCmd.identityProviderID).")
                         return
                     }
@@ -234,14 +234,6 @@ struct Root: AsyncParsableCommand {
                     ) { issuanceStartURL, requestJSON in
                         print("Starting temporary server waiting for identity verification to start.")
                         let res = try withIdentityIssuanceCallbackServer { callbackURL in
-                            func openURL(url: URL) {
-                                let p = Process()
-                                p.launchPath = "/usr/bin/open"
-                                p.arguments = [url.absoluteString]
-                                p.launch()
-                                p.waitUntilExit()
-                            }
-
                             let urlBuilder = IdentityRequestURLBuilder(callbackURL: callbackURL)
                             let url = try urlBuilder.issuanceURLToOpen(baseURL: issuanceStartURL, requestJSON: requestJSON)
                             // TODO: Consider calling URL first to see if it succeeds (DTS staging returned an error directly without redirecting to the callback).
@@ -251,27 +243,41 @@ struct Root: AsyncParsableCommand {
                         return try res.get()
                     }
 
-                    func fetchIdentityIssuance(request: IdentityIssuanceRequest) async throws -> IdentityIssuanceResult {
-                        var delaySecs: UInt64 = 1
-                        while true {
-                            print("Attempting to fetch identity.")
-                            try await Task.sleep(nanoseconds: delaySecs * 1_000_000_000)
-                            let res = try await request.response(session: URLSession.shared).result
-                            if case let .pending(detail) = res {
-                                delaySecs = min(delaySecs * 2, 10) // exponential backoff
-                                var msg = ""
-                                if let detail, !detail.isEmpty {
-                                    msg = " (\"\(detail)\")"
-                                }
-                                print("Verification pending\(msg). Retrying in \(delaySecs) s.")
-                                continue
-                            }
-                            return res
-                        }
+                    let res = try await fetchIdentityIssuance(request: identityReq)
+                    switch res {
+                    case let .failure(err):
+                        print("Identity verification failed: \(err)")
+                    case let .success(identity):
+                        print("Identity successfully created:")
+                        print(identity)
                     }
+                }
 
-                    let identity = try await fetchIdentityIssuance(request: identityReq)
-                    print(identity)
+                func openURL(url: URL) {
+                    let p = Process()
+                    p.launchPath = "/usr/bin/open"
+                    p.arguments = [url.absoluteString]
+                    p.launch()
+                    p.waitUntilExit()
+                }
+
+                func fetchIdentityIssuance(request: IdentityIssuanceRequest) async throws -> IdentityVerificationResult {
+                    var delaySecs: UInt64 = 1
+                    while true {
+                        print("Attempting to fetch identity.")
+                        try await Task.sleep(nanoseconds: delaySecs * 1_000_000_000)
+                        let res = try await request.send(session: URLSession.shared)
+                        if let r = res.result {
+                            // Verification result is ready.
+                            return r
+                        }
+                        delaySecs = min(delaySecs * 2, 10) // exponential backoff (with limit)
+                        var detailSuffix = ""
+                        if let d = res.detail, !d.isEmpty {
+                            detailSuffix = " (detail: \"\(d)\")"
+                        }
+                        print("Verification pending\(detailSuffix). Retrying in \(delaySecs) s.")
+                    }
                 }
             }
 
@@ -290,8 +296,8 @@ struct Root: AsyncParsableCommand {
                 var identityCmd: Identity
 
                 func run() async throws {
-                    let endpoints = WalletProxyEndpoints(baseURL: identityCmd.walletProxyOpts.baseURL)
-                    guard let ip = try await findIdentityProvider(endpoints: endpoints, id: walletCmd.identityProviderID) else {
+                    let walletProxy = WalletProxy(baseURL: identityCmd.walletProxyOpts.baseURL)
+                    guard let ip = try await findIdentityProvider(walletProxy: walletProxy, id: walletCmd.identityProviderID) else {
                         print("Cannot find identity with index \(walletCmd.identityProviderID).")
                         return
                     }
@@ -305,14 +311,15 @@ struct Root: AsyncParsableCommand {
                     let seed = try WalletSeed(seedHex: seedHex, network: walletCmd.network.network)
 
                     print("Preparing identity recovery request.")
-                    let req = try prepareRecoverIdentity(
+                    let req = try makeIdentityRecoveryRequest(
                         seed: seed,
                         cryptoParams: cryptoParams,
                         identityProvider: ip.toSDKType(),
                         identityIndex: walletCmd.identityIndex
                     )
                     print("Recovering identity.")
-                    let identity = try await req.response(session: URLSession.shared)
+                    let identity = try await req.send(session: URLSession.shared)
+                    print("Identity recovered successfully:")
                     print(identity)
                 }
             }
@@ -338,8 +345,8 @@ struct Root: AsyncParsableCommand {
                 var expiry: TransactionTime = 9_999_999_999
 
                 func run() async throws {
-                    let endpoints = WalletProxyEndpoints(baseURL: identityCmd.walletProxyOpts.baseURL)
-                    guard let ip = try await findIdentityProvider(endpoints: endpoints, id: walletCmd.identityProviderID) else {
+                    let walletProxy = WalletProxy(baseURL: identityCmd.walletProxyOpts.baseURL)
+                    guard let ip = try await findIdentityProvider(walletProxy: walletProxy, id: walletCmd.identityProviderID) else {
                         print("Cannot find identity with index \(walletCmd.identityProviderID).")
                         return
                     }
@@ -353,14 +360,14 @@ struct Root: AsyncParsableCommand {
                     let seed = try WalletSeed(seedHex: seedHex, network: walletCmd.network.network)
                     print("Preparing identity recovery request.")
                     let identityProvider = ip.toSDKType()
-                    let req = try prepareRecoverIdentity(
+                    let req = try makeIdentityRecoveryRequest(
                         seed: seed,
                         cryptoParams: cryptoParams,
                         identityProvider: identityProvider,
                         identityIndex: walletCmd.identityIndex
                     )
                     print("Recovering identity.")
-                    let identity = try await req.response(session: URLSession.shared)
+                    let identity = try await req.send(session: URLSession.shared)
 
                     let idxs = AccountCredentialSeedIndexes(
                         identity: IdentitySeedIndexes(providerID: walletCmd.identityProviderID, index: walletCmd.identityIndex),
@@ -399,8 +406,8 @@ struct Root: AsyncParsableCommand {
         var walletProxyOptions: WalletProxyOptions
 
         func run() async throws {
-            let endpoints = WalletProxyEndpoints(baseURL: walletProxyOptions.baseURL)
-            let res = try await endpoints.getIdentityProviders.response(session: URLSession.shared)
+            let walletProxy = WalletProxy(baseURL: walletProxyOptions.baseURL)
+            let res = try await walletProxy.getIdentityProviders.send(session: URLSession.shared)
             print(res)
         }
     }
@@ -422,8 +429,8 @@ struct Root: AsyncParsableCommand {
     }
 }
 
-func findIdentityProvider(endpoints: WalletProxyEndpoints, id: IdentityProviderID) async throws -> IdentityProviderJSON? {
-    let res = try await endpoints.getIdentityProviders.response(session: URLSession.shared)
+func findIdentityProvider(walletProxy: WalletProxy, id: IdentityProviderID) async throws -> IdentityProviderJSON? {
+    let res = try await walletProxy.getIdentityProviders.send(session: URLSession.shared)
     return res.first { $0.ipInfo.ipIdentity == id }
 }
 
@@ -452,7 +459,7 @@ func issueIdentity(
     return .init(url: url)
 }
 
-func prepareRecoverIdentity(
+func makeIdentityRecoveryRequest(
     seed: WalletSeed,
     cryptoParams: CryptographicParameters,
     identityProvider: IdentityProvider,
@@ -468,7 +475,7 @@ func prepareRecoverIdentity(
         time: Date.now
     )
     let urlBuilder = IdentityRequestURLBuilder(callbackURL: nil)
-    return try urlBuilder.recoveryRequestToFetch(
+    return try urlBuilder.recoveryRequest(
         baseURL: identityProvider.metadata.recoveryStart,
         requestJSON: reqJSON
     )
