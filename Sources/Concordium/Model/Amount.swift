@@ -3,34 +3,34 @@ import Foundation
 
 public enum AmountParseError: Error {
     case invalidInput
-    case negativeDecimals
-    case fractionPartTooLong
-    case inputTooLarge
+    case negativeDecimalCount
+    case tooManyFractionalDigits
+    case trailingDecimalSeparator
 }
 
 private let ten = BigUInt(10)
 
-public struct Amount {
+public struct Amount: Equatable {
     public var intValue: BigUInt
     public var decimalCount: Int
 
-    public init(intValue: BigUInt, decimalCount: Int) {
+    public init(_ intValue: BigUInt, decimalCount: Int) {
         self.intValue = intValue
         self.decimalCount = decimalCount
     }
 
-    public init(input: String, decimalCount: Int, decimalSeparator: String? = nil) throws {
+    public init(_ string: String, decimalCount: Int, decimalSeparator: String? = nil) throws {
         guard decimalCount >= 0 else {
-            throw AmountParseError.negativeDecimals
+            throw AmountParseError.negativeDecimalCount
         }
         let sep = Self.resolveDecimalSeparator(decimalSeparator)
-        if let sepIdx = input.firstIndex(of: sep[sep.startIndex]) {
-            let wholePart = input[input.startIndex ..< sepIdx]
-            let sepIdx1 = input.index(sepIdx, offsetBy: 1)
-            let fracPart = input[sepIdx1 ..< input.endIndex]
+        if let sepIdx = string.firstIndex(of: sep[sep.startIndex]) {
+            let wholePart = string[string.startIndex ..< sepIdx]
+            let sepIdx1 = string.index(sepIdx, offsetBy: 1)
+            let fracPart = string[sepIdx1 ..< string.endIndex]
             try self.init(wholePart: wholePart, fracPart: fracPart, decimalCount: decimalCount)
         } else {
-            try self.init(wholePart: input, decimalCount: decimalCount)
+            try self.init(wholePart: string, decimalCount: decimalCount)
         }
     }
 
@@ -40,33 +40,41 @@ public struct Amount {
         }
         var intValue = wp * ten.power(decimalCount)
         if let fracPart {
+            if fracPart.isEmpty {
+                throw AmountParseError.trailingDecimalSeparator
+            }
+            guard fracPart.count <= decimalCount else {
+                throw AmountParseError.tooManyFractionalDigits
+            }
             guard let fp = BigUInt(fracPart) else {
                 throw AmountParseError.invalidInput
             }
             intValue += fp * ten.power(decimalCount - fracPart.count)
+        } else if wholePart.isEmpty {
+            throw AmountParseError.invalidInput
         }
-        self.init(intValue: intValue, decimalCount: decimalCount)
+        self.init(intValue, decimalCount: decimalCount)
     }
 
-    public func format(minDecimalDigits: Int, decimalSeparator: String? = nil) -> String {
+    public func withoutTrailingZeros(minDecimalCount: Int) -> Amount {
         var v = intValue
         var d = decimalCount
-        while d > minDecimalDigits, v % 10 == 0 {
+        while d > minDecimalCount, v % 10 == 0 {
             v /= 10
             d -= 1
         }
-        return Self.format(value: v, subunitPrecision: d, decimalSeparator: decimalSeparator)
+        return Amount(v, decimalCount: d)
     }
 
-    public static func format(value: BigUInt, subunitPrecision: Int, decimalSeparator: String? = nil) -> String {
-        if subunitPrecision == 0 {
-            return String(value)
+    public func format(decimalSeparator: String? = nil) -> String {
+        if decimalCount == 0 {
+            return String(intValue)
         }
-        let divisor = ten.power(subunitPrecision)
-        let int = String(value / divisor)
-        let frac = String(value % divisor)
-        let padding = String(repeating: "0", count: subunitPrecision - frac.count)
-        return "\(int)\(resolveDecimalSeparator(decimalSeparator))\(padding)\(frac)"
+        let divisor = ten.power(decimalCount)
+        let int = String(intValue / divisor)
+        let frac = String(intValue % divisor)
+        let padding = String(repeating: "0", count: decimalCount - frac.count)
+        return "\(int)\(Self.resolveDecimalSeparator(decimalSeparator))\(padding)\(frac)"
     }
 
     private static func resolveDecimalSeparator(_ provided: String?) -> String {
@@ -80,11 +88,11 @@ public struct CCD: CustomStringConvertible {
     public var amount: Amount
 
     public init(microCCD: MicroCCDAmount) {
-        amount = .init(intValue: BigUInt(microCCD), decimalCount: Self.decimalCount)
+        amount = .init(BigUInt(microCCD), decimalCount: Self.decimalCount)
     }
 
     public init(_ string: String) throws {
-        amount = try .init(input: string, decimalCount: Self.decimalCount)
+        amount = try .init(string, decimalCount: Self.decimalCount)
     }
 
     public var microCCDAmount: MicroCCDAmount {
@@ -96,6 +104,6 @@ public struct CCD: CustomStringConvertible {
     }
 
     public func format(minDecimalDigits: Int = 0) -> String {
-        amount.format(minDecimalDigits: minDecimalDigits)
+        amount.withoutTrailingZeros(minDecimalCount: minDecimalDigits).format()
     }
 }
