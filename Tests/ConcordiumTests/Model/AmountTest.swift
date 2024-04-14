@@ -5,15 +5,15 @@ import XCTest
 
 final class AmountTest: XCTestCase {
     /// Helper function for conveniently parsing amount using decimal separator ".".
-    func amount(_ input: String, decimalCount: Int) throws -> Amount {
+    func amount(_ input: String, decimalCount: UInt16) throws -> Amount {
         try Amount(input, decimalCount: decimalCount, decimalSeparator: ".")
     }
 
-    func testCannotParseNegativeDecimals() throws {
-        XCTAssertThrowsError(try amount("0", decimalCount: -1)) { err in
-            XCTAssertEqual(err as! AmountParseError, AmountParseError.negativeDecimalCount)
-        }
-    }
+//    func testCannotParseNegativeDecimals() throws {
+//        XCTAssertThrowsError(try amount("0", decimalCount: -1)) { err in
+//            XCTAssertEqual(err as! AmountParseError, AmountParseError.negativeDecimalCount)
+//        }
+//    }
 
     func testCannotParseEmpty() throws {
         XCTAssertThrowsError(try amount("", decimalCount: 0)) { err in
@@ -209,6 +209,10 @@ final class AmountTest: XCTestCase {
         XCTAssertEqual(
             format(Amount(BigUInt(0), decimalCount: 0)),
             "0"
+        )
+        XCTAssertEqual(
+            format(Amount(BigUInt(0), decimalCount: 2)),
+            "0.00"
         )
         XCTAssertEqual(
             format(Amount(BigUInt(1), decimalCount: 0)),
