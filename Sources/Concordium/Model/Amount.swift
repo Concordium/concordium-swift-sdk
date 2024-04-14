@@ -5,7 +5,6 @@ public enum AmountParseError: Error {
     case invalidInput
     case negativeDecimalCount
     case tooManyFractionalDigits
-    case trailingDecimalSeparator
 }
 
 private let ten = BigUInt(10)
@@ -28,21 +27,21 @@ public struct Amount: Equatable {
             let wholePart = string[string.startIndex ..< sepIdx]
             let sepIdx1 = string.index(sepIdx, offsetBy: 1)
             let fracPart = string[sepIdx1 ..< string.endIndex]
-            try self.init(wholePart: wholePart, fracPart: fracPart, decimalCount: decimalCount)
+            try self.init(wholePart: String(wholePart), fracPart: String(fracPart), decimalCount: decimalCount)
         } else {
             try self.init(wholePart: string, decimalCount: decimalCount)
         }
     }
 
-    private init(wholePart: any StringProtocol, fracPart: (any StringProtocol)? = nil, decimalCount: Int) throws {
+    private init(wholePart: String, fracPart: String? = nil, decimalCount: Int) throws {
         guard let wp = BigUInt(wholePart) else {
             throw AmountParseError.invalidInput
         }
         var intValue = wp * ten.power(decimalCount)
         if let fracPart {
-            if fracPart.isEmpty {
-                throw AmountParseError.trailingDecimalSeparator
-            }
+//            if fracPart.isEmpty {
+//                throw AmountParseError.trailingDecimalSeparator
+//            }
             guard fracPart.count <= decimalCount else {
                 throw AmountParseError.tooManyFractionalDigits
             }
@@ -83,7 +82,7 @@ public struct Amount: Equatable {
 }
 
 public struct CCD: CustomStringConvertible {
-    private static let decimalCount = 6
+    public static let decimalCount = 6
 
     public var amount: Amount
 
@@ -100,10 +99,14 @@ public struct CCD: CustomStringConvertible {
     }
 
     public var description: String {
-        format(minDecimalDigits: 0)
+        format()
     }
 
-    public func format(minDecimalDigits: Int = 0) -> String {
-        amount.withoutTrailingZeros(minDecimalCount: minDecimalDigits).format()
+    public func format(minDecimalDigits: Int? = nil, decimalSeparator: String? = nil) -> String {
+        var a = amount
+        if let minDecimalDigits {
+            a = amount.withoutTrailingZeros(minDecimalCount: minDecimalDigits)
+        }
+        return a.format(decimalSeparator: decimalSeparator)
     }
 }
