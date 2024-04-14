@@ -193,6 +193,13 @@ final class AmountTest: XCTestCase {
         )
     }
 
+    func testTrimmingToMinDecimalCountAboveDecimalCountDoesNothing() {
+        XCTAssertEqual(
+            Amount(BigUInt(100), decimalCount: 2).withoutTrailingZeros(minDecimalCount: 100),
+            Amount(BigUInt(100), decimalCount: 2)
+        )
+    }
+
     /// Helper function for conveniently formatting amount using decimal separator ".".
     func format(_ amount: Amount) -> String {
         amount.format(decimalSeparator: ".")
@@ -235,4 +242,12 @@ final class AmountTest: XCTestCase {
 
     // TODO: Figure out how to test that decimal separator from locale is used by default
     // (I've not been able to change `Locale.current` programmatically).
+
+    func testMicroCCDAmountForCCDWithinRange() throws {
+        XCTAssertEqual(MicroCCDAmount(123_456_789), try CCD("123.456789", decimalSeparator: ".").microCCDAmount)
+    }
+
+    func testMicroCCDAmountForCCDOutsideRange() throws {
+        XCTAssertNil(try CCD("123456789012347890").microCCDAmount)
+    }
 }

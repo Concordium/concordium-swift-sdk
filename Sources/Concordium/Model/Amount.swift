@@ -10,11 +10,11 @@ public enum AmountParseError: Error {
 private let ten = BigUInt(10)
 
 public struct Amount: Equatable {
-    public var intValue: BigUInt
+    public var value: BigUInt
     public var decimalCount: Int
 
     public init(_ intValue: BigUInt, decimalCount: Int) {
-        self.intValue = intValue
+        value = intValue
         self.decimalCount = decimalCount
     }
 
@@ -56,7 +56,7 @@ public struct Amount: Equatable {
     }
 
     public func withoutTrailingZeros(minDecimalCount: Int) -> Amount {
-        var v = intValue
+        var v = value
         var d = decimalCount
         while d > minDecimalCount, v % 10 == 0 {
             v /= 10
@@ -67,11 +67,11 @@ public struct Amount: Equatable {
 
     public func format(decimalSeparator: String? = nil) -> String {
         if decimalCount == 0 {
-            return String(intValue)
+            return String(value)
         }
         let divisor = ten.power(decimalCount)
-        let int = String(intValue / divisor)
-        let frac = String(intValue % divisor)
+        let int = String(value / divisor)
+        let frac = String(value % divisor)
         let padding = String(repeating: "0", count: decimalCount - frac.count)
         return "\(int)\(Self.resolveDecimalSeparator(decimalSeparator))\(padding)\(frac)"
     }
@@ -90,12 +90,15 @@ public struct CCD: CustomStringConvertible {
         amount = .init(BigUInt(microCCD), decimalCount: Self.decimalCount)
     }
 
-    public init(_ string: String) throws {
-        amount = try .init(string, decimalCount: Self.decimalCount)
+    public init(_ string: String, decimalSeparator: String? = nil) throws {
+        amount = try .init(string, decimalCount: Self.decimalCount, decimalSeparator: decimalSeparator)
     }
 
-    public var microCCDAmount: MicroCCDAmount {
-        MicroCCDAmount(amount.intValue)
+    public var microCCDAmount: MicroCCDAmount? {
+        guard amount.value.bitWidth <= 64 else {
+            return nil
+        }
+        return MicroCCDAmount(amount.value)
     }
 
     public var description: String {
