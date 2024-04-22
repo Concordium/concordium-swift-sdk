@@ -237,28 +237,90 @@ public struct IdentityIssuanceResponse: Decodable {
     }
 }
 
-public enum AttributeType: UInt8, CustomStringConvertible, CaseIterable {
+/// The supported set of attributes which are stored on identities and optionally revealed by accounts.
+/// In some contexts (such as the gRPC API), attribute tags are represented by a byte (the raw type of this enum).
+/// Where human readability is a concern, the string representation implemented by ``description`` is used.
+/// Note that since ``AttributeList`` (which is a component of ``IdentityObject``) is defined in another library, it cannot use this type.
+/// Instead, its field `chosenAttributes` is a map from the string representation of the tag to the value.
+/// Use the appropriate initializer of this type to convert it.
+/// All attribute values are strings of 31 bytes or less. The expected format of the values is documented
+/// [here](https://docs.google.com/spreadsheets/d/1CxpFvtAoUcylHQyeBtRBaRt1zsibtpmQOVsk7bsHPGA/edit).
+public enum AttributeTag: UInt8, CustomStringConvertible, CaseIterable {
+    /// First name (format: string up to 31 bytes).
     case firstName = 0
+    /// Last name (format: string up to 31 bytes).
     case lastName = 1
+    /// Sex (format: ISO/IEC 5218).
     case sex = 2
-    case dob = 3
+    /// Date of birth (format: ISO8601 YYYYMMDD).
+    case dateOfBirth = 3
+    /// Country of residence (format: ISO3166-1 alpha-2).
     case countryOfResidence = 4
+    /// Country of nationality (format: ISO3166-1 alpha-2).
     case nationality = 5
+    /// Identity document type
+    ///
+    /// Format:
+    /// - 0 : na
+    /// - 1 : passport
+    /// - 2 : national ID card
+    /// - 3 : driving license
+    /// - 4 : immigration card
+    /// - eID string (see below)
+    ///
+    /// eID strings as of Apr 2024:
+    /// - DK:MITID        : Danish MitId
+    /// - SE:BANKID       : Swedish BankID
+    /// - NO:BANKID       : Norwegian BankID
+    /// - NO:VIPPS        : Norwegian Vipps
+    /// - FI:TRUSTNETWORK : Finnish Trust Network
+    /// - NL:DIGID        : Netherlands DigiD
+    /// - NL:IDIN         : Netherlands iDIN
+    /// - BE:EID          : Belgian eID
+    /// - ITSME           : (Cross-national) ItsME
+    /// - SOFORT          : (Cross-national) Sofort
     case idDocType = 6
+    /// Identity document number (format: string up to 31 bytes).
     case idDocNo = 7
+    /// Identity document issuer (format: ISO3166-1 alpha-2 or ISO3166-2 if applicable).
     case idDocIssuer = 8
+    /// Time from which the ID is valid (format: ISO8601 YYYYMMDD).
     case idDocIssuedAt = 9
+    /// Time to which the ID is valid (format: ISO8601 YYYYMMDD).
     case idDocExpiresAt = 10
+    /// National ID number (format: string up to 31 bytes).
     case nationalIdNo = 11
+    /// Tax ID number (format: string up to 31 bytes).
     case taxIdNo = 12
-    case lei = 13
+    /// LEI-code - companies only (format: ISO17442).
+    case legalEntityId = 13
+
+    public init?(_ description: String) {
+        switch description {
+        case "firstName": self = .firstName
+        case "lastName": self = .lastName
+        case "sex": self = .sex
+        case "dob": self = .dateOfBirth
+        case "countryOfResidence": self = .countryOfResidence
+        case "nationality": self = .nationality
+        case "idDocType": self = .idDocType
+        case "idDocNo": self = .idDocNo
+        case "idDocIssuer": self = .idDocIssuer
+        case "idDocIssuedAt": self = .idDocIssuedAt
+        case "idDocExpiresAt": self = .idDocExpiresAt
+        case "nationalIdNo": self = .nationalIdNo
+        case "taxIdNo": self = .taxIdNo
+        case "lei": self = .legalEntityId
+        default: return nil
+        }
+    }
 
     public var description: String {
         switch self {
         case .firstName: return "firstName"
         case .lastName: return "lastName"
         case .sex: return "sex"
-        case .dob: return "dob"
+        case .dateOfBirth: return "dob"
         case .countryOfResidence: return "countryOfResidence"
         case .nationality: return "nationality"
         case .idDocType: return "idDocType"
@@ -268,7 +330,7 @@ public enum AttributeType: UInt8, CustomStringConvertible, CaseIterable {
         case .idDocExpiresAt: return "idDocExpiresAt"
         case .nationalIdNo: return "nationalIdNo"
         case .taxIdNo: return "taxIdNo"
-        case .lei: return "lei"
+        case .legalEntityId: return "lei"
         }
     }
 }

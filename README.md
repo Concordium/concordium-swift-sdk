@@ -18,7 +18,7 @@ Once this SDK is ready for production, it will completely replace this old libra
 ### Supported platforms
 
 - iOS 15+
-- macOS 10.15+
+- macOS 10.15+ (macOS 12+ to build)
 
 ## Usage
 
