@@ -95,7 +95,6 @@ public struct SignedAccountTransaction {
         var t = Concordium_V2_AccountTransaction()
         t.header = transaction.header.toGRPCType()
         t.payload = p
-//        t.payload = transaction.payload.toGRPCType()
         t.signature = s
         return t
     }
