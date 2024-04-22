@@ -265,7 +265,7 @@ public class SeedBasedIdentityRequestBuilder {
         )
     }
 
-    public func issuanceRequestJSON(provider: IdentityProvider, index: IdentityIndex, anonymityRevokerThreshold: RevocationThreshold) throws -> String {
+    public func issuanceRequestJSON(provider: IdentityProvider, index: IdentityIndex, anonymityRevocationThreshold: RevocationThreshold) throws -> String {
         let identityIdxs = IdentitySeedIndexes(providerID: provider.info.identity, index: index)
         let prfKeyHex = try seed.prfKeyHex(identityIndexes: identityIdxs)
         let credSecHex = try seed.credSecHex(identityIndexes: identityIdxs)
@@ -275,7 +275,7 @@ public class SeedBasedIdentityRequestBuilder {
                 ipInfo: provider.info,
                 globalContext: cryptoParams,
                 arsInfos: provider.anonymityRevokers,
-                arThreshold: anonymityRevokerThreshold,
+                arThreshold: anonymityRevocationThreshold,
                 prfKeyHex: prfKeyHex,
                 idCredSecHex: credSecHex,
                 blindingRandomnessHex: blindingRandomnessHex
