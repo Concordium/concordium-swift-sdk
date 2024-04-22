@@ -31,41 +31,32 @@ struct WalletProxyOptions: ParsableArguments {
 }
 
 struct BlockOption: ExpressibleByArgument {
-    var blockHash: String
+    var identifier: BlockIdentifier = .lastFinal
 
     /// Initializer for implementing ``ExpressibleByArgument`` which allows the type to be used for `@Option` fields.
     init?(argument: String) {
-        blockHash = argument
-    }
-
-    var identifier: BlockIdentifier {
-        get throws {
-            if blockHash.isEmpty {
-                return .lastFinal
-            }
-            return try .hash(BlockHash(hex: blockHash))
+        do {
+            identifier = try .hash(BlockHash(hex: argument))
+        } catch {
+            return nil
         }
     }
 }
 
 struct AccountOption: ExpressibleByArgument {
-    var accountAddress: String
+    var address: AccountAddress
 
     /// Initializer for implementing ``ExpressibleByArgument`` which allows the type to be used for `@Option` fields.
     init?(argument: String) {
-        accountAddress = argument
-    }
-
-    var address: AccountAddress {
-        get throws {
-            try AccountAddress(base58Check: accountAddress)
+        do {
+            address = try AccountAddress(base58Check: argument)
+        } catch {
+            return nil
         }
     }
 
     var identifier: AccountIdentifier {
-        get throws {
-            try .address(address)
-        }
+        .address(address)
     }
 }
 
@@ -240,7 +231,7 @@ struct Root: AsyncParsableCommand {
                     return try await transfer(
                         client: client,
                         sender: account,
-                        receiver: AccountAddress(base58Check: receiver.accountAddress),
+                        receiver: receiver.address,
                         amount: amount,
                         expiry: expiry
                     )
@@ -508,17 +499,16 @@ struct Root: AsyncParsableCommand {
                     return
                 }
                 let export = try decryptLegacyWalletExport(export: encryptedExport, password: password)
-                let senderAddress = try walletCmd.account.address
+                let senderAddress = walletCmd.account.address
                 print("Looking up account with address '\(senderAddress.base58Check)' in export.")
                 guard let sender = try AccountStore(export.toSDKType()).lookup(senderAddress) else {
                     print("Account \(senderAddress) not found in export.")
                     return
                 }
-                let receiverAddress = try receiver.address
 
                 // Construct and send transaction.
                 let hash = try await withGRPCClient(target: rootCmd.opts.target) { client in
-                    try await transfer(client: client, sender: sender, receiver: receiverAddress, amount: amount, expiry: expiry)
+                    try await transfer(client: client, sender: sender, receiver: receiver.address, amount: amount, expiry: expiry)
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
             }

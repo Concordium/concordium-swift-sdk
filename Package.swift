@@ -18,7 +18,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/anquii/Base58Check.git", from: "1.0.1"),
-        .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.23.0"),
+        .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.22.0"),
         .package(url: "https://github.com/nicklockwood/SwiftFormat.git", exact: "0.53.7"),
         .package(url: "https://github.com/bisgardo/Hextension.git", from: "1.0.1"),
         overridableCryptoDependency(
