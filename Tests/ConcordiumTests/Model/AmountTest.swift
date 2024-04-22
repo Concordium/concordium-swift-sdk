@@ -9,12 +9,6 @@ final class AmountTest: XCTestCase {
         try Amount(input, decimalCount: decimalCount, decimalSeparator: ".")
     }
 
-//    func testCannotParseNegativeDecimals() throws {
-//        XCTAssertThrowsError(try amount("0", decimalCount: -1)) { err in
-//            XCTAssertEqual(err as! AmountParseError, AmountParseError.negativeDecimalCount)
-//        }
-//    }
-
     func testCannotParseEmpty() throws {
         XCTAssertThrowsError(try amount("", decimalCount: 0)) { err in
             XCTAssertEqual(err as! AmountParseError, AmountParseError.invalidInput)
@@ -80,6 +74,25 @@ final class AmountTest: XCTestCase {
             XCTAssertEqual(err as! AmountParseError, AmountParseError.invalidInput)
         }
         XCTAssertThrowsError(try amount(".1.1", decimalCount: 5)) { err in
+            XCTAssertEqual(err as! AmountParseError, AmountParseError.invalidInput)
+        }
+    }
+
+    func testCanParseMulticharacterDecimalSeparator() throws {
+        XCTAssertEqual(try Amount("1%?@!2", decimalCount: 1, decimalSeparator: "%?@!"), Amount(BigUInt(12), decimalCount: 1))
+    }
+
+    func testMulticharacterDecimalSeparatorNeedsAllCharacters() throws {
+        XCTAssertThrowsError(try Amount("1%2", decimalCount: 1, decimalSeparator: "%?@!")) { err in
+            XCTAssertEqual(err as! AmountParseError, AmountParseError.invalidInput)
+        }
+        XCTAssertThrowsError(try Amount("1%?2", decimalCount: 1, decimalSeparator: "%?@!")) { err in
+            XCTAssertEqual(err as! AmountParseError, AmountParseError.invalidInput)
+        }
+        XCTAssertThrowsError(try Amount("1%?@2", decimalCount: 1, decimalSeparator: "%?@!")) { err in
+            XCTAssertEqual(err as! AmountParseError, AmountParseError.invalidInput)
+        }
+        XCTAssertThrowsError(try Amount("1!2", decimalCount: 1, decimalSeparator: "%?@!")) { err in
             XCTAssertEqual(err as! AmountParseError, AmountParseError.invalidInput)
         }
     }

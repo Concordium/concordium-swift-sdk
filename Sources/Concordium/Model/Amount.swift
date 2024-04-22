@@ -23,10 +23,9 @@ public struct Amount: Equatable {
 
     public init(_ string: String, decimalCount: UInt16, decimalSeparator: String? = nil) throws {
         let sep = Self.resolveDecimalSeparator(decimalSeparator)
-        if let sepIdx = string.firstIndex(of: sep[sep.startIndex]) {
-            let wholePart = string[string.startIndex ..< sepIdx]
-            let sepIdx1 = string.index(sepIdx, offsetBy: 1)
-            let fracPart = string[sepIdx1 ..< string.endIndex]
+        if let sepRange = string.range(of: sep) {
+            let wholePart = string[string.startIndex ..< sepRange.lowerBound]
+            let fracPart = string[sepRange.upperBound ..< string.endIndex]
             try self.init(wholePart: String(wholePart), fracPart: String(fracPart), decimalCount: decimalCount)
         } else {
             try self.init(wholePart: string, decimalCount: decimalCount)
