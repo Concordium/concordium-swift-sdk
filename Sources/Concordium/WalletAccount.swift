@@ -12,12 +12,55 @@ public class Account {
     }
 }
 
+public protocol AccountRepository {
+    func lookup(_ address: AccountAddress) throws -> Account?
+    func insert(_ account: Account) throws
+    func remove(_ address: AccountAddress) throws
+}
+
+public class AccountStore: AccountRepository {
+    private var dictionary: [AccountAddress: Account] = [:]
+
+    public init(_ accounts: [Account] = []) {
+        accounts.forEach(insert)
+    }
+
+    public func lookup(_ address: AccountAddress) -> Account? {
+        dictionary[address]
+    }
+
+    public func insert(_ account: Account) {
+        dictionary[account.address] = account
+    }
+
+    public func remove(_ address: AccountAddress) {
+        dictionary[address] = nil
+    }
+}
+
 public protocol Signer {
     var count: Int { get }
     func sign(message: Data) throws -> Signatures
 }
 
 public extension Signer {
+    func sign(transaction: AccountTransaction, sequenceNumber: SequenceNumber, expiry: TransactionTime) throws -> SignedAccountTransaction {
+        try sign(
+            transaction: transaction.prepare(
+                sequenceNumber: sequenceNumber,
+                expiry: expiry,
+                signatureCount: count
+            )
+        )
+    }
+
+    func sign(transaction: PreparedAccountTransaction) throws -> SignedAccountTransaction {
+        try .init(
+            transaction: transaction,
+            signatures: sign(message: transaction.serialize().hash)
+        )
+    }
+
     func sign(deployment: AccountCredential, expiry: TransactionTime) throws -> SignedAccountCredentialDeployment {
         try sign(deployment: deployment.prepareDeployment(expiry: expiry))
     }
@@ -57,6 +100,47 @@ public class AccountKeys<Key: AccountKey>: Signer {
             try $0.mapValues {
                 try $0.signature(for: message)
             }
+        }
+    }
+}
+
+public struct AccountKeysJSON: Decodable {
+    public var keys: [String: CredentialKeys]
+
+    public func toSDKType() throws -> AccountKeysCurve25519 {
+        try AccountKeysCurve25519(
+            Dictionary(
+                uniqueKeysWithValues: keys.map { credIdx, key in
+                    try (
+                        CredentialIndex(credIdx)!,
+                        key.toSDKType()
+                    )
+                }
+            )
+        )
+    }
+
+    public struct CredentialKeys: Decodable {
+        public var keys: [String: Key]
+
+        public func toSDKType() throws -> [KeyIndex: AccountKeyCurve25519] {
+            try Dictionary(
+                uniqueKeysWithValues: keys.map { keyIdx, key in
+                    try (
+                        KeyIndex(keyIdx)!,
+                        key.toSDKType()
+                    )
+                }
+            )
+        }
+    }
+
+    public struct Key: Decodable {
+        public var signKey: String
+        public var verifyKey: String
+
+        public func toSDKType() throws -> AccountKeyCurve25519 {
+            try AccountKeyCurve25519(rawRepresentation: Data(hex: signKey))
         }
     }
 }

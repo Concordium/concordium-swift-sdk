@@ -9,6 +9,7 @@ public protocol NodeClient {
     func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevokerInfo]
     func nextAccountSequenceNumber(address: AccountAddress) async throws -> NextAccountSequenceNumber
     func info(account: AccountIdentifier, block: BlockIdentifier) async throws -> AccountInfo
+    func send(transaction: SignedAccountTransaction) async throws -> TransactionHash
     func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash
 }
 
@@ -62,6 +63,13 @@ public class GRPCNodeClient: NodeClient {
         req.blockHash = block.toGRPCType()
         let res = try await grpc.getAccountInfo(req).response.get()
         return try .fromGRPCType(res)
+    }
+
+    public func send(transaction: SignedAccountTransaction) async throws -> TransactionHash {
+        var req = Concordium_V2_SendBlockItemRequest()
+        req.accountTransaction = transaction.toGRPCType()
+        let res = try await grpc.sendBlockItem(req).response.get()
+        return res.value
     }
 
     public func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash {
