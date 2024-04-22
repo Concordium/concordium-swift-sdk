@@ -30,28 +30,26 @@ struct WalletProxyOptions: ParsableArguments {
     }
 }
 
-struct BlockOption: ParsableArguments {
-    @Option(help: "Hash of the block to query against. Defaults to last finalized block.")
-    var blockHash: String?
+struct BlockOption: ExpressibleByArgument {
+    var blockHash: String
 
-    var block: BlockIdentifier {
+    /// Initializer for implementing ``ExpressibleByArgument`` which allows the type to be used for `@Option` fields.
+    init?(argument: String) {
+        blockHash = argument
+    }
+
+    var identifier: BlockIdentifier {
         get throws {
-            if let blockHash {
-                return try .hash(BlockHash(hex: blockHash))
+            if blockHash.isEmpty {
+                return .lastFinal
             }
-            return .lastFinal
+            return try .hash(BlockHash(hex: blockHash))
         }
     }
 }
 
-struct AccountOption: ParsableArguments, ExpressibleByArgument {
-    @Argument(help: "Address of the account to interact with.")
+struct AccountOption: ExpressibleByArgument {
     var accountAddress: String
-
-    /// Initializer for implementing ``ParsableArguments`` which allows the type to be used as `@OptionGroup` fields.
-    init() {
-        accountAddress = ""
-    }
 
     /// Initializer for implementing ``ExpressibleByArgument`` which allows the type to be used for `@Option` fields.
     init?(argument: String) {
@@ -107,13 +105,13 @@ struct Root: AsyncParsableCommand {
         @OptionGroup
         var rootCmd: Root
 
-        @OptionGroup
-        var block: BlockOption
+        @Option(help: "Hash of the block to query against. Defaults to last finalized block.")
+        var block: BlockOption?
 
         func run() async throws {
             let res = try await withGRPCClient(target: rootCmd.opts.target) {
                 try await $0.cryptographicParameters(
-                    block: block.block
+                    block: block?.identifier ?? .lastFinal
                 )
             }
             print(res)
@@ -126,8 +124,8 @@ struct Root: AsyncParsableCommand {
             subcommands: [NextSequenceNumber.self, Info.self]
         )
 
-        @OptionGroup
-        var account: AccountOption
+        @Option(help: "Address of the account to interact with.")
+        var address: AccountOption
 
         struct NextSequenceNumber: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
@@ -143,7 +141,7 @@ struct Root: AsyncParsableCommand {
             func run() async throws {
                 let res = try await withGRPCClient(target: rootCmd.opts.target) {
                     try await $0.nextAccountSequenceNumber(
-                        address: accountCmd.account.address
+                        address: accountCmd.address.address
                     )
                 }
                 print(res)
@@ -159,16 +157,16 @@ struct Root: AsyncParsableCommand {
             var rootCmd: Root
 
             @OptionGroup
-            var block: BlockOption
-
-            @OptionGroup
             var accountCmd: Account
+
+            @Option(help: "Hash of the block to query against. Defaults to last finalized block.")
+            var block: BlockOption?
 
             func run() async throws {
                 let res = try await withGRPCClient(target: rootCmd.opts.target) {
                     try await $0.info(
-                        account: accountCmd.account.identifier,
-                        block: block.block
+                        account: accountCmd.address.identifier,
+                        block: block?.identifier ?? .lastFinal
                     )
                 }
                 print(res)
