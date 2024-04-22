@@ -13,8 +13,8 @@ private let ten = BigUInt(10)
 public struct Amount: Equatable {
     /// The amount value given as an arbitrary sized unsigned integer, i.e. without any decimal separator.
     public var value: BigUInt
-    /// The number of trailing digits in ``value`` that belong to the fractional part of the number.
-    public var decimalCount: UInt16 // type chosen to ensure that conversion to `Int` never fails (even on 32-bit arch)
+    /// The number of digits in ``value`` that belong to the fractional/decimal part of the number, including trailing zeros.
+    public var decimalCount: UInt16 // type is chosen to ensure that conversion to `Int` never fails (even on 32-bit arch)
 
     public init(_ value: BigUInt, decimalCount: UInt16) {
         self.value = value
@@ -22,9 +22,6 @@ public struct Amount: Equatable {
     }
 
     public init(_ string: String, decimalCount: UInt16, decimalSeparator: String? = nil) throws {
-//        guard decimalCount >= 0 else {
-//            throw AmountParseError.negativeDecimalCount
-//        }
         let sep = Self.resolveDecimalSeparator(decimalSeparator)
         if let sepIdx = string.firstIndex(of: sep[sep.startIndex]) {
             let wholePart = string[string.startIndex ..< sepIdx]
