@@ -104,3 +104,33 @@ concordium-example-client wallet --seed-phrase="gospel bicycle..." --identity-pr
 
 The command uses identity recovery to fetch the identity, derives a single account credential and deploys it to the chain.
 The hash of the submitted transaction is printed to the console.
+
+#### Transfer
+
+Send 123456789 µCCD (123.456789 CCD) from the account created using the [Create Account](#create-account) command above
+to account `39MD...`.
+
+```shell
+concordium-example-client wallet --seed-phrase="gospel bicycle..." --identity-provider-id=1 --identity-index=2 transfer --credential-counter=0 --receiver=<receiver-address> --amount=123456789
+```
+
+The hash of the submitted transaction is printed to the console.
+
+### Legacy Wallet
+
+All `legacy-wallet` commands decrypt a Legacy Wallet export file to obtain the keys for the account to interact with.
+The path to the export file is provided to option `--export-file`.
+The password to decrypt the file is provided as a plain text string to the option `--export-file-password`.
+This is very insecure - production tools that serve real users must never expect sensitive information like this
+to be provided as part of the command.
+
+#### Transfer
+
+From legacy account `33Po...` stored in export file `concordium-backup.concordiumwallet` under password `xxxxxx`,
+send 123456789 µCCD (123.456789 CCD) to account `39MD...`.
+
+```shell
+concordium-example-client legacy-wallet --export-file=concordium-backup.concordiumwallet --export-file-password=xxxxxx --account="33Po..." transfer --receiver="39MD..." --amount=123456789
+```
+
+The hash of the submitted transaction is printed to the console.
