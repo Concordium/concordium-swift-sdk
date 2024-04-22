@@ -493,10 +493,10 @@ struct Root: AsyncParsableCommand {
             @Option(help: "Address of receiving account.")
             var receiver: AccountOption
 
-            @Option(help: "Amount of uCCD to send")
+            @Option(help: "Amount of uCCD to send.")
             var amount: MicroCCDAmount
 
-            @Option(help: "Timestamp in Unix time of transaction expiry")
+            @Option(help: "Timestamp in Unix time of transaction expiry.")
             var expiry: TransactionTime = 9_999_999_999
 
             func run() async throws {
