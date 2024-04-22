@@ -20,7 +20,7 @@ func run(client: NodeClient) async throws {
     // Recover identity (not necessary if the ID is already stored).
     // This assumes that the identity already exists, of course.
     let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
-    let identityReq = try prepareRecoverIdentity(seed, cryptoParams, identityProvider.toSDKType(), identityIndex)
+    let identityReq = try prepareRecoverIdentity(seed, cryptoParams, identityProvider, identityIndex)
     let identity = try await identityReq.response(session: URLSession.shared)
 
     // Derive seed based credential and account from the given coordinates of the given seed.
@@ -33,7 +33,7 @@ func run(client: NodeClient) async throws {
     let credential = try accountDerivation.deriveCredential(
         seedIndexes: seedIndexes,
         identity: identity.value,
-        provider: identityProvider.toSDKType(),
+        provider: identityProvider,
         threshold: 1
     )
     // Account used to sign the deployment.

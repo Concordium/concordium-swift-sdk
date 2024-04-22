@@ -1,4 +1,4 @@
-# CLI
+# Example: CLI
 
 *Disclaimer: This tool is for testing/illustration purposes only.
 Secrets are not handled with care.*
@@ -41,6 +41,8 @@ Flip the commented out dependency in `Package.swift` to use the `main` branch of
 
 See the [SDK docs](../../README.md) for details on the variables to use if you need to use a local crypto library
 instead of a released one.
+
+See also [DocSnippets](../DocSnippets) for a set of simpler examples, designed for documentation purposes.
 
 ## Example Commands
 

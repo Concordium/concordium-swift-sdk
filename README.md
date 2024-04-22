@@ -41,6 +41,18 @@ and adding
 
 to the `dependencies` list of the appropriate `target`.
 
+## Examples
+
+The repository includes some example projects that show how to integrate the SDK into different kinds of applications:
+
+- [DocSnippets](./examples/DocSnippets):
+  Example snippets of code to be directly copied into documentation while being sure that they compile successfully.
+- [CLI](./examples/CLI):
+  A simple client that demonstrates how to use the SDK in a terminal-based context.
+  It's also used to exercise the gRPC client in ways that are hard to cover with unit tests.
+
+An example wallet app is currently in development.
+
 ## Development
 
 ### Build Rust bindings

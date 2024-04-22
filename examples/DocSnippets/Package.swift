@@ -28,6 +28,10 @@ let package = Package(
             name: "SignAndSendTransfer",
             dependencies: ["Common"]
         ),
+        .executableTarget(
+            name: "ListIdentityProviders",
+            dependencies: ["Common"]
+        ),
         .target(
             name: "Common",
             dependencies: [

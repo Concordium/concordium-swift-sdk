@@ -8,12 +8,24 @@ public func decodeSeed(_ seedPhrase: String, _ network: Network) throws -> Walle
     return WalletSeed(seedHex: seedHex, network: network)
 }
 
-public func findIdentityProvider(_ endpoints: WalletProxyEndpoints, _ id: IdentityProviderID) async throws -> IdentityProviderJSON? {
-    let res = try await endpoints.getIdentityProviders.response(session: URLSession.shared)
-    return res.first { $0.ipInfo.ipIdentity == id }
+public func identityProviders(_ walletProxy: WalletProxyEndpoints) async throws -> [IdentityProvider] {
+    let res = try await walletProxy.getIdentityProviders.response(session: URLSession.shared)
+    return res.map { $0.toSDKType() }
 }
 
-public func issueIdentitySync(_ seed: WalletSeed, _ cryptoParams: CryptographicParameters, _ identityProvider: IdentityProvider, _ identityIndex: IdentityIndex, _ anonymityRevocationThreshold: RevocationThreshold, _ runIdentityProviderFlow: (_ issuanceStartURL: URL, _ requestJSON: String) throws -> URL) throws -> IdentityIssuanceRequest {
+public func findIdentityProvider(_ walletProxy: WalletProxyEndpoints, _ id: IdentityProviderID) async throws -> IdentityProvider? {
+    let res = try await identityProviders(walletProxy)
+    return res.first { $0.info.identity == id }
+}
+
+public func issueIdentitySync(
+    _ seed: WalletSeed,
+    _ cryptoParams: CryptographicParameters,
+    _ identityProvider: IdentityProvider,
+    _ identityIndex: IdentityIndex,
+    _ anonymityRevocationThreshold: RevocationThreshold,
+    _ runIdentityProviderFlow: (_ issuanceStartURL: URL, _ requestJSON: String) throws -> URL
+) throws -> IdentityIssuanceRequest {
     print("Preparing identity issuance request.")
     let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
         seed: seed,
@@ -54,7 +66,13 @@ public func prepareRecoverIdentity(
 }
 
 /// Construct and sign transfer transaction.
-public func makeTransfer(_ account: Account, _ amount: MicroCCDAmount, _ receiver: AccountAddress, _ seq: SequenceNumber, _ expiry: TransactionTime) throws -> SignedAccountTransaction {
+public func makeTransfer(
+    _ account: Account,
+    _ amount: MicroCCDAmount,
+    _ receiver: AccountAddress,
+    _ seq: SequenceNumber,
+    _ expiry: TransactionTime
+) throws -> SignedAccountTransaction {
     let tx = AccountTransaction(sender: account.address, payload: .transfer(amount: amount, receiver: receiver))
     return try account.keys.sign(transaction: tx, sequenceNumber: seq, expiry: expiry)
 }

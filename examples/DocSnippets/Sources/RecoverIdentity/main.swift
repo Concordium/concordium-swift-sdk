@@ -17,7 +17,7 @@ func run(client: NodeClient) async throws {
 
     // Construct recovery request.
     let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
-    let identityReq = try prepareRecoverIdentity(seed, cryptoParams, identityProvider.toSDKType(), identityIndex)
+    let identityReq = try prepareRecoverIdentity(seed, cryptoParams, identityProvider, identityIndex)
 
     // Execute request.
     let identity = try await identityReq.response(session: URLSession.shared)

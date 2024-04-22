@@ -17,7 +17,7 @@ func run(client: NodeClient) async throws {
 
     // Construct identity creation request and start verification.
     let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
-    let identityReq = try issueIdentitySync(seed, cryptoParams, identityProvider.toSDKType(), identityIndex, anonymityRevocationThreshold) { issuanceStartURL, requestJSON in
+    let identityReq = try issueIdentitySync(seed, cryptoParams, identityProvider, identityIndex, anonymityRevocationThreshold) { issuanceStartURL, requestJSON in
         // The URL to be invoked when once the ID verification process has started (i.e. once the data has been filled in).
         let callbackURL = URL(string: "concordiumwallet-example://identity-issuer/callback")!
 

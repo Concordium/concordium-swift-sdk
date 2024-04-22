@@ -31,3 +31,6 @@ jobs:
     - name: Build example CLI
       working-directory: ./examples/CLI
       run: swift build
+    - name: Build DocSnippets examples
+      working-directory: ./examples/DocSnippets
+      run: swift build
