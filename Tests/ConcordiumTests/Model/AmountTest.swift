@@ -54,7 +54,8 @@ final class AmountTest: XCTestCase {
     }
 
     // This syntax is not commonly accepted, but it's unambiguous so we're (somewhat arbitrarily) allowing it.
-    // It does avoid the user from being hit by validation errors while interactively entering an amount...
+    // It avoids the user from being hit by validation errors while interactively entering an amount, which is probably sane.
+    // If the application wishes to disallow this kind of syntax, it can check the input against the result converted back into a string using `format`.
     func testCanParseEmptyFracPart() throws {
         XCTAssertEqual(try amount("1.", decimalCount: 1), Amount(BigUInt(10), decimalCount: 1))
         XCTAssertEqual(try amount(".", decimalCount: 1), Amount(BigUInt(0), decimalCount: 1))

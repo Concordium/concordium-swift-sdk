@@ -38,9 +38,6 @@ public struct Amount: Equatable {
         }
         var value = wp * ten.power(Int(decimalCount))
         if let fracPart {
-//            if fracPart.isEmpty {
-//                throw AmountParseError.trailingDecimalSeparator
-//            }
             guard fracPart.count <= Int(decimalCount) else {
                 throw AmountParseError.tooManyFractionalDigits
             }
