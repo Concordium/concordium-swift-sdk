@@ -17,7 +17,7 @@ public extension HTTPRequest {
         try JSONDecoder().decode(Response.self, from: data)
     }
 
-    func response(session: URLSession) async throws -> Response {
+    func send(session: URLSession) async throws -> Response {
         let (data, _) = try await session.data(for: request)
         return try decodeResponse(data: data)
     }

@@ -15,7 +15,7 @@ concordium-example-client cryptographic-parameters
 for retrieving the cryptographic parameters of the chain and
 
 ```shell
-concordium-example-client account <account-address> info --block-hash=<block-hash>
+concordium-example-client account --address=<account-address> info --block=<block-hash>
 ```
 
 for retrieving information about the account `<account-address>` as of block `<block-hash>`.

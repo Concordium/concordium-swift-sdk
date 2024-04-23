@@ -195,14 +195,22 @@ public struct Metadata: Decodable {
     }
 }
 
-public enum IdentityIssuanceResult {
-    case pending(detail: String?)
-    case failure(detail: String?)
-    case success(identity: Versioned<IdentityObject>, detail: String?)
+public typealias IdentityVerificationResult = Result<Versioned<IdentityObject>, IdentityVerificationError>
+
+public enum IdentityVerificationError: Error {
+    /// Identity verification failed with the attached string containing the reason provided by the IP.
+    case failure(String?)
 }
 
-public struct IdentityIssuanceResponse: Decodable {
-    public var result: IdentityIssuanceResult
+public enum IdentityVerificationStatus {
+    case pending
+    case error
+    case done(Versioned<IdentityObject>)
+}
+
+public struct IdentityVerificationStatusResponse: Decodable {
+    public var status: IdentityVerificationStatus
+    public var detail: String?
 
     enum CodingKeys: CodingKey {
         case status
@@ -212,20 +220,20 @@ public struct IdentityIssuanceResponse: Decodable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let status = try container.decode(String.self, forKey: .status)
-        result = try Self.decodeFromStatus(status, container: container)
+        let s = try container.decode(String.self, forKey: .status)
+        status = try Self.decodeStatus(s, container: container)
+        detail = try container.decodeIfPresent(String.self, forKey: .detail)
     }
 
-    private static func decodeFromStatus(_ status: String, container: KeyedDecodingContainer<CodingKeys>) throws -> IdentityIssuanceResult {
-        let detail = try container.decodeIfPresent(String.self, forKey: .detail)
+    private static func decodeStatus(_ status: String, container: KeyedDecodingContainer<CodingKeys>) throws -> IdentityVerificationStatus {
         switch status {
+        case "pending":
+            return .pending
+        case "error":
+            return .error
         case "done":
             let token = try container.decode(TokenJSON.self, forKey: .token)
-            return .success(identity: token.identityObject, detail: detail)
-        case "error":
-            return .failure(detail: detail)
-        case "pending":
-            return .pending(detail: detail)
+            return .done(token.identityObject)
         default:
             throw DecodingError.dataCorruptedError(forKey: .status, in: container, debugDescription: "unexpected status '\(status)'")
         }
@@ -233,6 +241,17 @@ public struct IdentityIssuanceResponse: Decodable {
 
     struct TokenJSON: Decodable {
         public var identityObject: Versioned<IdentityObject>
+    }
+
+    public var result: IdentityVerificationResult? {
+        switch status {
+        case .pending:
+            return nil
+        case .error:
+            return .failure(.failure(detail))
+        case let .done(identity):
+            return .success(identity)
+        }
     }
 }
 
