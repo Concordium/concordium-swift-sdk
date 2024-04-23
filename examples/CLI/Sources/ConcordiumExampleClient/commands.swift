@@ -202,7 +202,7 @@ struct Root: AsyncParsableCommand {
 
                 print("Fetching crypto parameters (for commitment key).")
                 let hash = try await withGRPCClient(target: rootCmd.opts.target) { client in
-                    let cryptoParams = try await client.cryptographicParameters(block: BlockIdentifier.lastFinal)
+                    let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
                     print("Deriving account address and keys.")
                     let account = try SeedBasedAccountDerivation(
                         seed: WalletSeed(seedHex: seedHex, network: walletCmd.network.network),
@@ -490,7 +490,7 @@ struct Root: AsyncParsableCommand {
                 }
                 let export = try decryptLegacyWalletExport(export: encryptedExport, password: password)
                 print("Looking up account with address '\(walletCmd.account.base58Check)' in export.")
-                guard let sender = try AccountStore(export.toSDKType()).lookup(walletCmd.account) else {
+                guard let sender = try export.toSDKType().first(where: { $0.address == walletCmd.account }) else {
                     print("Account \(walletCmd.account) not found in export.")
                     return
                 }

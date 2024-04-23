@@ -3,7 +3,7 @@ import Foundation
 
 public struct LegacyWalletExportEncryptedJSON: Decodable {
     public var cipherText: Data // base64
-    var metadata: Metadata
+    public var metadata: Metadata
 
     enum CodingKeys: CodingKey {
         case cipherText
@@ -69,7 +69,7 @@ public struct LegacyWalletExportJSON: Decodable {
     }
 }
 
-enum DecryptExportError: Error {
+public enum DecryptExportError: Error {
     case keyDerivationFailed(status: CCStatus)
     case decryptionFailed(status: CCCryptorStatus)
     case unsupportedEncryptionMethod(String)
@@ -117,23 +117,24 @@ func decryptLegacyWalletExport(cipher: Data, salt: Data, iterations: Int, iv: Da
 
 func deriveKeyAES256(password: Data, salt: Data, rounds: Int) throws -> Data {
     var res = Data(repeating: 0, count: kCCKeySizeAES256)
-    let status = password.withUnsafeBytes { passwordBytes in
-        salt.withUnsafeBytes { saltBytes in
-            res.withUnsafeMutableBytes { resBytes in
-                CCKeyDerivationPBKDF(
-                    CCPBKDFAlgorithm(kCCPBKDF2),
-                    passwordBytes.baseAddress,
-                    passwordBytes.count,
-                    saltBytes.baseAddress,
-                    saltBytes.count,
-                    CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
-                    UInt32(rounds),
-                    resBytes.baseAddress,
-                    kCCKeySizeAES256
-                )
+    let status =
+        password.withUnsafeBytes { passwordBytes in
+            salt.withUnsafeBytes { saltBytes in
+                res.withUnsafeMutableBytes { resBytes in
+                    CCKeyDerivationPBKDF(
+                        CCPBKDFAlgorithm(kCCPBKDF2),
+                        passwordBytes.baseAddress,
+                        passwordBytes.count,
+                        saltBytes.baseAddress,
+                        saltBytes.count,
+                        CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
+                        UInt32(rounds),
+                        resBytes.baseAddress,
+                        kCCKeySizeAES256
+                    )
+                }
             }
         }
-    }
     guard status == 0 else {
         throw DecryptExportError.keyDerivationFailed(status: status)
     }
@@ -146,26 +147,34 @@ func decryptAES256(key: Data, iv: Data, _ input: Data) throws -> Data {
         throw DecryptExportError.unsupportedKeyLength
     }
     guard iv.count == kCCBlockSizeAES128 else {
-        // Never happens as we just derived the key as AES256.
         throw DecryptExportError.unsupportedInputVectorLength
     }
-    var data = [UInt8](repeating: 0, count: input.count + kCCBlockSizeAES128) // TODO: necessary to add the block size?
+    var res = Data(repeating: 0, count: input.count)
     var count = 0
-    let status = CCCrypt(
-        CCOperation(kCCDecrypt),
-        CCAlgorithm(kCCAlgorithmAES),
-        CCOptions(kCCOptionPKCS7Padding),
-        [UInt8](key),
-        key.count,
-        [UInt8](iv),
-        [UInt8](input),
-        input.count,
-        &data,
-        data.count,
-        &count
-    )
+    let status =
+        key.withUnsafeBytes { keyBytes in
+            iv.withUnsafeBytes { ivBytes in
+                input.withUnsafeBytes { inputBytes in
+                    res.withUnsafeMutableBytes { resBytes in
+                        CCCrypt(
+                            CCOperation(kCCDecrypt),
+                            CCAlgorithm(kCCAlgorithmAES),
+                            CCOptions(kCCOptionPKCS7Padding),
+                            keyBytes.baseAddress,
+                            keyBytes.count,
+                            ivBytes.baseAddress,
+                            inputBytes.baseAddress,
+                            inputBytes.count,
+                            resBytes.baseAddress,
+                            resBytes.count,
+                            &count
+                        )
+                    }
+                }
+            }
+        }
     guard status == kCCSuccess else {
         throw DecryptExportError.decryptionFailed(status: status)
     }
-    return Data(bytes: data, count: count)
+    return res.prefix(count)
 }

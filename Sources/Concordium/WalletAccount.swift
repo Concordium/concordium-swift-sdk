@@ -12,32 +12,6 @@ public class Account {
     }
 }
 
-public protocol AccountRepository {
-    func lookup(_ address: AccountAddress) throws -> Account?
-    func insert(_ account: Account) throws
-    func remove(_ address: AccountAddress) throws
-}
-
-public class AccountStore: AccountRepository {
-    private var dictionary: [AccountAddress: Account] = [:]
-
-    public init(_ accounts: [Account] = []) {
-        accounts.forEach(insert)
-    }
-
-    public func lookup(_ address: AccountAddress) -> Account? {
-        dictionary[address]
-    }
-
-    public func insert(_ account: Account) {
-        dictionary[account.address] = account
-    }
-
-    public func remove(_ address: AccountAddress) {
-        dictionary[address] = nil
-    }
-}
-
 public protocol Signer {
     var count: Int { get }
     func sign(message: Data) throws -> Signatures
