@@ -41,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/grpc/grpc-swift.git",
       "state" : {
-        "revision" : "393b02b1c39cc82fb24e57f24fa446f43e8124c9",
-        "version" : "1.22.0"
+        "revision" : "5d0cf1c7b2e641e3a8961089e7e4672f4fe8abac",
+        "version" : "1.21.1"
       }
     },
     {
@@ -158,8 +158,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/nicklockwood/SwiftFormat.git",
       "state" : {
-        "revision" : "fef156a6135e584985ed26713dd2e9ee41f952cb",
-        "version" : "0.53.0"
+        "revision" : "825b4cdadbcabb91661243a09aeb44c3d4ef459d",
+        "version" : "0.53.7"
       }
     }
   ],

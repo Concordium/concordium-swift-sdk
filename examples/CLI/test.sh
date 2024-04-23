@@ -30,7 +30,7 @@ cli_path="${dir_path}/concordium-example-client"
 
 # Execute "tests".
 "${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters
-"${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters --block-hash="${some_block_hash}"
-"${cli_path}" --host="${host}" --port="${port}" account "${some_account_address}" next-sequence-number
-"${cli_path}" --host="${host}" --port="${port}" account "${some_account_address}" info
-"${cli_path}" --host="${host}" --port="${port}" account "${some_account_address}" info --block-hash="${some_block_hash}"
+"${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters --block="${some_block_hash}"
+"${cli_path}" --host="${host}" --port="${port}" account --address="${some_account_address}" next-sequence-number
+"${cli_path}" --host="${host}" --port="${port}" account --address="${some_account_address}" info
+"${cli_path}" --host="${host}" --port="${port}" account --address="${some_account_address}" info --block="${some_block_hash}"

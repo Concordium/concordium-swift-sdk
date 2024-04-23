@@ -1,10 +1,10 @@
 import Foundation
 
-public enum WalletProxyEndpointError: Error {
+public enum WalletProxyError: Error {
     case cannotConstructURL
 }
 
-public class WalletProxyEndpoints {
+public class WalletProxy {
     let baseURL: URL
 
     public init(baseURL: URL) {
@@ -13,7 +13,7 @@ public class WalletProxyEndpoints {
 
     public var getIdentityProviders: HTTPRequest<[IdentityProviderJSON]> {
         get throws {
-            try HTTPRequest(url: URL(string: "/v1/ip_info", relativeTo: baseURL) ?! WalletProxyEndpointError.cannotConstructURL)
+            try HTTPRequest(url: URL(string: "/v1/ip_info", relativeTo: baseURL) ?! WalletProxyError.cannotConstructURL)
         }
     }
 }
