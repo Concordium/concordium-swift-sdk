@@ -262,10 +262,10 @@ final class AmountTest: XCTestCase {
     // (I've not been able to change `Locale.current` programmatically).
 
     func testMicroCCDAmountForCCDWithinRange() throws {
-        XCTAssertEqual(MicroCCDAmount(123_456_789), try CCD("123.456789", decimalSeparator: ".").microCCDAmount)
+        XCTAssertEqual(MicroCCDAmount(123_456_789), try CCD("123.456789", decimalSeparator: ".").microCCD)
     }
 
     func testMicroCCDAmountForCCDOutsideRange() throws {
-        XCTAssertNil(try CCD("123456789012347890").microCCDAmount)
+        XCTAssertNil(try CCD("123456789012347890").microCCD)
     }
 }

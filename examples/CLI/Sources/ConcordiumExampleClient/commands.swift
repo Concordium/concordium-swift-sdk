@@ -50,6 +50,17 @@ extension AccountAddress: ExpressibleByArgument {
     }
 }
 
+extension CCD: ExpressibleByArgument {
+    public init?(argument: String) {
+        do {
+            try self.init(argument, decimalSeparator: ".")
+        } catch {
+            print(error)
+            return nil
+        }
+    }
+}
+
 struct NetworkOption: ExpressibleByArgument {
     var string: String
 
@@ -75,7 +86,15 @@ struct Root: AsyncParsableCommand {
     static var configuration = CommandConfiguration(
         commandName: "concordium-example-client", // would be nice if this could be inferred from the CLI args (https://github.com/apple/swift-argument-parser/issues/633)
         abstract: "A CLI for demonstrating and testing use of the gRPC client of the SDK.",
-        subcommands: [CryptographicParameters.self, Account.self, Wallet.self, LegacyWallet.self, IdentityProviders.self, AnonymityRevokers.self]
+        subcommands: [
+            CryptographicParameters.self,
+            GenerateSeedPhrase.self,
+            Account.self,
+            Wallet.self,
+            LegacyWallet.self,
+            IdentityProviders.self,
+            AnonymityRevokers.self,
+        ]
     )
 
     struct CryptographicParameters: AsyncParsableCommand {
@@ -96,6 +115,17 @@ struct Root: AsyncParsableCommand {
                 )
             }
             print(res)
+        }
+    }
+
+    struct GenerateSeedPhrase: ParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Generate a fresh seed phrase for use in a new wallet."
+        )
+
+        func run() throws {
+            let seedPhrase = try Mnemonic.generateMnemonic(strength: 256, language: .english)
+            print(seedPhrase)
         }
     }
 
@@ -190,8 +220,8 @@ struct Root: AsyncParsableCommand {
             @Option(help: "Address of receiving account.")
             var receiver: AccountAddress
 
-            @Option(help: "Amount of uCCD to send.")
-            var amount: MicroCCDAmount
+            @Option(help: "Amount of CCD to send.")
+            var amount: CCD
 
             @Option(help: "Timestamp in Unix time of transaction expiry.")
             var expiry: TransactionTime = 9_999_999_999
@@ -199,6 +229,11 @@ struct Root: AsyncParsableCommand {
             func run() async throws {
                 let seedHex = try Mnemonic.deterministicSeedString(from: walletCmd.seedPhrase)
                 print("Resolved seed hex '\(seedHex)'.")
+
+                guard let microCCDAmount = amount.microCCD else {
+                    print("CCD amount is out of bounds.")
+                    return
+                }
 
                 print("Fetching crypto parameters (for commitment key).")
                 let hash = try await withGRPCClient(target: rootCmd.opts.target) { client in
@@ -222,7 +257,7 @@ struct Root: AsyncParsableCommand {
                         client: client,
                         sender: account,
                         receiver: receiver,
-                        amount: amount,
+                        amount: microCCDAmount,
                         expiry: expiry
                     )
                 }
@@ -472,8 +507,8 @@ struct Root: AsyncParsableCommand {
             @Option(help: "Address of receiving account.")
             var receiver: AccountAddress
 
-            @Option(help: "Amount of uCCD to send.")
-            var amount: MicroCCDAmount
+            @Option(help: "Amount of CCD to send.")
+            var amount: CCD
 
             @Option(help: "Timestamp in Unix time of transaction expiry.")
             var expiry: TransactionTime = 9_999_999_999
@@ -494,10 +529,14 @@ struct Root: AsyncParsableCommand {
                     print("Account \(walletCmd.account) not found in export.")
                     return
                 }
+                guard let microCCDAmount = amount.microCCD else {
+                    print("CCD amount is out of bounds.")
+                    return
+                }
 
                 // Construct and send transaction.
                 let hash = try await withGRPCClient(target: rootCmd.opts.target) { client in
-                    try await transfer(client: client, sender: sender, receiver: receiver, amount: amount, expiry: expiry)
+                    try await transfer(client: client, sender: sender, receiver: receiver, amount: microCCDAmount, expiry: expiry)
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
             }
