@@ -14,14 +14,14 @@ let expiry = TransactionTime(9_999_999_999)
 
 func run(client: NodeClient) async throws {
     let seed = try decodeSeed(seedPhrase, network)
-    let walletProxy = WalletProxyEndpoints(baseURL: walletProxyBaseURL)
+    let walletProxy = WalletProxy(baseURL: walletProxyBaseURL)
     let identityProvider = try await findIdentityProvider(walletProxy, identityProviderID)!
 
     // Recover identity (not necessary if the ID is already stored).
     // This assumes that the identity already exists, of course.
     let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
-    let identityReq = try prepareRecoverIdentity(seed, cryptoParams, identityProvider, identityIndex)
-    let identity = try await identityReq.response(session: URLSession.shared)
+    let identityReq = try makeIdentityRecoveryRequest(seed, cryptoParams, identityProvider, identityIndex)
+    let identity = try await identityReq.send(session: URLSession.shared)
 
     // Derive seed based credential and account from the given coordinates of the given seed.
     let accountDerivation = SeedBasedAccountDerivation(seed: seed, cryptoParams: cryptoParams)

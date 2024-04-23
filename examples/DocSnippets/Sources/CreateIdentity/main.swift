@@ -12,7 +12,7 @@ let anonymityRevocationThreshold = RevocationThreshold(2)
 
 func run(client: NodeClient) async throws {
     let seed = try decodeSeed(seedPhrase, network)
-    let walletProxy = WalletProxyEndpoints(baseURL: walletProxyBaseURL)
+    let walletProxy = WalletProxy(baseURL: walletProxyBaseURL)
     let identityProvider = try await findIdentityProvider(walletProxy, identityProviderID)!
 
     // Construct identity creation request and start verification.
@@ -29,7 +29,7 @@ func run(client: NodeClient) async throws {
     }
 
     let res = try await todoFetchIdentityIssuance(identityReq)
-    if case let .success(identity, _) = res {
+    if case let .success(identity) = res {
         print("Identity issued successfully: \(identity))")
     } else {
         // Verification failed...
@@ -52,12 +52,16 @@ func todoAwaitCallbackWithVerificationPollingURL() -> URL {
     fatalError("'awaitCallbackWithVerificationPollingURL' not implemented")
 }
 
-func todoFetchIdentityIssuance(_ request: IdentityIssuanceRequest) async throws -> IdentityIssuanceResult {
-    // Block the thread, periodically polling for the verification ("identity issuance").
-    // Return the result once it's no longer "pending".
-    // In this example we just assume that it's non-pending right away.
-    let res = try await request.response(session: URLSession.shared)
-    return res.result
+func todoFetchIdentityIssuance(_ request: IdentityIssuanceRequest) async throws -> IdentityVerificationResult {
+    // Block the thread, periodically polling for the verification status.
+    // Return the result once it's no longer "pending" (i.e. the result is non-nil).
+    while true {
+        let status = try await request.send(session: URLSession.shared)
+        if let r = status.result {
+            return r
+        }
+        try await Task.sleep(nanoseconds: 10 * 1_000_000_000) // check once every 10s
+    }
 }
 
 // Execute ``run`` within the context of a gRPC client.

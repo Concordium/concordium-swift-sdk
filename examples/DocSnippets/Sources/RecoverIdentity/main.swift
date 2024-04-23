@@ -12,15 +12,15 @@ let anonymityRevocationThreshold = RevocationThreshold(2)
 
 func run(client: NodeClient) async throws {
     let seed = try decodeSeed(seedPhrase, network)
-    let walletProxy = WalletProxyEndpoints(baseURL: walletProxyBaseURL)
+    let walletProxy = WalletProxy(baseURL: walletProxyBaseURL)
     let identityProvider = try await findIdentityProvider(walletProxy, identityProviderID)!
 
     // Construct recovery request.
     let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
-    let identityReq = try prepareRecoverIdentity(seed, cryptoParams, identityProvider, identityIndex)
+    let identityReq = try makeIdentityRecoveryRequest(seed, cryptoParams, identityProvider, identityIndex)
 
     // Execute request.
-    let identity = try await identityReq.response(session: URLSession.shared)
+    let identity = try await identityReq.send(session: URLSession.shared)
     print("Successfully recovered identity: \(identity)")
 }
 

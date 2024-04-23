@@ -8,12 +8,12 @@ public func decodeSeed(_ seedPhrase: String, _ network: Network) throws -> Walle
     return WalletSeed(seedHex: seedHex, network: network)
 }
 
-public func identityProviders(_ walletProxy: WalletProxyEndpoints) async throws -> [IdentityProvider] {
-    let res = try await walletProxy.getIdentityProviders.response(session: URLSession.shared)
+public func identityProviders(_ walletProxy: WalletProxy) async throws -> [IdentityProvider] {
+    let res = try await walletProxy.getIdentityProviders.send(session: URLSession.shared)
     return res.map { $0.toSDKType() }
 }
 
-public func findIdentityProvider(_ walletProxy: WalletProxyEndpoints, _ id: IdentityProviderID) async throws -> IdentityProvider? {
+public func findIdentityProvider(_ walletProxy: WalletProxy, _ id: IdentityProviderID) async throws -> IdentityProvider? {
     let res = try await identityProviders(walletProxy)
     return res.first { $0.info.identity == id }
 }
@@ -43,7 +43,7 @@ public func issueIdentitySync(
     return .init(url: url)
 }
 
-public func prepareRecoverIdentity(
+public func makeIdentityRecoveryRequest(
     _ seed: WalletSeed,
     _ cryptoParams: CryptographicParameters,
     _ identityProvider: IdentityProvider,
@@ -59,7 +59,7 @@ public func prepareRecoverIdentity(
         time: Date.now
     )
     let urlBuilder = IdentityRequestURLBuilder(callbackURL: nil)
-    return try urlBuilder.recoveryRequestToFetch(
+    return try urlBuilder.recoveryRequest(
         baseURL: identityProvider.metadata.recoveryStart,
         requestJSON: reqJSON
     )

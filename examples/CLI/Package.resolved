@@ -84,7 +84,7 @@
     {
       "identity" : "mnemonicswift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Electric-Coin-Company/MnemonicSwift",
+      "location" : "https://github.com/Electric-Coin-Company/MnemonicSwift.git",
       "state" : {
         "revision" : "716a2c32ac2bbd8a1499ac834077df42b75edc85",
         "version" : "2.2.4"
@@ -264,7 +264,7 @@
     {
       "identity" : "vapor",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/vapor",
+      "location" : "https://github.com/vapor/vapor.git",
       "state" : {
         "revision" : "526a000bb082a261566b6adea3c1a1ddbed98a19",
         "version" : "4.93.0"
