@@ -30,33 +30,23 @@ struct WalletProxyOptions: ParsableArguments {
     }
 }
 
-struct BlockOption: ExpressibleByArgument {
-    var identifier: BlockIdentifier = .lastFinal
-
-    /// Initializer for implementing ``ExpressibleByArgument`` which allows the type to be used for `@Option` fields.
-    init?(argument: String) {
+extension BlockIdentifier: ExpressibleByArgument {
+    public init?(argument: String) {
         do {
-            identifier = try .hash(BlockHash(hex: argument))
+            self = try .hash(BlockHash(hex: argument))
         } catch {
             return nil
         }
     }
 }
 
-struct AccountOption: ExpressibleByArgument {
-    var address: AccountAddress
-
-    /// Initializer for implementing ``ExpressibleByArgument`` which allows the type to be used for `@Option` fields.
-    init?(argument: String) {
+extension AccountAddress: ExpressibleByArgument {
+    public init?(argument: String) {
         do {
-            address = try AccountAddress(base58Check: argument)
+            try self.init(base58Check: argument)
         } catch {
             return nil
         }
-    }
-
-    var identifier: AccountIdentifier {
-        .address(address)
     }
 }
 
@@ -83,8 +73,8 @@ struct Root: AsyncParsableCommand {
     var opts: GRPCOptions
 
     static var configuration = CommandConfiguration(
+        commandName: "concordium-example-client", // would be nice if this could be inferred from the CLI args (https://github.com/apple/swift-argument-parser/issues/633)
         abstract: "A CLI for demonstrating and testing use of the gRPC client of the SDK.",
-        version: "1.0.0",
         subcommands: [CryptographicParameters.self, Account.self, Wallet.self, LegacyWallet.self, IdentityProviders.self, AnonymityRevokers.self]
     )
 
@@ -96,13 +86,13 @@ struct Root: AsyncParsableCommand {
         @OptionGroup
         var rootCmd: Root
 
-        @Option(help: "Hash of the block to query against. Defaults to last finalized block.")
-        var block: BlockOption?
+        @Option(help: "Hash of the block to query against.")
+        var block: BlockIdentifier = .lastFinal
 
         func run() async throws {
             let res = try await withGRPCClient(target: rootCmd.opts.target) {
                 try await $0.cryptographicParameters(
-                    block: block?.identifier ?? .lastFinal
+                    block: block
                 )
             }
             print(res)
@@ -116,7 +106,7 @@ struct Root: AsyncParsableCommand {
         )
 
         @Option(help: "Address of the account to interact with.")
-        var address: AccountOption
+        var address: AccountAddress
 
         struct NextSequenceNumber: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
@@ -132,7 +122,7 @@ struct Root: AsyncParsableCommand {
             func run() async throws {
                 let res = try await withGRPCClient(target: rootCmd.opts.target) {
                     try await $0.nextAccountSequenceNumber(
-                        address: accountCmd.address.address
+                        address: accountCmd.address
                     )
                 }
                 print(res)
@@ -150,14 +140,14 @@ struct Root: AsyncParsableCommand {
             @OptionGroup
             var accountCmd: Account
 
-            @Option(help: "Hash of the block to query against. Defaults to last finalized block.")
-            var block: BlockOption?
+            @Option(help: "Hash of the block to query against.")
+            var block: BlockIdentifier = .lastFinal
 
             func run() async throws {
                 let res = try await withGRPCClient(target: rootCmd.opts.target) {
                     try await $0.info(
-                        account: accountCmd.address.identifier,
-                        block: block?.identifier ?? .lastFinal
+                        account: .address(accountCmd.address),
+                        block: block
                     )
                 }
                 print(res)
@@ -198,7 +188,7 @@ struct Root: AsyncParsableCommand {
             var credentialCounter: CredentialCounter
 
             @Option(help: "Address of receiving account.")
-            var receiver: AccountOption
+            var receiver: AccountAddress
 
             @Option(help: "Amount of uCCD to send.")
             var amount: MicroCCDAmount
@@ -231,7 +221,7 @@ struct Root: AsyncParsableCommand {
                     return try await transfer(
                         client: client,
                         sender: account,
-                        receiver: receiver.address,
+                        receiver: receiver,
                         amount: amount,
                         expiry: expiry
                     )
@@ -466,7 +456,7 @@ struct Root: AsyncParsableCommand {
         var exportFilePassword: String
 
         @Option(help: "Address of account to interact with.")
-        var account: AccountOption
+        var account: AccountAddress
 
         struct Transfer: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
@@ -480,7 +470,7 @@ struct Root: AsyncParsableCommand {
             var walletCmd: LegacyWallet
 
             @Option(help: "Address of receiving account.")
-            var receiver: AccountOption
+            var receiver: AccountAddress
 
             @Option(help: "Amount of uCCD to send.")
             var amount: MicroCCDAmount
@@ -499,16 +489,15 @@ struct Root: AsyncParsableCommand {
                     return
                 }
                 let export = try decryptLegacyWalletExport(export: encryptedExport, password: password)
-                let senderAddress = walletCmd.account.address
-                print("Looking up account with address '\(senderAddress.base58Check)' in export.")
-                guard let sender = try AccountStore(export.toSDKType()).lookup(senderAddress) else {
-                    print("Account \(senderAddress) not found in export.")
+                print("Looking up account with address '\(walletCmd.account.base58Check)' in export.")
+                guard let sender = try AccountStore(export.toSDKType()).lookup(walletCmd.account) else {
+                    print("Account \(walletCmd.account) not found in export.")
                     return
                 }
 
                 // Construct and send transaction.
                 let hash = try await withGRPCClient(target: rootCmd.opts.target) { client in
-                    try await transfer(client: client, sender: sender, receiver: receiver.address, amount: amount, expiry: expiry)
+                    try await transfer(client: client, sender: sender, receiver: receiver, amount: amount, expiry: expiry)
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
             }
