@@ -36,6 +36,31 @@ func run(client: NodeClient) async throws {
     }
 }
 
+public func issueIdentitySync(
+    _ seed: WalletSeed,
+    _ cryptoParams: CryptographicParameters,
+    _ identityProvider: IdentityProvider,
+    _ identityIndex: IdentityIndex,
+    _ anonymityRevocationThreshold: RevocationThreshold,
+    _ runIdentityProviderFlow: (_ issuanceStartURL: URL, _ requestJSON: String) throws -> URL
+) throws -> IdentityIssuanceRequest {
+    print("Preparing identity issuance request.")
+    let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
+        seed: seed,
+        cryptoParams: cryptoParams
+    )
+    let reqJSON = try identityRequestBuilder.issuanceRequestJSON(
+        provider: identityProvider,
+        index: identityIndex,
+        anonymityRevocationThreshold: anonymityRevocationThreshold
+    )
+
+    print("Start identity provider issuance flow.")
+    let url = try runIdentityProviderFlow(identityProvider.metadata.issuanceStart, reqJSON)
+    print("Identity verification process started!")
+    return .init(url: url)
+}
+
 func todoOpenURL(_: URL) {
     // Open the URL in a web view to start the identity verification flow with the identity provider.
     fatalError("'openURL' not implemented")

@@ -49,5 +49,28 @@ func run(client: NodeClient) async throws {
     print("Transaction with hash '\(hash.hex)' successfully submitted.")
 }
 
+// Duplicated in 'RecoverIdentity/main.swift'.
+public func makeIdentityRecoveryRequest(
+    _ seed: WalletSeed,
+    _ cryptoParams: CryptographicParameters,
+    _ identityProvider: IdentityProvider,
+    _ identityIndex: IdentityIndex
+) throws -> IdentityRecoverRequest {
+    let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
+        seed: seed,
+        cryptoParams: cryptoParams
+    )
+    let reqJSON = try identityRequestBuilder.recoveryRequestJSON(
+        provider: identityProvider.info,
+        index: identityIndex,
+        time: Date.now
+    )
+    let urlBuilder = IdentityRequestURLBuilder(callbackURL: nil)
+    return try urlBuilder.recoveryRequest(
+        baseURL: identityProvider.metadata.recoveryStart,
+        requestJSON: reqJSON
+    )
+}
+
 // Execute ``run`` within the context of a gRPC client.
 try await withGRPCClient(target: .host("localhost", port: 20000), run)

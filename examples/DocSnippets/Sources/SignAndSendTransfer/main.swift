@@ -30,5 +30,17 @@ func run(client: NodeClient) async throws {
     print("Transaction with hash '\(hash.hex)' successfully submitted.")
 }
 
+/// Construct and sign transfer transaction.
+public func makeTransfer(
+    _ account: Account,
+    _ amount: MicroCCDAmount,
+    _ receiver: AccountAddress,
+    _ seq: SequenceNumber,
+    _ expiry: TransactionTime
+) throws -> SignedAccountTransaction {
+    let tx = AccountTransaction(sender: account.address, payload: .transfer(amount: amount, receiver: receiver))
+    return try account.keys.sign(transaction: tx, sequenceNumber: seq, expiry: expiry)
+}
+
 // Execute ``run`` within the context of a gRPC client.
 try await withGRPCClient(target: .host("localhost", port: 20000), run)
