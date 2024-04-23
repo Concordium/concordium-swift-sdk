@@ -3,7 +3,7 @@ import Foundation
 
 public struct LegacyWalletExportEncryptedJSON: Decodable {
     public var cipherText: Data // base64
-    var metadata: Metadata
+    public var metadata: Metadata
 
     enum CodingKeys: CodingKey {
         case cipherText
@@ -69,7 +69,7 @@ public struct LegacyWalletExportJSON: Decodable {
     }
 }
 
-enum DecryptExportError: Error {
+public enum DecryptExportError: Error {
     case keyDerivationFailed(status: CCStatus)
     case decryptionFailed(status: CCCryptorStatus)
     case unsupportedEncryptionMethod(String)
@@ -116,28 +116,22 @@ func decryptLegacyWalletExport(cipher: Data, salt: Data, iterations: Int, iv: Da
 }
 
 func deriveKeyAES256(password: Data, salt: Data, rounds: Int) throws -> Data {
-    var res = Data(repeating: 0, count: kCCKeySizeAES256)
-    let status = password.withUnsafeBytes { passwordBytes in
-        salt.withUnsafeBytes { saltBytes in
-            res.withUnsafeMutableBytes { resBytes in
-                CCKeyDerivationPBKDF(
-                    CCPBKDFAlgorithm(kCCPBKDF2),
-                    passwordBytes.baseAddress,
-                    passwordBytes.count,
-                    saltBytes.baseAddress,
-                    saltBytes.count,
-                    CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
-                    UInt32(rounds),
-                    resBytes.baseAddress,
-                    kCCKeySizeAES256
-                )
-            }
-        }
-    }
+    var res = [UInt8](repeating: 0, count: kCCKeySizeAES256)
+    let status = CCKeyDerivationPBKDF(
+        CCPBKDFAlgorithm(kCCPBKDF2),
+        [UInt8](password),
+        password.count,
+        [UInt8](salt),
+        salt.count,
+        CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
+        UInt32(rounds),
+        &res,
+        kCCKeySizeAES256
+    )
     guard status == 0 else {
         throw DecryptExportError.keyDerivationFailed(status: status)
     }
-    return res
+    return Data(bytes: res, count: res.count)
 }
 
 func decryptAES256(key: Data, iv: Data, _ input: Data) throws -> Data {
@@ -149,7 +143,7 @@ func decryptAES256(key: Data, iv: Data, _ input: Data) throws -> Data {
         // Never happens as we just derived the key as AES256.
         throw DecryptExportError.unsupportedInputVectorLength
     }
-    var data = [UInt8](repeating: 0, count: input.count + kCCBlockSizeAES128) // TODO: necessary to add the block size?
+    var res = [UInt8](repeating: 0, count: input.count)
     var count = 0
     let status = CCCrypt(
         CCOperation(kCCDecrypt),
@@ -160,12 +154,12 @@ func decryptAES256(key: Data, iv: Data, _ input: Data) throws -> Data {
         [UInt8](iv),
         [UInt8](input),
         input.count,
-        &data,
-        data.count,
+        &res,
+        res.count,
         &count
     )
     guard status == kCCSuccess else {
         throw DecryptExportError.decryptionFailed(status: status)
     }
-    return Data(bytes: data, count: count)
+    return Data(bytes: res, count: count)
 }
