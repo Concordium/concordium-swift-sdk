@@ -482,7 +482,7 @@ struct Root: AsyncParsableCommand {
                 // Load account from Legacy Wallet export.
                 print("Loading legacy wallet export from file '\(walletCmd.exportFile)' and decodig contents.")
                 let exportContents = try Data(contentsOf: URL(fileURLWithPath: walletCmd.exportFile))
-                let encryptedExport = try JSONDecoder().decode(LegacyWalletEncryptedExportJSON.self, from: exportContents)
+                let encryptedExport = try JSONDecoder().decode(LegacyWalletExportEncryptedJSON.self, from: exportContents)
                 print("Decrypting export contents.")
                 guard let password = walletCmd.exportFilePassword.data(using: .utf8) else {
                     print("Provided decryption password is not valid utf-8.")

@@ -1,7 +1,7 @@
 import CommonCrypto
 import Foundation
 
-public struct LegacyWalletEncryptedExportJSON: Decodable {
+public struct LegacyWalletExportEncryptedJSON: Decodable {
     public var cipherText: Data // base64
     var metadata: Metadata
 
@@ -70,7 +70,7 @@ public struct LegacyWalletExportJSON: Decodable {
 }
 
 enum DecryptExportError: Error {
-    case keyGenerationFailed(status: Int)
+    case keyDerivationFailed(status: CCStatus)
     case decryptionFailed(status: CCCryptorStatus)
     case unsupportedEncryptionMethod(String)
     case unsupportedKeyDerivationMethod(String)
@@ -82,7 +82,7 @@ enum DecryptExportError: Error {
     case invalidPasswordOrCorrupted
 }
 
-public func decryptLegacyWalletExport(export: LegacyWalletEncryptedExportJSON, password: Data) throws -> LegacyWalletExportJSON {
+public func decryptLegacyWalletExport(export: LegacyWalletExportEncryptedJSON, password: Data) throws -> LegacyWalletExportJSON {
     let data = try decryptLegacyWalletExport(cipher: export.cipherText, metadata: export.metadata, password: password)
     guard String(data: data, encoding: .utf8) != nil else {
         // Decrypted payload is not valid UTF-8.
@@ -91,7 +91,7 @@ public func decryptLegacyWalletExport(export: LegacyWalletEncryptedExportJSON, p
     return try JSONDecoder().decode(LegacyWalletExportJSON.self, from: data)
 }
 
-func decryptLegacyWalletExport(cipher: Data, metadata: LegacyWalletEncryptedExportJSON.Metadata, password: Data) throws -> Data {
+func decryptLegacyWalletExport(cipher: Data, metadata: LegacyWalletExportEncryptedJSON.Metadata, password: Data) throws -> Data {
     guard metadata.keyDerivationMethod == "PBKDF2WithHmacSHA256" else {
         throw DecryptExportError.unsupportedKeyDerivationMethod(metadata.keyDerivationMethod)
     }
@@ -135,19 +135,21 @@ func deriveKeyAES256(password: Data, salt: Data, rounds: Int) throws -> Data {
         }
     }
     guard status == 0 else {
-        throw DecryptExportError.keyGenerationFailed(status: Int(status))
+        throw DecryptExportError.keyDerivationFailed(status: status)
     }
     return res
 }
 
 func decryptAES256(key: Data, iv: Data, _ input: Data) throws -> Data {
     guard key.count == kCCKeySizeAES256 else {
+        // Never happens as we just derived the key as AES256.
         throw DecryptExportError.unsupportedKeyLength
     }
     guard iv.count == kCCBlockSizeAES128 else {
+        // Never happens as we just derived the key as AES256.
         throw DecryptExportError.unsupportedInputVectorLength
     }
-    var data = [UInt8](repeating: 0, count: input.count + kCCBlockSizeAES128)
+    var data = [UInt8](repeating: 0, count: input.count + kCCBlockSizeAES128) // TODO: necessary to add the block size?
     var count = 0
     let status = CCCrypt(
         CCOperation(kCCDecrypt),
