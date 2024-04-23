@@ -109,11 +109,11 @@ The hash of the submitted transaction is printed to the console.
 
 #### Transfer
 
-Send 123456789 µCCD (123.456789 CCD) from the account created using the [Create Account](#create-account) command above
+Send 123.456 CCD from the account created using the [Create Account](#create-account) command above
 to account `39MD...`.
 
 ```shell
-concordium-example-client wallet --seed-phrase="gospel bicycle..." --identity-provider-id=1 --identity-index=2 transfer --credential-counter=0 --receiver=<receiver-address> --amount=123456789
+concordium-example-client wallet --seed-phrase="gospel bicycle..." --identity-provider-id=1 --identity-index=2 transfer --credential-counter=0 --receiver=<receiver-address> --amount=123.456
 ```
 
 The hash of the submitted transaction is printed to the console.
@@ -129,10 +129,10 @@ to be provided as part of the command.
 #### Transfer
 
 From legacy account `33Po...` stored in export file `concordium-backup.concordiumwallet` under password `xxxxxx`,
-send 123456789 µCCD (123.456789 CCD) to account `39MD...`.
+send 123.456 CCD to account `39MD...`.
 
 ```shell
-concordium-example-client legacy-wallet --export-file=concordium-backup.concordiumwallet --export-file-password=xxxxxx --account="33Po..." transfer --receiver="39MD..." --amount=123456789
+concordium-example-client legacy-wallet --export-file=concordium-backup.concordiumwallet --export-file-password=xxxxxx --account="33Po..." transfer --receiver="39MD..." --amount=123.456
 ```
 
 The hash of the submitted transaction is printed to the console.

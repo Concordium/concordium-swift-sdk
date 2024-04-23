@@ -94,7 +94,7 @@ public struct CCD: CustomStringConvertible {
     }
 
     /// The amount in MicroCCD if it fits within that type, otherwise `nil`.
-    public var microCCDAmount: MicroCCDAmount? {
+    public var microCCD: MicroCCDAmount? {
         guard amount.value.bitWidth <= 64 else {
             return nil
         }
