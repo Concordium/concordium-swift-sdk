@@ -32,7 +32,7 @@ func transfer(client: NodeClient) async throws {
 }
 
 /// Construct and sign transfer transaction.
-public func makeTransfer(
+func makeTransfer(
     _ account: Account,
     _ amount: MicroCCDAmount,
     _ receiver: AccountAddress,
@@ -44,4 +44,4 @@ public func makeTransfer(
 }
 
 // Execute ``transfer`` within the context of a gRPC client.
-try await withGRPCClient(target: .host("localhost", port: 20000), transfer)
+try await withGRPCClient(host: "localhost", port: 20000, transfer)

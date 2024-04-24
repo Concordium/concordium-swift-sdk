@@ -12,7 +12,7 @@ let walletProxyBaseURL = URL(string: "https://wallet-proxy.testnet.concordium.co
 let anonymityRevocationThreshold = RevocationThreshold(2)
 let expiry = TransactionTime(9_999_999_999)
 
-/// Perform account creation based on the inputs above.
+/// Perform account creation (on recovered identity) based on the inputs above.
 func createAccount(client: NodeClient) async throws {
     let seed = try decodeSeed(seedPhrase, network)
     let walletProxy = WalletProxy(baseURL: walletProxyBaseURL)
@@ -51,7 +51,7 @@ func createAccount(client: NodeClient) async throws {
 }
 
 // Duplicated in 'RecoverIdentity/main.swift'.
-public func makeIdentityRecoveryRequest(
+func makeIdentityRecoveryRequest(
     _ seed: WalletSeed,
     _ cryptoParams: CryptographicParameters,
     _ identityProvider: IdentityProvider,
@@ -74,4 +74,4 @@ public func makeIdentityRecoveryRequest(
 }
 
 // Execute ``createAccount`` within the context of a gRPC client.
-try await withGRPCClient(target: .host("localhost", port: 20000), createAccount)
+try await withGRPCClient(host: "localhost", port: 20000, createAccount)

@@ -37,7 +37,7 @@ func createIdentity(client: NodeClient) async throws {
     }
 }
 
-public func issueIdentitySync(
+func issueIdentitySync(
     _ seed: WalletSeed,
     _ cryptoParams: CryptographicParameters,
     _ identityProvider: IdentityProvider,
@@ -91,4 +91,4 @@ func todoFetchIdentityIssuance(_ request: IdentityIssuanceRequest) async throws 
 }
 
 // Execute ``createIdentity`` within the context of a gRPC client.
-try await withGRPCClient(target: .host("localhost", port: 20000), createIdentity)
+try await withGRPCClient(host: "localhost", port: 20000, createIdentity)

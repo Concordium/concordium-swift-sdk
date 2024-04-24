@@ -26,7 +26,7 @@ func recoverIdentity(client: NodeClient) async throws {
 }
 
 // Duplicated in 'CreateAccount/main.swift'.
-public func makeIdentityRecoveryRequest(
+func makeIdentityRecoveryRequest(
     _ seed: WalletSeed,
     _ cryptoParams: CryptographicParameters,
     _ identityProvider: IdentityProvider,
@@ -49,4 +49,4 @@ public func makeIdentityRecoveryRequest(
 }
 
 // Execute ``recoverIdentity`` within the context of a gRPC client.
-try await withGRPCClient(target: .host("localhost", port: 20000), recoverIdentity)
+try await withGRPCClient(host: "localhost", port: 20000, recoverIdentity)
