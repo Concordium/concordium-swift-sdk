@@ -34,3 +34,6 @@ cli_path="${dir_path}/concordium-example-client"
 "${cli_path}" --host="${host}" --port="${port}" account --address="${some_account_address}" next-sequence-number
 "${cli_path}" --host="${host}" --port="${port}" account --address="${some_account_address}" info
 "${cli_path}" --host="${host}" --port="${port}" account --address="${some_account_address}" info --block="${some_block_hash}"
+"${cli_path}" generate-seed-phrase --strength=64
+"${cli_path}" generate-seed-phrase --strength=128
+"${cli_path}" generate-seed-phrase

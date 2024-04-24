@@ -12,7 +12,8 @@ let walletProxyBaseURL = URL(string: "https://wallet-proxy.testnet.concordium.co
 let anonymityRevocationThreshold = RevocationThreshold(2)
 let expiry = TransactionTime(9_999_999_999)
 
-func run(client: NodeClient) async throws {
+/// Perform account creation based on the inputs above.
+func createAccount(client: NodeClient) async throws {
     let seed = try decodeSeed(seedPhrase, network)
     let walletProxy = WalletProxy(baseURL: walletProxyBaseURL)
     let identityProvider = try await findIdentityProvider(walletProxy, identityProviderID)!
@@ -72,5 +73,5 @@ public func makeIdentityRecoveryRequest(
     )
 }
 
-// Execute ``run`` within the context of a gRPC client.
-try await withGRPCClient(target: .host("localhost", port: 20000), run)
+// Execute ``createAccount`` within the context of a gRPC client.
+try await withGRPCClient(target: .host("localhost", port: 20000), createAccount)

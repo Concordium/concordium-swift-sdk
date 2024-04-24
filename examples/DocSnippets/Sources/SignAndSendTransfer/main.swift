@@ -11,7 +11,8 @@ let amount = MicroCCDAmount(1337)
 let receiver = try! AccountAddress(base58Check: "33Po4Z5v4DaAHo9Gz9Afc9LRzbZmYikus4Q7gqMaXHtdS17khz")
 let expiry = TransactionTime(9_999_999_999)
 
-func run(client: NodeClient) async throws {
+/// Perform a transfer based on the inputs above.
+func transfer(client: NodeClient) async throws {
     let seed = try decodeSeed(seedPhrase, network)
 
     // Derive seed based account from the given coordinates of the given seed.
@@ -42,5 +43,5 @@ public func makeTransfer(
     return try account.keys.sign(transaction: tx, sequenceNumber: seq, expiry: expiry)
 }
 
-// Execute ``run`` within the context of a gRPC client.
-try await withGRPCClient(target: .host("localhost", port: 20000), run)
+// Execute ``transfer`` within the context of a gRPC client.
+try await withGRPCClient(target: .host("localhost", port: 20000), transfer)

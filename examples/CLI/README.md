@@ -71,6 +71,14 @@ Apart from the seed phrase, the derived keys etc. are also tied to a particular 
 For the reasons above, these commands are intended to be used on test networks only.
 To use it (at your own risk) on mainnet, add `--network=Mainnet` right after the `wallet` component.
 
+#### Seed phrase generation
+
+Generate a fresh 24-word seed phrase for use in a new wallet.
+
+```shell
+concordium-example-client generate-seed-phrase
+```
+
 #### Identity
 
 ##### Issuance

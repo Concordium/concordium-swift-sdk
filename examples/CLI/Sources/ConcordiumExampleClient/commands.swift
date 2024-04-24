@@ -120,11 +120,16 @@ struct Root: AsyncParsableCommand {
 
     struct GenerateSeedPhrase: ParsableCommand {
         static var configuration = CommandConfiguration(
-            abstract: "Generate a fresh seed phrase for use in a new wallet."
+            abstract: "Generate a fresh 24-word seed phrase for use in a new wallet."
         )
 
+        // Strength 256 corresponds to 24 words
+        // (see 'https://support.ledger.com/hc/en-us/articles/4415198323089-How-Ledger-device-generates-24-word-recovery-phrase?docs=true').
+        @Option(help: "The strength to use. This must be a multiple of 32.")
+        var strength: Int = 256
+
         func run() throws {
-            let seedPhrase = try Mnemonic.generateMnemonic(strength: 256, language: .english)
+            let seedPhrase = try Mnemonic.generateMnemonic(strength: strength, language: .english)
             print(seedPhrase)
         }
     }

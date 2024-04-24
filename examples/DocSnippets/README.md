@@ -10,8 +10,8 @@ The project is structured as a set of simple executable targets:
 - [SignAndSendTransfer](./Sources/SignAndSendTransfer/main.swift) ([doc page](https://developer.concordium.software/en/mainnet/net/guides/wallet-sdk/wallet-sdk-account-transaction.html))
 - [ListIdentityProviders](./Sources/ListIdentityProviders/main.swift) ([doc page](https://developer.concordium.software/en/mainnet/net/guides/wallet-sdk/wallet-sdk-identity-provider.html))
 
-Except for `ListIdentityProviders`, the "main" code of each snippet is hosted in a function named `run`.
-This function is executed by [`withGRPCClient`](./Sources/Common/GRPC.swift), which provides the `NodeClient` expected by `run`.
+Except for `ListIdentityProviders`, the "main" code of each snippet is hosted in a runner function named by the snippet.
+This function is executed by [`withGRPCClient`](./Sources/Common/GRPC.swift), which provides the `NodeClient` expected by the runner.
 
 The library [Common](./Sources/Common) contains a set of small functions that are used by multiple snippets.
 All the snippets share a dependency to this library.
