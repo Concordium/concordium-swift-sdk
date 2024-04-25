@@ -258,7 +258,7 @@ public typealias ChainArData = ConcordiumWalletCrypto.ChainArData
 
 extension ChainArData {
     static func fromGRPCType(_ grpc: Concordium_V2_ChainArData) -> Self {
-        .init(endIdCredPubShareHex: grpc.encIDCredPubShare.hex)
+        .init(encIdCredPubShareHex: grpc.encIDCredPubShare.hex)
     }
 }
 

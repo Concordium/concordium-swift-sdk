@@ -115,7 +115,7 @@ extension ChoiceArParameters: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
             arIdentities: container.decode([AnonymityRevokerID].self, forKey: .arIdentities),
-            threshold: UInt32(container.decode(RevocationThreshold.self, forKey: .threshold)) // TODO: remove conversion
+            threshold: container.decode(RevocationThreshold.self, forKey: .threshold)
         )
     }
 }
