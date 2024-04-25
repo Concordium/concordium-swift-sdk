@@ -1,7 +1,5 @@
 # Concordium Swift SDK
 
-**STATUS: EARLY DEVELOPMENT**
-
 An SDK for applications written in the [Swift Programming Language](https://www.swift.org/) to
 interact with the [Concordium Blockchain](https://concordium.com).
 
@@ -22,18 +20,15 @@ Once this SDK is ready for production, it will completely replace this old libra
 
 ## Usage
 
-*No tags have been added to "publish" a build yet. The following is not going to work until v1.0 has been published.
-To use it in the current, unfinished state, replace `"1.0"` with `"main"`.*
-
 The SDK is available as a [SwiftPM package](https://developer.apple.com/documentation/xcode/swift-packages)
 hosted on GitHub as this repository.
 To include it as a dependency, add the following 
 
 ```swift
-.package(url: "https://github.com/Concordium/concordium-swift-sdk.git", from: "1.0")
+.package(url: "https://github.com/Concordium/concordium-swift-sdk.git", from: "<version>")
 ```
 
-and adding
+where `<version>` is replaced by an actual version (see tags/releases on GitHub). Then add
 
 ```swift
 .product(name: "Concordium", package: "concordium-swift-sdk")
@@ -52,6 +47,11 @@ The repository includes some example projects that show how to integrate the SDK
   It's also used to exercise the gRPC client in ways that are hard to cover with unit tests.
 
 An example wallet app is currently in development.
+
+## Documentation
+
+See the [developer documentation site](https://developer.concordium.software/en/mainnet/net/guides/wallet-sdk/wallet-sdk.html)
+for collected documentation of the various Wallet SDKs.
 
 ## Development
 
@@ -88,7 +88,7 @@ The CI workflow [`Build and test`](https://github.com/Concordium/concordium-swif
 checks that the code base is correctly formatted before PRs are merged.
 
 The formatter has been integrated as a
-[Swift Package Manger plugin](https://github.com/nicklockwood/SwiftFormat#swift-package-manager-plugin).
+[Swift Package Manager plugin](https://github.com/nicklockwood/SwiftFormat#swift-package-manager-plugin).
 It's possible to run the tool in a variety of ways (see the previous link for all options).
 The easiest option is to run it on the command line via
 
