@@ -1,5 +1,6 @@
 @testable import Concordium
 import CryptoKit
+import NIO
 import XCTest
 
 final class WalletTest: XCTestCase {
@@ -14,10 +15,10 @@ final class WalletTest: XCTestCase {
         let seed = WalletSeed(seedHex: TEST_SEED, network: .testnet)
         let gen = SeedBasedAccountDerivation(seed: seed, cryptoParams: TESTNET_CRYPTO_PARAMS)
         let account1 = try gen.deriveAccount(
-            credentials: [AccountCredentialSeedIndexes(identity: IdentitySeedIndexes(providerID: 0, index: 0), counter: 0)]
+            credentials: [.init(identity: .init(providerID: 0, index: 0), counter: 0)]
         )
         let account2 = try gen.deriveAccount(
-            credentials: [AccountCredentialSeedIndexes(identity: IdentitySeedIndexes(providerID: 0, index: 0), counter: 1)]
+            credentials: [.init(identity: .init(providerID: 0, index: 0), counter: 1)]
         )
 
         // Construct transaction.
@@ -31,7 +32,7 @@ final class WalletTest: XCTestCase {
         XCTAssertEqual(transactionHash.hex, "56cb3bbb655c2aae88406e14ff4e77bce01d6a921bf0628e25abbeb665255864")
 
         // Sign transaction hash and verify signature against public key of the credential used to generate account 1.
-        let signatures = try account1.keys.sign(message: transactionHash)
+        let signatures = try account1.keys.sign(transactionHash)
         XCTAssertEqual(signatures.count, 1)
         let signaturesCred0 = signatures[0]!
         XCTAssertEqual(signaturesCred0.count, 1)
@@ -39,13 +40,42 @@ final class WalletTest: XCTestCase {
         let account1PublicKey = try Curve25519.Signing.PublicKey(
             rawRepresentation: Data(
                 hex: seed.publicKeyHex(
-                    accountCredentialIndexes: AccountCredentialSeedIndexes(
-                        identity: IdentitySeedIndexes(providerID: 0, index: 0),
+                    accountCredentialIndexes: .init(
+                        identity: .init(providerID: 0, index: 0),
                         counter: 0
                     )
                 )
             )
         )
         XCTAssertTrue(account1PublicKey.isValidSignature(signature, for: transactionHash))
+    }
+
+    func testSignMessage() throws {
+        let key = try Curve25519.Signing.PrivateKey(
+            rawRepresentation: Data(
+                hex: "e5f7a2119681e469bd7f6bf832f2076efd307a3a6d284447e221267aac9a2ff2"
+            )
+        )
+        let signer = AccountKeysCurve25519([0: [0: key]])
+        let msg = "L".data(using: .ascii)!
+        let address = try AccountAddress(base58Check: "3ovtzpkUSB9PrbH46FPogPY1GXJdPt2Z4QFj8m7shA1L57p6ek")
+        let signatures = try signer.sign(message: msg, address: address)
+
+        var buf = ByteBuffer()
+        buf.writeData(address.data)
+        buf.writeRepeatingByte(0, count: 8)
+        buf.writeData(msg)
+        let signedData = Data(buffer: buf)
+        let signedHash = Data(SHA256.hash(data: signedData))
+
+        // Verify that computed signature is valid.
+        XCTAssertTrue(key.publicKey.isValidSignature(signatures[0]![0]!, for: signedHash))
+        // Verify that we're signing the correct bytes by checking against signature computed externally.
+        XCTAssertTrue(
+            try key.publicKey.isValidSignature(
+                Data(hex: "aa3e8b5ddc07f4a50d2e89f892a3db897a0acdd65cb4fc17519c905833a5c11bcb66142ad2216485a6bff746ea49e9f18ba7c668078f10f30c7716857606ab03"),
+                for: signedHash
+            )
+        )
     }
 }

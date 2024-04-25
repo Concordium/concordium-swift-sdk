@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import NIO
 
 // TODO: Include credentials?
 public class Account {
@@ -14,7 +15,7 @@ public class Account {
 
 public protocol Signer {
     var count: Int { get }
-    func sign(message: Data) throws -> Signatures
+    func sign(_ data: Data) throws -> Signatures
 }
 
 public extension Signer {
@@ -31,7 +32,7 @@ public extension Signer {
     func sign(transaction: PreparedAccountTransaction) throws -> SignedAccountTransaction {
         try .init(
             transaction: transaction,
-            signatures: sign(message: transaction.serialize().hash)
+            signatures: sign(transaction.serialize().hash)
         )
     }
 
@@ -40,9 +41,19 @@ public extension Signer {
     }
 
     func sign(deployment: PreparedAccountCredentialDeployment) throws -> SignedAccountCredentialDeployment {
-        let signatures = try sign(message: deployment.hash)
+        let signatures = try sign(deployment.hash)
         let signaturesCred0 = signatures[0]! // account has exactly one credential (the one we're signing)
         return .init(deployment: deployment, signatures: signaturesCred0)
+    }
+
+    func sign(message: Data, address: AccountAddress) throws -> Signatures {
+        var buf = ByteBuffer()
+        buf.writeData(address.data)
+        buf.writeRepeatingByte(0, count: 8)
+        buf.writeData(message)
+        let data = Data(buffer: buf)
+        let hash = Data(SHA256.hash(data: data))
+        return try sign(hash)
     }
 }
 
@@ -69,10 +80,10 @@ public class AccountKeys<Key: AccountKey>: Signer {
         keys.reduce(0) { acc, cred in acc + cred.value.count }
     }
 
-    public func sign(message: Data) throws -> Signatures {
+    public func sign(_ data: Data) throws -> Signatures {
         try keys.mapValues {
             try $0.mapValues {
-                try $0.signature(for: message)
+                try $0.signature(for: data)
             }
         }
     }
