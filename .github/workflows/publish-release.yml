@@ -1,0 +1,52 @@
+name: Publish release for SwiftPM package tag
+
+on:
+  push:
+    tags: '*.*.*'
+  workflow_dispatch: # trigger manually (for debugging)
+
+jobs:
+  publish-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Parse ref
+      uses: bisgardo/github-action-parse-ref@v1
+      id: ref
+      with:
+        ref: '${{github.ref}}'
+    - name: 'Print outputs (for debugging)'
+      run: |
+        echo "github.ref='${{github.ref}}'"
+        echo "steps.ref.outputs.ref='${{steps.ref.outputs.ref}}'"
+        echo "steps.ref.outputs.ref-name='${{steps.ref.outputs.ref-name}}'"
+    - name: Checkout project
+      uses: actions/checkout@v4
+      with:
+        ref: '${{steps.ref.outputs.ref}}'
+    - name: Extract tag message
+      uses: bisgardo/github-action-echo@v1
+      id: tag-msg
+      with:
+        msg: '$(git for-each-ref "${{steps.ref.outputs.ref}}" --format="%(contents)")'
+        version: '${{steps.ref.outputs.ref-name}}'
+    - name: Fail if tag is not "annotated" or its message is empty
+      if: "steps.tag-msg.outputs.msg == ''"
+      run: exit 1
+    - name: Extract changelog entries
+      uses: concordium/github-action-changelog-extract@v1
+      id: changelog
+      with:
+        file: 'CHANGELOG.md'
+        version: '${{steps.tag-msg.outputs.version}}'
+    - name: Upload package as GitHub release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: '${{steps.tag-msg.outputs.version}}'
+        # Release body is the message of the annotated tag followed by the changelog entries for the version.
+        body: |
+          ${{steps.tag-msg.outputs.msg}}
+          
+          # Changelog
+          
+          ${{steps.changelog.outputs.section}}
