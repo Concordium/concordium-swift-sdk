@@ -79,6 +79,20 @@ Generate a fresh 24-word seed phrase for use in a new wallet.
 concordium-example-client generate-seed-phrase
 ```
 
+#### List Identity Providers and Anonymity Revokers
+
+Fetch all Identity Providers from Wallet Proxy:
+
+```shell
+concordium-example-client identity-providers
+```
+
+Fetch all Anonymity Revokers from the gRPC API.
+
+```shell
+concordium-example-client anonymity-revokers
+```
+
 #### Identity
 
 ##### Issuance

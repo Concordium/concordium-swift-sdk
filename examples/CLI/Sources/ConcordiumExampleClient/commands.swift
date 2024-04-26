@@ -380,7 +380,7 @@ struct Root: AsyncParsableCommand {
                 func run() async throws {
                     let walletProxy = WalletProxy(baseURL: identityCmd.walletProxyOpts.baseURL)
                     guard let ip = try await findIdentityProvider(walletProxy: walletProxy, id: walletCmd.identityProviderID) else {
-                        print("Cannot find identity with index \(walletCmd.identityProviderID).")
+                        print("Cannot find identity provider with ID \(walletCmd.identityProviderID).")
                         return
                     }
 
@@ -429,7 +429,7 @@ struct Root: AsyncParsableCommand {
                 func run() async throws {
                     let walletProxy = WalletProxy(baseURL: identityCmd.walletProxyOpts.baseURL)
                     guard let ip = try await findIdentityProvider(walletProxy: walletProxy, id: walletCmd.identityProviderID) else {
-                        print("Cannot find identity with index \(walletCmd.identityProviderID).")
+                        print("Cannot find identity provider with ID \(walletCmd.identityProviderID).")
                         return
                     }
 
