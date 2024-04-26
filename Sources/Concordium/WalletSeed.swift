@@ -67,7 +67,7 @@ public class WalletSeed {
         try identityCredSecHex(
             seedHex: seedHex,
             network: network.rawValue,
-            identityProviderIndex: identityIndexes.providerID,
+            identityProviderId: identityIndexes.providerID,
             identityIndex: identityIndexes.index
         )
     }
@@ -76,7 +76,7 @@ public class WalletSeed {
         try identityPrfKeyHex(
             seedHex: seedHex,
             network: network.rawValue,
-            identityProviderIndex: identityIndexes.providerID,
+            identityProviderId: identityIndexes.providerID,
             identityIndex: identityIndexes.index
         )
     }
@@ -85,7 +85,7 @@ public class WalletSeed {
         try identityAttributesSignatureBlindingRandomnessHex(
             seedHex: seedHex,
             network: network.rawValue,
-            identityProviderIndex: identityIndexes.providerID,
+            identityProviderId: identityIndexes.providerID,
             identityIndex: identityIndexes.index
         )
     }
@@ -94,7 +94,7 @@ public class WalletSeed {
         try accountCredentialSigningKeyHex(
             seedHex: seedHex,
             network: network.rawValue,
-            identityProviderIndex: accountCredentialIndexes.identity.providerID,
+            identityProviderId: accountCredentialIndexes.identity.providerID,
             identityIndex: accountCredentialIndexes.identity.index,
             credentialCounter: accountCredentialIndexes.counter
         )
@@ -104,7 +104,7 @@ public class WalletSeed {
         try accountCredentialPublicKeyHex(
             seedHex: seedHex,
             network: network.rawValue,
-            identityProviderIndex: accountCredentialIndexes.identity.providerID,
+            identityProviderId: accountCredentialIndexes.identity.providerID,
             identityIndex: accountCredentialIndexes.identity.index,
             credentialCounter: accountCredentialIndexes.counter
         )
@@ -114,7 +114,7 @@ public class WalletSeed {
         try accountCredentialIdHex(
             seedHex: seedHex,
             network: network.rawValue,
-            identityProviderIndex: accountCredentialIndexes.identity.providerID,
+            identityProviderId: accountCredentialIndexes.identity.providerID,
             identityIndex: accountCredentialIndexes.identity.index,
             credentialCounter: accountCredentialIndexes.counter,
             commitmentKey: commitmentKey
@@ -125,7 +125,7 @@ public class WalletSeed {
         try accountCredentialAttributeCommitmentRandomnessHex(
             seedHex: seedHex,
             network: network.rawValue,
-            identityProviderIndex: accountCredentialIndexes.identity.providerID,
+            identityProviderId: accountCredentialIndexes.identity.providerID,
             identityIndex: accountCredentialIndexes.identity.index,
             credentialCounter: accountCredentialIndexes.counter,
             attribute: attribute
