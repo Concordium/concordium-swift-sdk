@@ -7,7 +7,7 @@ public enum IdentityRequestError: Error {
 }
 
 public typealias IdentityIssuanceRequest = HTTPRequest<IdentityVerificationStatusResponse>
-public typealias IdentityRecoverRequest = HTTPRequest<Versioned<IdentityObject>> // TODO: ensure that failure is handled gracefully if identity isn't there
+public typealias IdentityRecoverRequest = HTTPRequest<Versioned<IdentityObject>> // TODO: (#37): ensure that failure is handled gracefully if identity isn't there
 
 public class IdentityRequestURLBuilder {
     private let callbackURL: URL? // Android example wallet uses: concordiumwallet-example://identity-issuer/callback
