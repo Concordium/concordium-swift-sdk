@@ -29,11 +29,13 @@ dir_path="$(swift build --show-bin-path)"
 cli_path="${dir_path}/concordium-example-client"
 
 # Execute "tests".
+"${cli_path}" generate-seed-phrase --strength=64
+"${cli_path}" generate-seed-phrase --strength=128
+"${cli_path}" generate-seed-phrase
 "${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters
 "${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters --block="${some_block_hash}"
 "${cli_path}" --host="${host}" --port="${port}" account --address="${some_account_address}" next-sequence-number
 "${cli_path}" --host="${host}" --port="${port}" account --address="${some_account_address}" info
 "${cli_path}" --host="${host}" --port="${port}" account --address="${some_account_address}" info --block="${some_block_hash}"
-"${cli_path}" generate-seed-phrase --strength=64
-"${cli_path}" generate-seed-phrase --strength=128
-"${cli_path}" generate-seed-phrase
+"${cli_path}" identity-providers
+"${cli_path}" --host="${host}" --port="${port}" anonymity-revokers

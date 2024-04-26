@@ -18,11 +18,14 @@ func createAccount(client: NodeClient) async throws {
     let walletProxy = WalletProxy(baseURL: walletProxyBaseURL)
     let identityProvider = try await findIdentityProvider(walletProxy, identityProviderID)!
 
-    // Recover identity (not necessary if the ID is already stored).
+    // Recover identity (skip if the ID is already available).
     // This assumes that the identity already exists, of course.
     let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
     let identityReq = try makeIdentityRecoveryRequest(seed, cryptoParams, identityProvider, identityIndex)
-    let identity = try await identityReq.send(session: URLSession.shared)
+    let identityRes = try await identityReq.send(session: URLSession.shared)
+
+    // We assume that the identity already exists. Real applications should handle errors better.
+    let identity = try identityRes.result.get()
 
     // Derive seed based credential and account from the given coordinates of the given seed.
     let accountDerivation = SeedBasedAccountDerivation(seed: seed, cryptoParams: cryptoParams)
@@ -56,7 +59,7 @@ func makeIdentityRecoveryRequest(
     _ cryptoParams: CryptographicParameters,
     _ identityProvider: IdentityProvider,
     _ identityIndex: IdentityIndex
-) throws -> IdentityRecoverRequest {
+) throws -> IdentityRecoveryRequest {
     let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
         seed: seed,
         cryptoParams: cryptoParams
