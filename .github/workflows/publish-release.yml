@@ -42,7 +42,7 @@ jobs:
     - name: Upload package as GitHub release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: '${{steps.tag-msg.outputs.version}}'
+        name: '${{steps.tag-msg.outputs.version}}'
         # Release body is the message of the annotated tag followed by the changelog entries for the version.
         body: |
           ${{steps.tag-msg.outputs.msg}}
@@ -50,6 +50,3 @@ jobs:
           # Changelog
           
           ${{steps.changelog.outputs.section}}
-        files: '${{steps.release.outputs.npm-pack-file}}'
-        name: '${{steps.release.outputs.github-release-name}}'
-        generate_release_notes: false
