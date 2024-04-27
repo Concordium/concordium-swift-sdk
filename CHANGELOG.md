@@ -22,5 +22,6 @@ Features:
 - Construction, signing, and sending of transfer transactions (without memo) from legacy or seed based accounts.
 - Support for signing arbitrary binary messages.
 - Support for decrypting and using accounts created using the legacy wallet.
+- Utilities for working with amounts in CCD and fungible CIS-2 tokens.
 
 Communication with the blockchain happens via the gRPC API except for info that's only available from Wallet Proxy.
