@@ -126,6 +126,7 @@ public enum AccountTransactionPayload {
                 var res = 0
                 res += buffer.writeInteger(22, as: UInt8.self)
                 res += buffer.writeData(receiver.data)
+                res += buffer.writeInteger(UInt16(memo.count), as: UInt16.self)
                 res += buffer.writeData(memo)
                 res += buffer.writeInteger(amount, endianness: .big, as: UInt64.self)
                 return res
