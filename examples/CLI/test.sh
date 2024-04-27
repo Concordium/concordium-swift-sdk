@@ -16,7 +16,7 @@ set -eux
 #
 #   socat TCP-LISTEN:20000,fork TCP:[IP]:[port]
 
-host="${HOST-localhost}"
+host="${HOST-grpc.testnet.concordium.com}"
 port="${PORT-20000}"
 
 # Test data (picked randomly from testnet).
@@ -29,11 +29,11 @@ dir_path="$(swift build --show-bin-path)"
 cli_path="${dir_path}/concordium-example-client"
 
 # Execute "tests".
-"${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters
-"${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters --block="${some_block_hash}"
-"${cli_path}" --host="${host}" --port="${port}" account --address="${some_account_address}" next-sequence-number
-"${cli_path}" --host="${host}" --port="${port}" account --address="${some_account_address}" info
-"${cli_path}" --host="${host}" --port="${port}" account --address="${some_account_address}" info --block="${some_block_hash}"
+"${cli_path}" cryptographic-parameters
+"${cli_path}" cryptographic-parameters --block="${some_block_hash}"
+"${cli_path}" account --address="${some_account_address}" next-sequence-number
+"${cli_path}" account --address="${some_account_address}" info
+"${cli_path}" account --address="${some_account_address}" info --block="${some_block_hash}"
 "${cli_path}" generate-seed-phrase --strength=64
 "${cli_path}" generate-seed-phrase --strength=128
 "${cli_path}" generate-seed-phrase

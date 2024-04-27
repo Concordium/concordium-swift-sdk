@@ -11,10 +11,13 @@ enum CLIError: Error {
 
 struct GRPCOptions: ParsableArguments {
     @Option(help: "IP or DNS name of the Node.")
-    var host = "localhost"
+    var host = "grpc.testnet.concordium.com"
 
     @Option(help: "Port of the Node.")
     var port = 20000
+
+    @Option(help: "Use HTTP without TLS encryption.")
+    var insecure = false
 }
 
 struct WalletProxyOptions: ParsableArguments {
@@ -105,7 +108,7 @@ struct Root: AsyncParsableCommand {
         var block: BlockIdentifier = .lastFinal
 
         func run() async throws {
-            let res = try await withGRPCClient(host: rootCmd.opts.host, port: rootCmd.opts.port) {
+            let res = try await withGRPCClient(rootCmd.opts) {
                 try await $0.cryptographicParameters(
                     block: block
                 )
@@ -151,7 +154,7 @@ struct Root: AsyncParsableCommand {
             var accountCmd: Account
 
             func run() async throws {
-                let res = try await withGRPCClient(host: rootCmd.opts.host, port: rootCmd.opts.port) {
+                let res = try await withGRPCClient(rootCmd.opts) {
                     try await $0.nextAccountSequenceNumber(
                         address: accountCmd.address
                     )
@@ -175,7 +178,7 @@ struct Root: AsyncParsableCommand {
             var block: BlockIdentifier = .lastFinal
 
             func run() async throws {
-                let res = try await withGRPCClient(host: rootCmd.opts.host, port: rootCmd.opts.port) {
+                let res = try await withGRPCClient(rootCmd.opts) {
                     try await $0.info(
                         account: .address(accountCmd.address),
                         block: block
@@ -237,7 +240,7 @@ struct Root: AsyncParsableCommand {
                 }
 
                 print("Fetching crypto parameters (for commitment key).")
-                let hash = try await withGRPCClient(host: rootCmd.opts.host, port: rootCmd.opts.port) { client in
+                let hash = try await withGRPCClient(rootCmd.opts) { client in
                     let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
                     print("Deriving account address and keys.")
                     let account = try SeedBasedAccountDerivation(
@@ -300,7 +303,7 @@ struct Root: AsyncParsableCommand {
                     }
 
                     print("Fetching crypto parameters.")
-                    let cryptoParams = try await withGRPCClient(host: rootCmd.opts.host, port: rootCmd.opts.port) {
+                    let cryptoParams = try await withGRPCClient(rootCmd.opts) {
                         try await $0.cryptographicParameters(block: .lastFinal)
                     }
 
@@ -385,7 +388,7 @@ struct Root: AsyncParsableCommand {
                     }
 
                     print("Fetching crypto parameters.")
-                    let cryptoParams = try await withGRPCClient(host: rootCmd.opts.host, port: rootCmd.opts.port) {
+                    let cryptoParams = try await withGRPCClient(rootCmd.opts) {
                         try await $0.cryptographicParameters(block: .lastFinal)
                     }
 
@@ -434,7 +437,7 @@ struct Root: AsyncParsableCommand {
                     }
 
                     print("Fetching crypto parameters.")
-                    let cryptoParams = try await withGRPCClient(host: rootCmd.opts.host, port: rootCmd.opts.port) {
+                    let cryptoParams = try await withGRPCClient(rootCmd.opts) {
                         try await $0.cryptographicParameters(block: .lastFinal)
                     }
 
@@ -470,7 +473,7 @@ struct Root: AsyncParsableCommand {
                     print("Serializing credential deployment.")
                     let serializedTx = try signedTx.serialize()
                     print("Sending credential deployment.")
-                    let hash = try await withGRPCClient(host: rootCmd.opts.host, port: rootCmd.opts.port) { client in
+                    let hash = try await withGRPCClient(rootCmd.opts) { client in
                         try await client.send(deployment: serializedTx)
                     }
                     print("Transaction with hash '\(hash.hex)' successfully submitted.")
@@ -536,7 +539,7 @@ struct Root: AsyncParsableCommand {
                 }
 
                 // Construct and send transaction.
-                let hash = try await withGRPCClient(host: rootCmd.opts.host, port: rootCmd.opts.port) { client in
+                let hash = try await withGRPCClient(rootCmd.opts) { client in
                     try await transfer(client: client, sender: sender, receiver: receiver, amount: microCCDAmount, expiry: expiry)
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
@@ -568,7 +571,7 @@ struct Root: AsyncParsableCommand {
         var rootCmd: Root
 
         func run() async throws {
-            let res = try await withGRPCClient(host: rootCmd.opts.host, port: rootCmd.opts.port) { client in
+            let res = try await withGRPCClient(rootCmd.opts) { client in
                 try await client.anonymityRevokers(block: .lastFinal)
             }
             print(res)
@@ -645,15 +648,16 @@ func makeIdentityRecoveryRequest(
     )
 }
 
-func withGRPCClient<T>(host: String, port: Int, _ f: (GRPCNodeClient) async throws -> T) async throws -> T {
+func withGRPCClient<T>(_ opts: GRPCOptions, _ f: (GRPCNodeClient) async throws -> T) async throws -> T {
     let group = PlatformSupport.makeEventLoopGroup(loopCount: 1)
     defer {
         try! group.syncShutdownGracefully()
     }
     // Flip comment to use TLS (required for the official gRPC endpoints "grpc.testnet.concordium.com" etc.).
-    let builder = ClientConnection.insecure(group: group)
-//    let builder = ClientConnection.usingPlatformAppropriateTLS(for: group)
-    let connection = builder.connect(host: host, port: port)
+    let builder = opts.insecure
+        ? ClientConnection.insecure(group: group)
+        : ClientConnection.usingPlatformAppropriateTLS(for: group)
+    let connection = builder.connect(host: opts.host, port: opts.port)
     defer {
         try! connection.close().wait()
     }
