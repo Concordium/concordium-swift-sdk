@@ -263,9 +263,9 @@ public struct IdentityRecoveryResponse: Decodable {
 
     public init(from decoder: any Decoder) throws {
         do {
-            result = try .failure(IdentityRecoveryError(from: decoder))
+            result = try .failure(.init(from: decoder))
         } catch {
-            result = try .success(Versioned<IdentityObject>.init(from: decoder))
+            result = try .success(.init(from: decoder))
         }
     }
 }
