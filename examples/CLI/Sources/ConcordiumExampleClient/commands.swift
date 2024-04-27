@@ -4,6 +4,7 @@ import Foundation
 import GRPC
 import MnemonicSwift
 import NIOPosix
+import SwiftCBOR
 
 enum CLIError: Error {
     case unsupportedNetwork(String)
@@ -224,8 +225,8 @@ struct Root: AsyncParsableCommand {
             @Option(help: "Amount of CCD to send.")
             var amount: CCD
 
-            @Option(help: "Optional memo encoded as hex.")
-            var memoHex: String?
+            @Option(help: "Optional memo string.")
+            var memo: String?
 
             @Option(help: "Timestamp in Unix time of transaction expiry.")
             var expiry: TransactionTime = 9_999_999_999
@@ -239,7 +240,7 @@ struct Root: AsyncParsableCommand {
                     return
                 }
 
-                let memo = try memoHex.map { try Data(hex: $0) }
+                let memo = memo.map { Data(CBOR.encode($0)) }
 
                 print("Fetching crypto parameters (for commitment key).")
                 let hash = try await withGRPCClient(host: rootCmd.opts.host, port: rootCmd.opts.port) { client in
@@ -517,8 +518,8 @@ struct Root: AsyncParsableCommand {
             @Option(help: "Amount of CCD to send.")
             var amount: CCD
 
-            @Option(help: "Optional memo encoded as hex.")
-            var memoHex: String?
+            @Option(help: "Optional memo string.")
+            var memo: String?
 
             @Option(help: "Timestamp in Unix time of transaction expiry.")
             var expiry: TransactionTime = 9_999_999_999
@@ -544,7 +545,7 @@ struct Root: AsyncParsableCommand {
                     return
                 }
 
-                let memo = try memoHex.map { try Data(hex: $0) }
+                let memo = memo.map { Data(CBOR.encode($0)) }
 
                 // Construct and send transaction.
                 let hash = try await withGRPCClient(host: rootCmd.opts.host, port: rootCmd.opts.port) { client in
