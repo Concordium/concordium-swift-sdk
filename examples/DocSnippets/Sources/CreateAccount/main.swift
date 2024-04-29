@@ -9,7 +9,6 @@ let identityProviderID = IdentityProviderID(3)
 let identityIndex = IdentityIndex(7)
 let credentialCounter = CredentialCounter(21)
 let walletProxyBaseURL = URL(string: "https://wallet-proxy.testnet.concordium.com")!
-let anonymityRevocationThreshold = RevocationThreshold(2)
 let expiry = TransactionTime(9_999_999_999)
 
 /// Perform account creation (on recovered identity) based on the inputs above.
@@ -54,6 +53,7 @@ func createAccount(client: NodeClient) async throws {
 }
 
 // Duplicated in 'RecoverIdentity/main.swift'.
+// TODO: Figure out how to depend on 'RecoverIdentity' and use its impl (got it to compile but linking failed).
 func makeIdentityRecoveryRequest(
     _ seed: WalletSeed,
     _ cryptoParams: CryptographicParameters,

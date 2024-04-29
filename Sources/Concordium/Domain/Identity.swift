@@ -199,7 +199,7 @@ public typealias IdentityVerificationResult = Result<Versioned<IdentityObject>, 
 public typealias IdentityVerificationStatusRequest = HTTPRequest<IdentityVerificationStatusResponse>
 
 public enum IdentityVerificationError: Error {
-    /// Identity verification failed with the attached string containing any reason provided by the IP.
+    /// Identity verification failed with the attached string containing any reason provided by the identity provider.
     case failure(String?)
 }
 
