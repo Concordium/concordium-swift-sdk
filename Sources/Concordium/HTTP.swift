@@ -10,14 +10,12 @@ public struct HTTPRequest<Response: Decodable> {
     public init(url: URL) {
         self.init(request: URLRequest(url: url))
     }
-}
 
-public extension HTTPRequest {
     func decodeResponse(data: Data) throws -> Response {
         try JSONDecoder().decode(Response.self, from: data)
     }
 
-    func send(session: URLSession) async throws -> Response {
+    public func send(session: URLSession) async throws -> Response {
         let (data, _) = try await session.data(for: request)
         return try decodeResponse(data: data)
     }

@@ -18,7 +18,17 @@ func createIdentity(client: NodeClient) async throws {
 
     // Construct identity creation request and start verification.
     let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
-    let statusURL = try issueIdentitySync(seed, cryptoParams, identityProvider, identityIndex, anonymityRevocationThreshold) { issuanceStartURL, requestJSON in
+    print("Preparing identity issuance request.")
+    let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
+        seed: seed,
+        cryptoParams: cryptoParams
+    )
+    let reqJSON = try identityRequestBuilder.issuanceRequestJSON(
+        provider: identityProvider,
+        index: identityIndex,
+        anonymityRevocationThreshold: anonymityRevocationThreshold
+    )
+    let statusURL = try issueIdentitySync(reqJSON, identityProvider) { issuanceStartURL, requestJSON in
         // The URL to be invoked when once the ID verification process has started (i.e. once the data has been filled in).
         let callbackURL = URL(string: "concordiumwallet-example://identity-issuer/callback")!
 
@@ -38,26 +48,12 @@ func createIdentity(client: NodeClient) async throws {
 }
 
 func issueIdentitySync(
-    _ seed: WalletSeed,
-    _ cryptoParams: CryptographicParameters,
+    _ issuanceRequestJSON: String,
     _ identityProvider: IdentityProvider,
-    _ identityIndex: IdentityIndex,
-    _ anonymityRevocationThreshold: RevocationThreshold,
     _ runIdentityProviderFlow: (_ issuanceStartURL: URL, _ requestJSON: String) throws -> URL
 ) throws -> IdentityVerificationStatusRequest {
-    print("Preparing identity issuance request.")
-    let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
-        seed: seed,
-        cryptoParams: cryptoParams
-    )
-    let reqJSON = try identityRequestBuilder.issuanceRequestJSON(
-        provider: identityProvider,
-        index: identityIndex,
-        anonymityRevocationThreshold: anonymityRevocationThreshold
-    )
-
     print("Start identity provider issuance flow.")
-    let url = try runIdentityProviderFlow(identityProvider.metadata.issuanceStart, reqJSON)
+    let url = try runIdentityProviderFlow(identityProvider.metadata.issuanceStart, issuanceRequestJSON)
     print("Identity verification process started!")
     return .init(url: url)
 }
@@ -79,11 +75,11 @@ func todoAwaitCallbackWithVerificationPollingURL() -> URL {
 }
 
 func todoAwaitVerification(_ request: IdentityVerificationStatusRequest) async throws -> IdentityVerificationResult {
-    // Block the thread, periodically polling for the verification status.
-    // Return the result once it's no longer "pending" (i.e. the result is non-nil).
+    // Dummy impl that simply blocks the thread and periodically polls the verification status.
     while true {
         let status = try await request.send(session: URLSession.shared)
         if let r = status.result {
+            // Status is no longer "pending"; return the result.
             return r
         }
         try await Task.sleep(nanoseconds: 10 * 1_000_000_000) // check once every 10s
