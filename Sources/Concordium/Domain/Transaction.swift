@@ -109,23 +109,34 @@ public typealias TransactionTime = UInt64
 
 /// The payload for an account transaction (only transfer is supported for now).
 public enum AccountTransactionPayload {
-    case transfer(amount: MicroCCDAmount, receiver: AccountAddress)
+    case transfer(amount: MicroCCDAmount, receiver: AccountAddress, memo: Data? = nil)
 
     var cost: Energy {
         switch self {
         case .transfer:
-            return 300
+            return 300 // including memo doesn't increase cost
         }
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
+        // Based on 'https://github.com/Concordium/concordium-base/blob/2c3255f39afd73543b5b21bbae1074fb069a0abd/rust-src/concordium_base/src/transactions.rs#L931'.
         switch self {
-        case let .transfer(amount, receiver):
-            var res = 0
-            res += buffer.writeInteger(3, as: UInt8.self)
-            res += buffer.writeData(receiver.data)
-            res += buffer.writeInteger(amount, endianness: .big, as: UInt64.self)
-            return res
+        case let .transfer(amount, receiver, memo):
+            if let memo {
+                var res = 0
+                res += buffer.writeInteger(22, as: UInt8.self)
+                res += buffer.writeData(receiver.data)
+                res += buffer.writeInteger(UInt16(memo.count), as: UInt16.self)
+                res += buffer.writeData(memo)
+                res += buffer.writeInteger(amount, endianness: .big, as: UInt64.self)
+                return res
+            } else {
+                var res = 0
+                res += buffer.writeInteger(3, as: UInt8.self)
+                res += buffer.writeData(receiver.data)
+                res += buffer.writeInteger(amount, endianness: .big, as: UInt64.self)
+                return res
+            }
         }
     }
 
@@ -137,17 +148,29 @@ public enum AccountTransactionPayload {
 
     func toGRPCType() -> Concordium_V2_AccountTransactionPayload {
         switch self {
-        case let .transfer(amount, receiver):
+        case let .transfer(amount, receiver, memo):
             var a = Concordium_V2_Amount()
             a.value = amount
             var r = Concordium_V2_AccountAddress()
             r.value = receiver.data
-            var p = Concordium_V2_TransferPayload()
-            p.amount = a
-            p.receiver = r
-            var t = Concordium_V2_AccountTransactionPayload()
-            t.transfer = p
-            return t
+            if let memo {
+                var m = Concordium_V2_Memo()
+                m.value = memo
+                var p = Concordium_V2_TransferWithMemoPayload()
+                p.receiver = r
+                p.memo = m
+                p.amount = a
+                var t = Concordium_V2_AccountTransactionPayload()
+                t.transferWithMemo = p
+                return t
+            } else {
+                var p = Concordium_V2_TransferPayload()
+                p.receiver = r
+                p.amount = a
+                var t = Concordium_V2_AccountTransactionPayload()
+                t.transfer = p
+                return t
+            }
         }
     }
 }

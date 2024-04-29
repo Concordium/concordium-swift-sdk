@@ -4,6 +4,7 @@ import Foundation
 import GRPC
 import MnemonicSwift
 import NIOPosix
+import SwiftCBOR
 
 enum CLIError: Error {
     case unsupportedNetwork(String)
@@ -227,6 +228,9 @@ struct Root: AsyncParsableCommand {
             @Option(help: "Amount of CCD to send.")
             var amount: CCD
 
+            @Option(help: "Optional memo string.")
+            var memo: String?
+
             @Option(help: "Timestamp in Unix time of transaction expiry.")
             var expiry: TransactionTime = 9_999_999_999
 
@@ -238,6 +242,8 @@ struct Root: AsyncParsableCommand {
                     print("CCD amount is out of bounds.")
                     return
                 }
+
+                let memo = memo.map { Data(CBOR.encode($0)) }
 
                 print("Fetching crypto parameters (for commitment key).")
                 let hash = try await withGRPCClient(rootCmd.opts) { client in
@@ -262,6 +268,7 @@ struct Root: AsyncParsableCommand {
                         sender: account,
                         receiver: receiver,
                         amount: microCCDAmount,
+                        memo: memo,
                         expiry: expiry
                     )
                 }
@@ -458,7 +465,7 @@ struct Root: AsyncParsableCommand {
                     )
                     print("Recovering identity.")
                     let res = try await req.send(session: URLSession.shared)
-                    let identity = try res.result.get()
+                    let identity = try res.result.get() // unsafely assume success
 
                     let idxs = AccountCredentialSeedIndexes(
                         identity: IdentitySeedIndexes(providerID: walletCmd.identityProviderID, index: walletCmd.identityIndex),
@@ -520,6 +527,9 @@ struct Root: AsyncParsableCommand {
             @Option(help: "Amount of CCD to send.")
             var amount: CCD
 
+            @Option(help: "Optional memo string.")
+            var memo: String?
+
             @Option(help: "Timestamp in Unix time of transaction expiry.")
             var expiry: TransactionTime = 9_999_999_999
 
@@ -544,9 +554,11 @@ struct Root: AsyncParsableCommand {
                     return
                 }
 
+                let memo = memo.map { Data(CBOR.encode($0)) }
+
                 // Construct and send transaction.
                 let hash = try await withGRPCClient(rootCmd.opts) { client in
-                    try await transfer(client: client, sender: sender, receiver: receiver, amount: microCCDAmount, expiry: expiry)
+                    try await transfer(client: client, sender: sender, receiver: receiver, amount: microCCDAmount, memo: memo, expiry: expiry)
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
             }
@@ -585,7 +597,7 @@ struct Root: AsyncParsableCommand {
     }
 }
 
-func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amount: MicroCCDAmount, expiry: TransactionTime) async throws -> TransactionHash {
+func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amount: MicroCCDAmount, memo: Data?, expiry: TransactionTime) async throws -> TransactionHash {
     print("Attempting to send \(amount) uCCD from account '\(sender.address.base58Check)' to '\(receiver.base58Check)'...")
     print("Resolving next sequence number of sender account.")
     let next = try await client.nextAccountSequenceNumber(address: sender.address)
@@ -593,7 +605,7 @@ func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amo
     let tx = try sender.keys.sign(
         transaction: AccountTransaction(
             sender: sender.address,
-            payload: .transfer(amount: amount, receiver: receiver)
+            payload: .transfer(amount: amount, receiver: receiver, memo: memo)
         ),
         sequenceNumber: next.sequenceNumber,
         expiry: expiry
@@ -627,9 +639,9 @@ func issueIdentity(
     )
 
     print("Start identity provider issuance flow.")
-    let url = try runIdentityProviderFlow(identityProvider.metadata.issuanceStart, reqJSON)
+    let statusURL = try runIdentityProviderFlow(identityProvider.metadata.issuanceStart, reqJSON)
     print("Identity verification process started!")
-    return .init(url: url)
+    return .init(url: statusURL)
 }
 
 func makeIdentityRecoveryRequest(

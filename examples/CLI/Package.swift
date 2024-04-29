@@ -13,6 +13,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.1"),
         .package(url: "https://github.com/Electric-Coin-Company/MnemonicSwift.git", from: "2.2.4"),
+        .package(url: "https://github.com/valpackett/SwiftCBOR.git", from: "0.4.7"),
         .package(url: "https://github.com/vapor/vapor.git", from: "4.93.0"),
 //        .package(url: "https://github.com/Concordium/concordium-swift-sdk.git", branch: "main"),
         .package(path: "../.."),
@@ -24,6 +25,7 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Concordium", package: "concordium-swift-sdk"),
                 "MnemonicSwift",
+                "SwiftCBOR",
                 .product(name: "Vapor", package: "vapor"),
             ]
         ),
