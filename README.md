@@ -111,3 +111,24 @@ make fmt
 It may also be [invoked directly from XCode](https://github.com/nicklockwood/SwiftFormat#trigger-plugin-from-xcode)
 by right-clicking on package root (i.e. `concordium-swift-sdk`) in the Project Navigator pane.
 The tool is then listed under "SwiftFormat" as "SwiftFormatPlugin" in the context menu for formatting the entire project.
+
+## Release new version
+
+To ship a new release for version `<version>`, push a commit that inserts the version and release date 
+to [`CHANGELOG.md`](./CHANGELOG.md), i.e., below `## [Unreleased]`, insert
+
+```markdown
+## [<version>] - <date>
+```
+
+Then simply push an *annotated* tag named `<version>` for this commit:
+
+```shell
+git tag -a <version>
+```
+
+Give the tag a message that explains briefly what changed.
+This will trigger a [workflow](./.github/workflows/publish-release.yml) that publishes a GitHub release for the tag.
+The release notes are constructed by concatenating the tag message with the changelog section 
+
+Note that the GitHub release is really used only for presentation - the actual release is defined by the tag.

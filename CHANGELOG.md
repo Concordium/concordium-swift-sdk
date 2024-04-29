@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2024-04-29
+
 ### Added
 
 - `AccountTransactionPayload.transfer(...)`: Add optional `memo` field for including a memo message in the transfer.
