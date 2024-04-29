@@ -196,9 +196,10 @@ public struct Metadata: Decodable {
 }
 
 public typealias IdentityVerificationResult = Result<Versioned<IdentityObject>, IdentityVerificationError>
+public typealias IdentityVerificationStatusRequest = HTTPRequest<IdentityVerificationStatusResponse>
 
 public enum IdentityVerificationError: Error {
-    /// Identity verification failed with the attached string containing the reason provided by the IP.
+    /// Identity verification failed with the attached string containing any reason provided by the IP.
     case failure(String?)
 }
 
@@ -253,6 +254,25 @@ public struct IdentityVerificationStatusResponse: Decodable {
             return .success(identity)
         }
     }
+}
+
+public typealias IdentityRecoveryRequest = HTTPRequest<IdentityRecoveryResponse>
+
+public struct IdentityRecoveryResponse: Decodable {
+    public var result: Result<Versioned<IdentityObject>, IdentityRecoveryError>
+
+    public init(from decoder: any Decoder) throws {
+        do {
+            result = try .failure(.init(from: decoder))
+        } catch {
+            result = try .success(.init(from: decoder))
+        }
+    }
+}
+
+public struct IdentityRecoveryError: Decodable, Error {
+    public var code: Int
+    public var message: String
 }
 
 /// The supported set of attributes which are stored on identities and optionally revealed by accounts.

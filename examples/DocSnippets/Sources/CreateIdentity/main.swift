@@ -44,7 +44,7 @@ func issueIdentitySync(
     _ identityIndex: IdentityIndex,
     _ anonymityRevocationThreshold: RevocationThreshold,
     _ runIdentityProviderFlow: (_ issuanceStartURL: URL, _ requestJSON: String) throws -> URL
-) throws -> IdentityIssuanceRequest {
+) throws -> IdentityVerificationStatusRequest {
     print("Preparing identity issuance request.")
     let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
         seed: seed,
@@ -78,7 +78,7 @@ func todoAwaitCallbackWithVerificationPollingURL() -> URL {
     fatalError("'awaitCallbackWithVerificationPollingURL' not implemented")
 }
 
-func todoFetchIdentityIssuance(_ request: IdentityIssuanceRequest) async throws -> IdentityVerificationResult {
+func todoFetchIdentityIssuance(_ request: IdentityVerificationStatusRequest) async throws -> IdentityVerificationResult {
     // Block the thread, periodically polling for the verification status.
     // Return the result once it's no longer "pending" (i.e. the result is non-nil).
     while true {

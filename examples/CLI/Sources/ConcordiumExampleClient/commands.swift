@@ -346,7 +346,7 @@ struct Root: AsyncParsableCommand {
                     p.waitUntilExit()
                 }
 
-                func fetchIdentityIssuance(request: IdentityIssuanceRequest) async throws -> IdentityVerificationResult {
+                func fetchIdentityIssuance(request: IdentityVerificationStatusRequest) async throws -> IdentityVerificationResult {
                     var delaySecs: UInt64 = 1
                     while true {
                         print("Attempting to fetch identity.")
@@ -404,8 +404,13 @@ struct Root: AsyncParsableCommand {
                     )
                     print("Recovering identity.")
                     let identity = try await req.send(session: URLSession.shared)
-                    print("Identity recovered successfully:")
-                    print(identity)
+                    switch identity.result {
+                    case let .failure(err):
+                        print("Identity recovery failed: \(err)")
+                    case let .success(identity):
+                        print("Identity recovered successfully:")
+                        print(identity)
+                    }
                 }
             }
 
@@ -452,7 +457,8 @@ struct Root: AsyncParsableCommand {
                         identityIndex: walletCmd.identityIndex
                     )
                     print("Recovering identity.")
-                    let identity = try await req.send(session: URLSession.shared)
+                    let res = try await req.send(session: URLSession.shared)
+                    let identity = try res.result.get()
 
                     let idxs = AccountCredentialSeedIndexes(
                         identity: IdentitySeedIndexes(providerID: walletCmd.identityProviderID, index: walletCmd.identityIndex),
@@ -608,7 +614,7 @@ func issueIdentity(
     identityIndex: IdentityIndex,
     anonymityRevocationThreshold: RevocationThreshold,
     runIdentityProviderFlow: (_ issuanceStartURL: URL, _ requestJSON: String) throws -> URL
-) throws -> IdentityIssuanceRequest {
+) throws -> IdentityVerificationStatusRequest {
     print("Preparing identity issuance request.")
     let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
         seed: seed,
@@ -631,7 +637,7 @@ func makeIdentityRecoveryRequest(
     cryptoParams: CryptographicParameters,
     identityProvider: IdentityProvider,
     identityIndex: IdentityIndex
-) throws -> IdentityRecoverRequest {
+) throws -> IdentityRecoveryRequest {
     let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
         seed: seed,
         cryptoParams: cryptoParams

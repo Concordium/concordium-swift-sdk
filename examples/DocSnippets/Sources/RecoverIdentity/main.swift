@@ -21,8 +21,14 @@ func recoverIdentity(client: NodeClient) async throws {
     let identityReq = try makeIdentityRecoveryRequest(seed, cryptoParams, identityProvider, identityIndex)
 
     // Execute request.
-    let identity = try await identityReq.send(session: URLSession.shared)
-    print("Successfully recovered identity: \(identity)")
+    let identityRes = try await identityReq.send(session: URLSession.shared)
+    switch identityRes.result {
+    case let .failure(err):
+        print("Identity recovery failed: \(err)")
+    case let .success(identity):
+        print("Identity recovered successfully:")
+        print(identity)
+    }
 }
 
 // Duplicated in 'CreateAccount/main.swift'.
@@ -31,7 +37,7 @@ func makeIdentityRecoveryRequest(
     _ cryptoParams: CryptographicParameters,
     _ identityProvider: IdentityProvider,
     _ identityIndex: IdentityIndex
-) throws -> IdentityRecoverRequest {
+) throws -> IdentityRecoveryRequest {
     let identityRequestBuilder = SeedBasedIdentityRequestBuilder(
         seed: seed,
         cryptoParams: cryptoParams
