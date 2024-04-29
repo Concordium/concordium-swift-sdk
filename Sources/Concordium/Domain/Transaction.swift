@@ -114,7 +114,7 @@ public enum AccountTransactionPayload {
     var cost: Energy {
         switch self {
         case .transfer:
-            return 300 // including memo doesn't cost extra
+            return 300 // including memo doesn't increase cost
         }
     }
 
