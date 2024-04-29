@@ -5,13 +5,25 @@ interact with the [Concordium Blockchain](https://concordium.com).
 
 The main purpose of the SDK is to facilitate development of mobile wallet apps for iOS devices.
 
+Features:
+
+- Creation and recovery of seed based identities.
+- Creation and deployment of seed based credentials/accounts.
+- Construction, signing, and sending of transfer transactions (with optional memo) from legacy or seed based accounts.
+- Support for signing arbitrary binary messages.
+- Support for decrypting and using accounts created using the legacy wallet.
+- Utilities for working with amounts in CCD and fungible CIS-2 tokens of arbitrary size.
+
+### Cryptographic functions
+
 Concordium specific cryptographic functions that are implemented in Rust are exposed as a separate Swift library
 [`ConcordiumWalletCrypto`](https://github.com/Concordium/concordium-wallet-crypto-swift).
 That library [used to](https://github.com/Concordium/concordium-wallet-crypto-swift?tab=readme-ov-file#prior-usage)
 merely host a SwiftPM package for exposing a single binary artifact of an older crypto library
 which is still used in the [iOS reference wallet](https://github.com/Concordium/concordium-reference-wallet-ios/).
 
-Once this SDK is ready for production, it will completely replace this old library.
+This SDK is intended to replace this old library, but hasn't yet reached full feature parity
+([#42](https://github.com/Concordium/concordium-swift-sdk/issues/42)).
 
 ### Supported platforms
 
