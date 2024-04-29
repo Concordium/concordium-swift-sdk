@@ -28,7 +28,7 @@ func createIdentity(client: NodeClient) async throws {
         index: identityIndex,
         anonymityRevocationThreshold: anonymityRevocationThreshold
     )
-    let identityStatusURL = try issueIdentitySync(reqJSON, identityProvider) { issuanceStartURL, requestJSON in
+    let statusURL = try issueIdentitySync(reqJSON, identityProvider) { issuanceStartURL, requestJSON in
         // The URL to be invoked when once the ID verification process has started (i.e. once the data has been filled in).
         let callbackURL = URL(string: "concordiumwallet-example://identity-issuer/callback")!
 
@@ -39,7 +39,7 @@ func createIdentity(client: NodeClient) async throws {
         return todoAwaitCallbackWithVerificationPollingURL()
     }
 
-    let res = try await todoAwaitVerification(identityStatusURL)
+    let res = try await todoAwaitVerification(statusURL)
     if case let .success(identity) = res {
         print("Identity issued successfully: \(identity))")
     } else {
