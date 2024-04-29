@@ -465,7 +465,7 @@ struct Root: AsyncParsableCommand {
                     )
                     print("Recovering identity.")
                     let res = try await req.send(session: URLSession.shared)
-                    let identity = try res.result.get()
+                    let identity = try res.result.get() // unsafely assume success
 
                     let idxs = AccountCredentialSeedIndexes(
                         identity: IdentitySeedIndexes(providerID: walletCmd.identityProviderID, index: walletCmd.identityIndex),
@@ -639,9 +639,9 @@ func issueIdentity(
     )
 
     print("Start identity provider issuance flow.")
-    let url = try runIdentityProviderFlow(identityProvider.metadata.issuanceStart, reqJSON)
+    let statusURL = try runIdentityProviderFlow(identityProvider.metadata.issuanceStart, reqJSON)
     print("Identity verification process started!")
-    return .init(url: url)
+    return .init(url: statusURL)
 }
 
 func makeIdentityRecoveryRequest(
