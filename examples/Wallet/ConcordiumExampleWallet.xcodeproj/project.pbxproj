@@ -1,0 +1,459 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		61401ACD2BC3333000F6EFA2 /* ConcordiumExampleWalletApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61401ACC2BC3333000F6EFA2 /* ConcordiumExampleWalletApp.swift */; };
+		61401AD12BC3333100F6EFA2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 61401AD02BC3333100F6EFA2 /* Assets.xcassets */; };
+		61401AD52BC3333100F6EFA2 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 61401AD42BC3333100F6EFA2 /* Preview Assets.xcassets */; };
+		61401AE12BC3340400F6EFA2 /* DisposableNodeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61401ADB2BC3340400F6EFA2 /* DisposableNodeClient.swift */; };
+		61401AE32BC3340400F6EFA2 /* AccountDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61401ADD2BC3340400F6EFA2 /* AccountDetailsView.swift */; };
+		61401AE52BC3340400F6EFA2 /* NodeClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61401ADF2BC3340400F6EFA2 /* NodeClientProvider.swift */; };
+		61401AEA2BC3365800F6EFA2 /* Concordium in Frameworks */ = {isa = PBXBuildFile; productRef = 61401AE92BC3365800F6EFA2 /* Concordium */; };
+		CD3345232BC42CA900FE51A7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CD33451E2BC42CA900FE51A7 /* Assets.xcassets */; };
+		CD3345242BC42CA900FE51A7 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CD33451F2BC42CA900FE51A7 /* Preview Assets.xcassets */; };
+		CD3345252BC42CA900FE51A7 /* SeedProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3345212BC42CA900FE51A7 /* SeedProvider.swift */; };
+		CD3345262BC42CA900FE51A7 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3345222BC42CA900FE51A7 /* MainView.swift */; };
+		CD3345292BC42CF200FE51A7 /* MnemonicSwift in Frameworks */ = {isa = PBXBuildFile; productRef = CD3345282BC42CF200FE51A7 /* MnemonicSwift */; };
+		CD40B4432BCDA83B00A6D600 /* Wallet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD40B4422BCDA83B00A6D600 /* Wallet.swift */; };
+		CD40B44C2BCE5B6D00A6D600 /* SeedsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD40B44B2BCE5B6D00A6D600 /* SeedsView.swift */; };
+		CD40B4502BCE5BE500A6D600 /* SeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD40B44F2BCE5BE500A6D600 /* SeedView.swift */; };
+		CDFA2D662BCFD5C600A7C70B /* ViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDFA2D652BCFD5C600A7C70B /* ViewModel.swift */; };
+		CDFA2D682BCFD70A00A7C70B /* Model.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDFA2D672BCFD70A00A7C70B /* Model.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		61401AC92BC3333000F6EFA2 /* ConcordiumExampleWallet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ConcordiumExampleWallet.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		61401ACC2BC3333000F6EFA2 /* ConcordiumExampleWalletApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcordiumExampleWalletApp.swift; sourceTree = "<group>"; };
+		61401AD02BC3333100F6EFA2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		61401AD22BC3333100F6EFA2 /* ConcordiumExampleWallet.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ConcordiumExampleWallet.entitlements; sourceTree = "<group>"; };
+		61401AD42BC3333100F6EFA2 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		61401ADB2BC3340400F6EFA2 /* DisposableNodeClient.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DisposableNodeClient.swift; sourceTree = "<group>"; };
+		61401ADD2BC3340400F6EFA2 /* AccountDetailsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountDetailsView.swift; sourceTree = "<group>"; };
+		61401ADF2BC3340400F6EFA2 /* NodeClientProvider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NodeClientProvider.swift; sourceTree = "<group>"; };
+		61401AE82BC3345400F6EFA2 /* concordium-swift-sdk */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "concordium-swift-sdk"; path = ../..; sourceTree = "<group>"; };
+		CD33451E2BC42CA900FE51A7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CD33451F2BC42CA900FE51A7 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		CD3345212BC42CA900FE51A7 /* SeedProvider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeedProvider.swift; sourceTree = "<group>"; };
+		CD3345222BC42CA900FE51A7 /* MainView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
+		CD40B4422BCDA83B00A6D600 /* Wallet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Wallet.swift; sourceTree = "<group>"; };
+		CD40B44B2BCE5B6D00A6D600 /* SeedsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeedsView.swift; sourceTree = "<group>"; };
+		CD40B44F2BCE5BE500A6D600 /* SeedView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeedView.swift; sourceTree = "<group>"; };
+		CDFA2D652BCFD5C600A7C70B /* ViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModel.swift; sourceTree = "<group>"; };
+		CDFA2D672BCFD70A00A7C70B /* Model.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		61401AC62BC3333000F6EFA2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CD3345292BC42CF200FE51A7 /* MnemonicSwift in Frameworks */,
+				61401AEA2BC3365800F6EFA2 /* Concordium in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		61401AC02BC3333000F6EFA2 = {
+			isa = PBXGroup;
+			children = (
+				61401ACB2BC3333000F6EFA2 /* ConcordiumExampleWallet */,
+				61401ACA2BC3333000F6EFA2 /* Products */,
+				61401AE72BC3345400F6EFA2 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		61401ACA2BC3333000F6EFA2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				61401AC92BC3333000F6EFA2 /* ConcordiumExampleWallet.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		61401ACB2BC3333000F6EFA2 /* ConcordiumExampleWallet */ = {
+			isa = PBXGroup;
+			children = (
+				CD40B4422BCDA83B00A6D600 /* Wallet.swift */,
+				CD40B4442BCE52DA00A6D600 /* Views */,
+				CD33451E2BC42CA900FE51A7 /* Assets.xcassets */,
+				CD3345222BC42CA900FE51A7 /* MainView.swift */,
+				CD3345202BC42CA900FE51A7 /* Preview Content */,
+				CD3345212BC42CA900FE51A7 /* SeedProvider.swift */,
+				61401ADD2BC3340400F6EFA2 /* AccountDetailsView.swift */,
+				61401ADB2BC3340400F6EFA2 /* DisposableNodeClient.swift */,
+				61401ADF2BC3340400F6EFA2 /* NodeClientProvider.swift */,
+				61401ACC2BC3333000F6EFA2 /* ConcordiumExampleWalletApp.swift */,
+				61401AD02BC3333100F6EFA2 /* Assets.xcassets */,
+				61401AD22BC3333100F6EFA2 /* ConcordiumExampleWallet.entitlements */,
+				61401AD32BC3333100F6EFA2 /* Preview Content */,
+				CDFA2D652BCFD5C600A7C70B /* ViewModel.swift */,
+				CDFA2D672BCFD70A00A7C70B /* Model.swift */,
+			);
+			path = ConcordiumExampleWallet;
+			sourceTree = "<group>";
+		};
+		61401AD32BC3333100F6EFA2 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				61401AD42BC3333100F6EFA2 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		61401AE72BC3345400F6EFA2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				61401AE82BC3345400F6EFA2 /* concordium-swift-sdk */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		CD3345202BC42CA900FE51A7 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				CD33451F2BC42CA900FE51A7 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		CD40B4442BCE52DA00A6D600 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				CD40B44F2BCE5BE500A6D600 /* SeedView.swift */,
+				CD40B44B2BCE5B6D00A6D600 /* SeedsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		61401AC82BC3333000F6EFA2 /* ConcordiumExampleWallet */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 61401AD82BC3333100F6EFA2 /* Build configuration list for PBXNativeTarget "ConcordiumExampleWallet" */;
+			buildPhases = (
+				61401AC52BC3333000F6EFA2 /* Sources */,
+				61401AC62BC3333000F6EFA2 /* Frameworks */,
+				61401AC72BC3333000F6EFA2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ConcordiumExampleWallet;
+			packageProductDependencies = (
+				61401AE92BC3365800F6EFA2 /* Concordium */,
+				CD3345282BC42CF200FE51A7 /* MnemonicSwift */,
+			);
+			productName = ConcordiumExampleWallet;
+			productReference = 61401AC92BC3333000F6EFA2 /* ConcordiumExampleWallet.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		61401AC12BC3333000F6EFA2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1420;
+				LastUpgradeCheck = 1420;
+				TargetAttributes = {
+					61401AC82BC3333000F6EFA2 = {
+						CreatedOnToolsVersion = 14.2;
+					};
+				};
+			};
+			buildConfigurationList = 61401AC42BC3333000F6EFA2 /* Build configuration list for PBXProject "ConcordiumExampleWallet" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 61401AC02BC3333000F6EFA2;
+			packageReferences = (
+				CD3345272BC42CF200FE51A7 /* XCRemoteSwiftPackageReference "MnemonicSwift" */,
+			);
+			productRefGroup = 61401ACA2BC3333000F6EFA2 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				61401AC82BC3333000F6EFA2 /* ConcordiumExampleWallet */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		61401AC72BC3333000F6EFA2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CD3345242BC42CA900FE51A7 /* Preview Assets.xcassets in Resources */,
+				61401AD52BC3333100F6EFA2 /* Preview Assets.xcassets in Resources */,
+				CD3345232BC42CA900FE51A7 /* Assets.xcassets in Resources */,
+				61401AD12BC3333100F6EFA2 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		61401AC52BC3333000F6EFA2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CD40B4432BCDA83B00A6D600 /* Wallet.swift in Sources */,
+				61401AE52BC3340400F6EFA2 /* NodeClientProvider.swift in Sources */,
+				CD3345262BC42CA900FE51A7 /* MainView.swift in Sources */,
+				61401AE32BC3340400F6EFA2 /* AccountDetailsView.swift in Sources */,
+				CDFA2D662BCFD5C600A7C70B /* ViewModel.swift in Sources */,
+				61401AE12BC3340400F6EFA2 /* DisposableNodeClient.swift in Sources */,
+				CDFA2D682BCFD70A00A7C70B /* Model.swift in Sources */,
+				61401ACD2BC3333000F6EFA2 /* ConcordiumExampleWalletApp.swift in Sources */,
+				CD3345252BC42CA900FE51A7 /* SeedProvider.swift in Sources */,
+				CD40B4502BCE5BE500A6D600 /* SeedView.swift in Sources */,
+				CD40B44C2BCE5B6D00A6D600 /* SeedsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		61401AD62BC3333100F6EFA2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		61401AD72BC3333100F6EFA2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		61401AD92BC3333100F6EFA2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ConcordiumExampleWallet/ConcordiumExampleWallet.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"ConcordiumExampleWallet/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 12.7;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.concordium.ConcordiumExampleWallet;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		61401ADA2BC3333100F6EFA2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ConcordiumExampleWallet/ConcordiumExampleWallet.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"ConcordiumExampleWallet/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 12.7;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.concordium.ConcordiumExampleWallet;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		61401AC42BC3333000F6EFA2 /* Build configuration list for PBXProject "ConcordiumExampleWallet" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				61401AD62BC3333100F6EFA2 /* Debug */,
+				61401AD72BC3333100F6EFA2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		61401AD82BC3333100F6EFA2 /* Build configuration list for PBXNativeTarget "ConcordiumExampleWallet" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				61401AD92BC3333100F6EFA2 /* Debug */,
+				61401ADA2BC3333100F6EFA2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CD3345272BC42CF200FE51A7 /* XCRemoteSwiftPackageReference "MnemonicSwift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Electric-Coin-Company/MnemonicSwift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.2.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		61401AE92BC3365800F6EFA2 /* Concordium */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Concordium;
+		};
+		CD3345282BC42CF200FE51A7 /* MnemonicSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CD3345272BC42CF200FE51A7 /* XCRemoteSwiftPackageReference "MnemonicSwift" */;
+			productName = MnemonicSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 61401AC12BC3333000F6EFA2 /* Project object */;
+}
