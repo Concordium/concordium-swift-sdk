@@ -69,13 +69,13 @@ public class GRPCNodeClient: NodeClient {
         var req = Concordium_V2_SendBlockItemRequest()
         req.accountTransaction = transaction.toGRPCType()
         let res = try await grpc.sendBlockItem(req).response.get()
-        return res.value
+        return TransactionHash(value: res.value)
     }
 
     public func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash {
         var req = Concordium_V2_SendBlockItemRequest()
         req.credentialDeployment = deployment.toGRPCType()
         let res = try await grpc.sendBlockItem(req).response.get()
-        return res.value
+        return TransactionHash(value: res.value)
     }
 }

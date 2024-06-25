@@ -100,79 +100,121 @@ public struct SignedAccountTransaction {
     }
 }
 
-/// Energy is used to count exact execution cost.
-/// This cost is then converted to CCD amounts.
-public typealias Energy = UInt64
-
-/// Transaction time specified as seconds since unix epoch.
-public typealias TransactionTime = UInt64
-
 /// The payload for an account transaction (only transfer is supported for now).
-public enum AccountTransactionPayload {
+public enum AccountTransactionPayload: Serialize {
+    case deployModule(module: WasmModule)
+//    case initContract(amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter)
+    // case updateContract
     case transfer(amount: MicroCCDAmount, receiver: AccountAddress, memo: Data? = nil)
+    // case addBaker
+    // case removeBaker
+    // case updateBakerStake
+    // case updateBakerStakeEarnings
+    // case updateBakerKeys
+    // case updateCredentialKeys
+    // case encryptedAmountTransfer(memo: Data?)
+    // case transferToEncrypted
+    // case transferToPublic
+    case transferWithSchedule(receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Data? = nil)
+    // case updateCredentials
+    // case registerData
+    // case configureBaker
+    // case configureDelegation
 
     var cost: Energy {
         switch self {
+        case let .deployModule(module):
+            return Energy(module.source.count) / 10
         case .transfer:
             return 300 // including memo doesn't increase cost
+        case let .transferWithSchedule(_, schedule, _):
+            return Energy(schedule.count) * (300 + 64) // including memo doesn't increase cost
         }
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
+        var res = 0
+
         // Based on 'https://github.com/Concordium/concordium-base/blob/2c3255f39afd73543b5b21bbae1074fb069a0abd/rust-src/concordium_base/src/transactions.rs#L931'.
         switch self {
+        case let .deployModule(module):
+            res += buffer.writeInteger(0, as: UInt8.self)
+            res += buffer.writeSerializable(module)
         case let .transfer(amount, receiver, memo):
             if let memo {
-                var res = 0
                 res += buffer.writeInteger(22, as: UInt8.self)
                 res += buffer.writeData(receiver.data)
-                res += buffer.writeInteger(UInt16(memo.count), as: UInt16.self)
-                res += buffer.writeData(memo)
-                res += buffer.writeInteger(amount, endianness: .big, as: UInt64.self)
-                return res
+                res += buffer.writeData(memo, lengthPrefix: UInt16.self)
+                res += buffer.writeInteger(amount)
             } else {
-                var res = 0
                 res += buffer.writeInteger(3, as: UInt8.self)
                 res += buffer.writeData(receiver.data)
-                res += buffer.writeInteger(amount, endianness: .big, as: UInt64.self)
-                return res
+                res += buffer.writeInteger(amount)
             }
-        }
-    }
-
-    public func serialize() -> Data {
-        var buf = ByteBuffer()
-        serializeInto(buffer: &buf)
-        return Data(buffer: buf)
-    }
-
-    func toGRPCType() -> Concordium_V2_AccountTransactionPayload {
-        switch self {
-        case let .transfer(amount, receiver, memo):
-            var a = Concordium_V2_Amount()
-            a.value = amount
-            var r = Concordium_V2_AccountAddress()
-            r.value = receiver.data
+        case let .transferWithSchedule(receiver, schedule, memo):
             if let memo {
-                var m = Concordium_V2_Memo()
-                m.value = memo
-                var p = Concordium_V2_TransferWithMemoPayload()
-                p.receiver = r
-                p.memo = m
-                p.amount = a
-                var t = Concordium_V2_AccountTransactionPayload()
-                t.transferWithMemo = p
-                return t
+                res += buffer.writeInteger(24, as: UInt8.self)
+                res += buffer.writeData(receiver.data)
+                res += buffer.writeData(memo, lengthPrefix: UInt16.self)
+                res += buffer.writeSerializable(list: schedule, lengthPrefix: UInt8.self)
             } else {
-                var p = Concordium_V2_TransferPayload()
-                p.receiver = r
-                p.amount = a
-                var t = Concordium_V2_AccountTransactionPayload()
-                t.transfer = p
-                return t
+                res += buffer.writeInteger(19, as: UInt8.self)
+                res += buffer.writeData(receiver.data)
+                res += buffer.writeSerializable(list: schedule, lengthPrefix: UInt8.self)
             }
         }
+
+        return res
     }
+//
+//    func toGRPCType() -> Concordium_V2_AccountTransactionPayload {
+//        var t = Concordium_V2_AccountTransactionPayload()
+//        switch self {
+//        case let .deployModule(module):
+//            t.deployModule = module.toGRPC()
+//        case let .transfer(amount, receiver, memo):
+//            var a = Concordium_V2_Amount()
+//            a.value = amount
+//            var r = Concordium_V2_AccountAddress()
+//            r.value = receiver.data
+//            if let memo {
+//                var m = Concordium_V2_Memo()
+//                m.value = memo
+//                var p = Concordium_V2_TransferWithMemoPayload()
+//                p.receiver = r
+//                p.memo = m
+//                p.amount = a
+//                var t = Concordium_V2_AccountTransactionPayload()
+//                t.transferWithMemo = p
+//            } else {
+//                var p = Concordium_V2_TransferPayload()
+//                p.receiver = r
+//                p.amount = a
+//                var t = Concordium_V2_AccountTransactionPayload()
+//                t.transfer = p
+//            }
+//        case let .transferWithSchedule(receiver, schedule, memo):
+//            if let memo {
+//                var m = Concordium_V2_Memo()
+//                m.value = memo
+//                var p = Concordium_V2_()
+//                p.receiver = r
+//                p.memo = m
+//                p.amount = a
+//                var t = Concordium_V2_AccountTransactionPayload()
+//                t.transferWithMemo = p
+//            } else {
+//                var p = Concordium_V2_TransferPayload()
+//                p.receiver = r
+//                p.amount = a
+//                var t = Concordium_V2_AccountTransactionPayload()
+//                t.transfer = p
+//            }
+//        }
+//
+//        return t
+//
+//    }
 }
 
 /// Header of an account transaction that contains basic data to check whether

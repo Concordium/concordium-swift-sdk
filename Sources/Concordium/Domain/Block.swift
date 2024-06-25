@@ -1,7 +1,5 @@
 import Foundation
 
-public typealias BlockHash = Data // 32 bytes
-
 public enum BlockIdentifier {
     case lastFinal
     case best
@@ -20,8 +18,7 @@ public enum BlockIdentifier {
             b.best = Concordium_V2_Empty()
             return b
         case let .hash(hash):
-            var h = Concordium_V2_BlockHash()
-            h.value = hash
+            let h = hash.toGRPC()
             var b = Concordium_V2_BlockHashInput()
             b.given = h
             return b
@@ -46,5 +43,3 @@ public enum BlockIdentifier {
         }
     }
 }
-
-public typealias TransactionHash = Data // 32 bytes (SHA256)

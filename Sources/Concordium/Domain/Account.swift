@@ -154,11 +154,11 @@ public struct Release {
     /// List of transaction hashes that contribute a balance to this release.
     public var transactions: [TransactionHash]
 
-    static func fromGRPCType(_ grpc: Concordium_V2_Release) -> Self {
-        .init(
+    static func fromGRPCType(_ grpc: Concordium_V2_Release) throws -> Self {
+        try .init(
             timestamp: dateFromUnixTimeMillis(grpc.timestamp.value),
             amount: grpc.amount.value,
-            transactions: grpc.transactions.map(\.value)
+            transactions: grpc.transactions.map { try .fromGRPC($0) }
         )
     }
 }
@@ -171,9 +171,9 @@ public struct ReleaseSchedule {
     /// List of timestamped releases in increasing order of timestamps.
     public var schedule: [Release]
 
-    static func fromGRPCType(_ grpc: Concordium_V2_ReleaseSchedule) -> Self {
-        .init(total: grpc.total.value, schedule: grpc.schedules.map {
-            .fromGRPCType($0)
+    static func fromGRPCType(_ grpc: Concordium_V2_ReleaseSchedule) throws -> Self {
+        try .init(total: grpc.total.value, schedule: grpc.schedules.map {
+            try .fromGRPCType($0)
         })
     }
 }
