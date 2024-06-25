@@ -1,13 +1,13 @@
 import Foundation
 
-public enum BlockIdentifier {
+public enum BlockIdentifier: ToGRPC {
     case lastFinal
     case best
     case hash(BlockHash)
     case absoluteHeight(UInt64)
     case relativeHeight(genesisIndex: UInt32, height: UInt64, restrictedToGenesisIndex: Bool)
 
-    func toGRPCType() -> Concordium_V2_BlockHashInput {
+    func toGRPC() -> Concordium_V2_BlockHashInput {
         switch self {
         case .lastFinal:
             var b = Concordium_V2_BlockHashInput()

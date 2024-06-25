@@ -25,26 +25,26 @@ public class GRPCNodeClient: NodeClient {
     }
 
     public func cryptographicParameters(block: BlockIdentifier) async throws -> CryptographicParameters {
-        let req = block.toGRPCType()
+        let req = block.toGRPC()
         let res = try await grpc.getCryptographicParameters(req).response.get()
-        return .fromGRPCType(res)
+        return .fromGRPC(res)
     }
 
     public func identityProviders(block: BlockIdentifier) async throws -> [IdentityProviderInfo] {
-        let req = block.toGRPCType()
+        let req = block.toGRPC()
         var res: [IdentityProviderInfo] = []
         let call = grpc.getIdentityProviders(req) {
-            res.append(.fromGRPCType($0))
+            res.append(.fromGRPC($0))
         }
         _ = try await call.status.get()
         return res
     }
 
     public func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevokerInfo] {
-        let req = block.toGRPCType()
+        let req = block.toGRPC()
         var res: [AnonymityRevokerInfo] = []
         let call = grpc.getAnonymityRevokers(req) {
-            res.append(.fromGRPCType($0))
+            res.append(.fromGRPC($0))
         }
         _ = try await call.status.get()
         return res
@@ -54,27 +54,27 @@ public class GRPCNodeClient: NodeClient {
         var req = Concordium_V2_AccountAddress()
         req.value = address.data
         let res = try await grpc.getNextAccountSequenceNumber(req).response.get()
-        return .fromGRPCType(res)
+        return .fromGRPC(res)
     }
 
     public func info(account: AccountIdentifier, block: BlockIdentifier) async throws -> AccountInfo {
         var req = Concordium_V2_AccountInfoRequest()
-        req.accountIdentifier = account.toGRPCType()
-        req.blockHash = block.toGRPCType()
+        req.accountIdentifier = account.toGRPC()
+        req.blockHash = block.toGRPC()
         let res = try await grpc.getAccountInfo(req).response.get()
-        return try .fromGRPCType(res)
+        return try .fromGRPC(res)
     }
 
     public func send(transaction: SignedAccountTransaction) async throws -> TransactionHash {
         var req = Concordium_V2_SendBlockItemRequest()
-        req.accountTransaction = transaction.toGRPCType()
+        req.accountTransaction = transaction.toGRPC()
         let res = try await grpc.sendBlockItem(req).response.get()
         return TransactionHash(value: res.value)
     }
 
     public func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash {
         var req = Concordium_V2_SendBlockItemRequest()
-        req.credentialDeployment = deployment.toGRPCType()
+        req.credentialDeployment = deployment.toGRPC()
         let res = try await grpc.sendBlockItem(req).response.get()
         return TransactionHash(value: res.value)
     }
