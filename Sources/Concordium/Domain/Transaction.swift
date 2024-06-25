@@ -101,11 +101,11 @@ public struct SignedAccountTransaction: ToGRPC {
 }
 
 /// The payload for an account transaction (only transfer is supported for now).
-public enum AccountTransactionPayload: Serialize, FromGRPC {
-    case deployModule(module: WasmModule)
+public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC {
+    case deployModule(_ module: WasmModule)
 //    case initContract(amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter)
     // case updateContract
-    case transfer(amount: MicroCCDAmount, receiver: AccountAddress, memo: Data? = nil)
+    case transfer(amount: MicroCCDAmount, receiver: AccountAddress, memo: Memo? = nil)
     // case addBaker
     // case removeBaker
     // case updateBakerStake
@@ -115,7 +115,7 @@ public enum AccountTransactionPayload: Serialize, FromGRPC {
     // case encryptedAmountTransfer(memo: Data?)
     // case transferToEncrypted
     // case transferToPublic
-    case transferWithSchedule(receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Data? = nil)
+    case transferWithSchedule(receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Memo? = nil)
     // case updateCredentials
     // case registerData
     // case configureBaker
@@ -144,7 +144,7 @@ public enum AccountTransactionPayload: Serialize, FromGRPC {
             if let memo {
                 res += buffer.writeInteger(22, as: UInt8.self)
                 res += buffer.writeData(receiver.data)
-                res += buffer.writeData(memo, lengthPrefix: UInt16.self)
+                res += buffer.writeSerializable(memo)
                 res += buffer.writeInteger(amount)
             } else {
                 res += buffer.writeInteger(3, as: UInt8.self)
@@ -155,7 +155,7 @@ public enum AccountTransactionPayload: Serialize, FromGRPC {
             if let memo {
                 res += buffer.writeInteger(24, as: UInt8.self)
                 res += buffer.writeData(receiver.data)
-                res += buffer.writeData(memo, lengthPrefix: UInt16.self)
+                res += buffer.writeSerializable(memo)
                 res += buffer.writeSerializable(list: schedule, lengthPrefix: UInt8.self)
             } else {
                 res += buffer.writeInteger(19, as: UInt8.self)
@@ -166,24 +166,61 @@ public enum AccountTransactionPayload: Serialize, FromGRPC {
 
         return res
     }
-    
+
+    public static func deserialize(_ data: inout Cursor) -> AccountTransactionPayload? {
+        guard let type = data.parseUInt(UInt8.self) else { return nil }
+
+        switch type {
+        case 0:
+            guard let module = WasmModule.deserialize(&data) else { return nil }
+            return AccountTransactionPayload.deployModule(module)
+        case 3, 22:
+            guard let receiver = AccountAddress.deserialize(&data) else { return nil }
+            var memo: Memo?
+            if type == 22 {
+                guard let m = Memo.deserialize(&data) else { return nil }
+                memo = m
+            }
+            guard let amount = data.parseUInt(UInt64.self) else { return nil }
+            return .transfer(amount: amount, receiver: receiver, memo: memo)
+        case 19, 24:
+            guard let receiver = AccountAddress.deserialize(&data) else { return nil }
+            var memo: Memo?
+            if type == 24 {
+                guard let m = Memo.deserialize(&data) else { return nil }
+                memo = m
+            }
+            guard let length = data.parseUInt(UInt8.self) else { return nil }
+            var schedule: [ScheduledTransfer] = []
+            for _ in 0 ... length {
+                guard let s = ScheduledTransfer.deserialize(&data) else { return nil }
+                schedule.append(s)
+            }
+            return .transferWithSchedule(receiver: receiver, schedule: schedule, memo: memo)
+        // TODO: handle the rest of the cases...
+        default:
+            // TODO: should this be an error instead?
+            return nil
+        }
+    }
+
     static func fromGRPC(_ gRPC: Concordium_V2_AccountTransactionPayload) throws -> AccountTransactionPayload {
         guard let payload = gRPC.payload else {
             throw GRPCConversionError(message: "Expected a payload value on GRPC type")
         }
         switch payload {
         case let .deployModule(src):
-            return .deployModule(module: try WasmModule.fromGRPC(src))
+            return try .deployModule(WasmModule.fromGRPC(src))
         case let .transfer(payload):
             return .transfer(amount: payload.amount.value, receiver: AccountAddress(payload.receiver.value))
         case let .transferWithMemo(payload):
-            return .transfer(amount: payload.amount.value, receiver: AccountAddress(payload.receiver.value), memo: payload.memo.value)
+            return try .transfer(amount: payload.amount.value, receiver: AccountAddress(payload.receiver.value), memo: Memo.fromGRPC(payload.memo))
         // TODO: implement the rest...
 //        case let .initContract(payload):
 //        case let .updateContract(payload):
 //        case let .registerData(data):
 //        case let .rawPayload(<#T##Data#>):
-            
+
         // TODO: ... and remove this
         default:
             throw GRPCConversionError(message: "Conversion not implemented for \(payload)")

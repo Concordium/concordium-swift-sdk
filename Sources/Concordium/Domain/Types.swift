@@ -129,7 +129,7 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC {
         return res
     }
 
-    public func deserialize(_ data: inout Cursor) -> Self? {
+    public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let version = data.parseUInt(UInt32.self).flatMap(WasmVersion.init),
               let source = data.read(withLengthPrefix: UInt32.self) else { return nil }
 
@@ -165,6 +165,30 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC {
     }
 }
 
+public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC {
+    public var value: Data
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        var res = 0
+        res += buffer.writeData(value, lengthPrefix: UInt16.self)
+        return res
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> Memo? {
+        data.read(withLengthPrefix: UInt16.self).map { Self(value: Data($0)) }
+    }
+
+    static func fromGRPC(_ gRPC: Concordium_V2_Memo) throws -> Memo {
+        Self(value: gRPC.value)
+    }
+
+    func toGRPC() -> Concordium_V2_Memo {
+        var m = Concordium_V2_Memo()
+        m.value = value
+        return m
+    }
+}
+
 /// Represents a single scheduled transfer in a transfer schedule, i.e. a list of `ScheduledTransfer`s
 public struct ScheduledTransfer: Serialize, Deserialize {
     public var timestamp: TransactionTime
@@ -177,7 +201,7 @@ public struct ScheduledTransfer: Serialize, Deserialize {
         return res
     }
 
-    public func deserialize(_ data: inout Cursor) -> Self? {
+    public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let timestamp = data.parseUInt(UInt64.self),
               let amount = data.parseUInt(UInt64.self) else { return nil }
         return Self(timestamp: timestamp, amount: amount)
@@ -216,7 +240,7 @@ public struct InitName: Serialize, Deserialize {
         return res
     }
 
-    public func deserialize(_ data: inout Cursor) -> Self? {
+    public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
         return try? Self.checked(parsed)
     }
@@ -236,7 +260,7 @@ public struct ContractName: Serialize, Deserialize {
         return res
     }
 
-    public func deserialize(_ data: inout Cursor) -> Self? {
+    public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
         return try? Self.checked(parsed)
     }
@@ -256,7 +280,7 @@ public struct EntrypointName: Serialize, Deserialize {
         return res
     }
 
-    public func deserialize(_ data: inout Cursor) -> Self? {
+    public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
         return try? Self.checked(parsed)
     }
@@ -276,7 +300,7 @@ public struct ReceiveName: Serialize, Deserialize {
         return res
     }
 
-    public func deserialize(_ data: inout Cursor) -> Self? {
+    public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
         return try? Self.checked(parsed)
     }

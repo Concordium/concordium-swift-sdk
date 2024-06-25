@@ -64,7 +64,7 @@ public struct Cursor {
 public protocol Deserialize {
     /// Deserializes part of the data in the cursor into the implementing type.
     /// - Returns: The corresponding type, or `nil` if the type could not be parsed due running out of bytes to read.
-    func deserialize(_ data: inout Cursor) -> Self?
+    static func deserialize(_ data: inout Cursor) -> Self?
 }
 
 public extension Deserialize {
@@ -72,7 +72,7 @@ public extension Deserialize {
     /// - Returns: The corresponding type, or `nil` if the type could not be parsed due to mismatch between the expected/found number of bytes in the buffer.
     func deserialize(_ data: Data) -> Self? {
         var parser = Cursor(data: data)
-        let result = deserialize(&parser)
+        let result = Self.deserialize(&parser)
         guard parser.empty else { return nil }
         return result
     }
