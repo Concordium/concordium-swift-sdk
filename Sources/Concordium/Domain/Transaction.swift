@@ -101,7 +101,7 @@ public struct SignedAccountTransaction: ToGRPC {
 }
 
 /// The payload for an account transaction (only transfer is supported for now).
-public enum AccountTransactionPayload: Serialize {
+public enum AccountTransactionPayload: Serialize, FromGRPC {
     case deployModule(module: WasmModule)
 //    case initContract(amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter)
     // case updateContract
@@ -165,6 +165,29 @@ public enum AccountTransactionPayload: Serialize {
         }
 
         return res
+    }
+    
+    static func fromGRPC(_ gRPC: Concordium_V2_AccountTransactionPayload) throws -> AccountTransactionPayload {
+        guard let payload = gRPC.payload else {
+            throw GRPCConversionError(message: "Expected a payload value on GRPC type")
+        }
+        switch payload {
+        case let .deployModule(src):
+            return .deployModule(module: try WasmModule.fromGRPC(src))
+        case let .transfer(payload):
+            return .transfer(amount: payload.amount.value, receiver: AccountAddress(payload.receiver.value))
+        case let .transferWithMemo(payload):
+            return .transfer(amount: payload.amount.value, receiver: AccountAddress(payload.receiver.value), memo: payload.memo.value)
+        // TODO: implement the rest...
+//        case let .initContract(payload):
+//        case let .updateContract(payload):
+//        case let .registerData(data):
+//        case let .rawPayload(<#T##Data#>):
+            
+        // TODO: ... and remove this
+        default:
+            throw GRPCConversionError(message: "Conversion not implemented for \(payload)")
+        }
     }
 //
 //    func toGRPC() -> Concordium_V2_AccountTransactionPayload {
