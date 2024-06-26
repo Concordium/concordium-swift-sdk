@@ -27,9 +27,14 @@ final class TransactionTest: XCTestCase {
 
     func testTransferSerialization() throws {
         let a = try AccountAddress(base58Check: "35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh")
-        let t = AccountTransactionPayload.transfer(amount: 100, receiver: a, memo: nil)
+        var t = AccountTransactionPayload.transfer(amount: 100, receiver: a, memo: nil)
 
-        let expected = Data([03, 16, 234, 195, 243, 10, 162, 72, 149, 8, 200, 110, 176, 147, 40, 255, 138, 84, 117, 249, 254, 92, 148, 88, 204, 60, 112, 149, 111, 207, 203, 34, 191, 0, 0, 0, 0, 0, 0, 0, 100])
+        // Generated from serializing payload in rust sdk
+        var expected = Data([3, 16, 234, 195, 243, 10, 162, 72, 149, 8, 200, 110, 176, 147, 40, 255, 138, 84, 117, 249, 254, 92, 148, 88, 204, 60, 112, 149, 111, 207, 203, 34, 191, 0, 0, 0, 0, 0, 0, 0, 100])
+        XCTAssertEqual(t.serialize(), expected)
+
+        t = AccountTransactionPayload.transfer(amount: 100, receiver: a, memo: Memo(value: Data([0, 23, 55])))
+        expected = Data([22, 16, 234, 195, 243, 10, 162, 72, 149, 8, 200, 110, 176, 147, 40, 255, 138, 84, 117, 249, 254, 92, 148, 88, 204, 60, 112, 149, 111, 207, 203, 34, 191, 0, 3, 0, 23, 55, 0, 0, 0, 0, 0, 0, 0, 100])
         XCTAssertEqual(t.serialize(), expected)
     }
 }
