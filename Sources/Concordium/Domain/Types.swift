@@ -61,7 +61,7 @@ extension HashBytes {
 }
 
 /// Represents a Concordium transaction hash
-public struct TransactionHash: HashBytes, ToGRPC, FromGRPC {
+public struct TransactionHash: HashBytes, ToGRPC, FromGRPC, Equatable {
     let value: Data
 
     func toGRPC() -> Concordium_V2_TransactionHash {
@@ -78,7 +78,7 @@ public struct TransactionHash: HashBytes, ToGRPC, FromGRPC {
 }
 
 /// Represents a Concordium block hash
-public struct BlockHash: HashBytes, ToGRPC, FromGRPC {
+public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable {
     let value: Data
 
     func toGRPC() -> Concordium_V2_BlockHash {
@@ -95,7 +95,7 @@ public struct BlockHash: HashBytes, ToGRPC, FromGRPC {
 }
 
 /// Represents a Concordium smart contract module reference
-public struct ModuleReference: HashBytes, ToGRPC, FromGRPC {
+public struct ModuleReference: HashBytes, ToGRPC, FromGRPC, Equatable {
     let value: Data
 
     func toGRPC() -> Concordium_V2_ModuleRef {
@@ -118,7 +118,7 @@ public enum WasmVersion: UInt32 {
 }
 
 /// Represents a WASM module as deployed to a Concordium node
-public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC {
+public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var version: WasmVersion
     public var source: Data
 
@@ -165,7 +165,7 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC {
     }
 }
 
-public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC {
+public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var value: Data
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
@@ -190,7 +190,7 @@ public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC {
 }
 
 /// Represents a single scheduled transfer in a transfer schedule, i.e. a list of `ScheduledTransfer`s
-public struct ScheduledTransfer: Serialize, Deserialize {
+public struct ScheduledTransfer: Serialize, Deserialize, Equatable {
     public var timestamp: TransactionTime
     public var amount: MicroCCDAmount
 
@@ -213,7 +213,7 @@ public struct ParameterSizeError: Error {
     let max: Int = PARAMETER_SIZE_MAX
 }
 
-public struct Parameter {
+public struct Parameter: Equatable {
     public let value: Data
 
     /// Initializes a `Parameter` while checking the data
@@ -226,7 +226,7 @@ public struct Parameter {
     }
 }
 
-public struct InitName: Serialize, Deserialize {
+public struct InitName: Serialize, Deserialize, Equatable {
     public let value: String
 
     static func checked(_ value: String) throws -> Self {
@@ -246,7 +246,7 @@ public struct InitName: Serialize, Deserialize {
     }
 }
 
-public struct ContractName: Serialize, Deserialize {
+public struct ContractName: Serialize, Deserialize, Equatable {
     public let value: String
 
     static func checked(_ value: String) throws -> Self {
@@ -266,7 +266,7 @@ public struct ContractName: Serialize, Deserialize {
     }
 }
 
-public struct EntrypointName: Serialize, Deserialize {
+public struct EntrypointName: Serialize, Deserialize, Equatable {
     public let value: String
 
     static func checked(_ value: String) throws -> Self {
@@ -286,7 +286,7 @@ public struct EntrypointName: Serialize, Deserialize {
     }
 }
 
-public struct ReceiveName: Serialize, Deserialize {
+public struct ReceiveName: Serialize, Deserialize, Equatable {
     public let value: String
 
     static func checked(_ value: String) throws -> Self {

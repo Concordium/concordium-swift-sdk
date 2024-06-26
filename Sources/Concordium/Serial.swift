@@ -70,7 +70,7 @@ public protocol Deserialize {
 public extension Deserialize {
     /// Deserializes the data into the implementing type.
     /// - Returns: The corresponding type, or `nil` if the type could not be parsed due to mismatch between the expected/found number of bytes in the buffer.
-    func deserialize(_ data: Data) -> Self? {
+    static func deserialize(_ data: Data) -> Self? {
         var parser = Cursor(data: data)
         let result = Self.deserialize(&parser)
         guard parser.empty else { return nil }

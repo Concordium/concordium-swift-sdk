@@ -101,7 +101,7 @@ public struct SignedAccountTransaction: ToGRPC {
 }
 
 /// The payload for an account transaction (only transfer is supported for now).
-public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC {
+public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, Equatable {
     case deployModule(_ module: WasmModule)
 //    case initContract(amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter)
     // case updateContract
