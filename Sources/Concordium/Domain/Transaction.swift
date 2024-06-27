@@ -192,7 +192,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, Equatab
             }
             guard let length = data.parseUInt(UInt8.self) else { return nil }
             var schedule: [ScheduledTransfer] = []
-            for _ in 0 ... length {
+            for _ in 0 ..< length {
                 guard let s = ScheduledTransfer.deserialize(&data) else { return nil }
                 schedule.append(s)
             }
