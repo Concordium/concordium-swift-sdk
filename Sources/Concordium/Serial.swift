@@ -57,6 +57,21 @@ public struct Cursor {
         return String(decoding: bytes, as: UTF8.self)
     }
 
+    public mutating func deserialize<T: Deserialize>(_ _: T) -> T? {
+        T.deserialize(&self)
+    }
+
+    public mutating func deserialize<T: Deserialize, UInt: UnsignedInteger>(listOf _: T.Type, withLengthPrefix _: UInt.Type) -> [T]? {
+        guard let length = parseUInt(UInt.self) else { return nil }
+
+        var list: [T] = []
+        for _ in 0 ..< Int(length) {
+            guard let s = T.deserialize(&self) else { return nil }
+            list.append(s)
+        }
+        return list
+    }
+
     /// Whether there is no more data to read
     public var empty: Bool { data.count == 0 }
 }

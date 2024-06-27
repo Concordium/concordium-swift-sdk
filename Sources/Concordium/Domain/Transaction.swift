@@ -11,13 +11,58 @@ public func baseTransactionCost(headerByteCount: Int, payloadByteCount: Int, sig
     return sizeCost + signatureCost
 }
 
+public enum TransactionCost {
+    public static func base(headerByteCount: Int, payloadByteCount: Int, signatureCount: Int) -> Energy {
+        let energyPerByte = 1
+        let energyPerSignature = 100
+        let sizeCost = Energy(energyPerByte * (headerByteCount + payloadByteCount))
+        let signatureCost = Energy(energyPerSignature * signatureCount)
+        return sizeCost + signatureCost
+    }
+
+    public static let TRANSFER: Energy = 300 // Including memo doesn't increase the cost
+
+    public static func transferWithSchedule(_ schedule: [ScheduledTransfer]) -> Energy {
+        Energy(schedule.count) * (300 + 64) // including memo doesn't increase cost
+    }
+
+    public static func deployModule(_ module: WasmModule) -> Energy {
+        Energy(module.source.count) / 10
+    }
+}
+
 public struct AccountTransaction {
     public var sender: AccountAddress
-    public var payload: AccountTransactionPayload
+    public let payload: AccountTransactionPayload
+    public let energy: Energy
 
-    public init(sender: AccountAddress, payload: AccountTransactionPayload) {
+    public init(sender: AccountAddress, payload: AccountTransactionPayload, energy: Energy) {
         self.sender = sender
         self.payload = payload
+        self.energy = energy
+    }
+
+    public static func deployModule(sender: AccountAddress, module: WasmModule) -> Self {
+        let payload = AccountTransactionPayload.deployModule(module)
+        let energy = TransactionCost.deployModule(module)
+        return self.init(sender: sender, payload: payload, energy: energy)
+    }
+
+    public static func transfer(sender: AccountAddress, receiver: AccountAddress, amount: MicroCCDAmount, memo: Memo? = nil) -> Self {
+        let payload = AccountTransactionPayload.transfer(amount: amount, receiver: receiver, memo: memo)
+        let energy = TransactionCost.TRANSFER
+        return self.init(sender: sender, payload: payload, energy: energy)
+    }
+
+    public static func transferWithSchedule(sender: AccountAddress, receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Memo?) -> Self {
+        let payload = AccountTransactionPayload.transferWithSchedule(receiver: receiver, schedule: schedule, memo: memo)
+        let energy = TransactionCost.transferWithSchedule(schedule)
+        return self.init(sender: sender, payload: payload, energy: energy)
+    }
+
+    public static func initContract(sender: AccountAddress, amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter, energy: Energy) -> Self {
+        let payload = AccountTransactionPayload.initContract(amount: amount, modRef: modRef, initName: initName, param: param)
+        return self.init(sender: sender, payload: payload, energy: energy)
     }
 
     public func prepare(sequenceNumber: SequenceNumber, expiry: UInt64, signatureCount: Int) -> PreparedAccountTransaction {
@@ -27,11 +72,11 @@ public struct AccountTransaction {
         // We then serialize this header and patch the computed cost back on.
         // Updating the energy allocation will never affect the header size.
         var header = AccountTransactionHeader(sender: sender, sequenceNumber: sequenceNumber, maxEnergy: 0, expiry: expiry)
-        header.maxEnergy = baseTransactionCost(
+        header.maxEnergy = TransactionCost.base(
             headerByteCount: header.serialize(serializedPayloadSize: 0).count, // concrete payload size doesn't affect header size
             payloadByteCount: serializedPayload.count,
             signatureCount: signatureCount
-        ) + payload.cost
+        ) + energy
         return .init(header: header, serializedPayload: serializedPayload)
     }
 }
@@ -103,7 +148,7 @@ public struct SignedAccountTransaction: ToGRPC {
 /// The payload for an account transaction (only transfer is supported for now).
 public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, Equatable {
     case deployModule(_ module: WasmModule)
-//    case initContract(amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter)
+    case initContract(amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter)
     // case updateContract
     case transfer(amount: MicroCCDAmount, receiver: AccountAddress, memo: Memo? = nil)
     // case addBaker
@@ -121,17 +166,6 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, Equatab
     // case configureBaker
     // case configureDelegation
 
-    var cost: Energy {
-        switch self {
-        case let .deployModule(module):
-            return Energy(module.source.count) / 10
-        case .transfer:
-            return 300 // including memo doesn't increase cost
-        case let .transferWithSchedule(_, schedule, _):
-            return Energy(schedule.count) * (300 + 64) // including memo doesn't increase cost
-        }
-    }
-
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
         var res = 0
 
@@ -140,6 +174,12 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, Equatab
         case let .deployModule(module):
             res += buffer.writeInteger(0, as: UInt8.self)
             res += buffer.writeSerializable(module)
+        case let .initContract(amount, modRef, initName, param):
+            res += buffer.writeInteger(1, as: UInt8.self)
+            res += buffer.writeInteger(amount)
+            res += buffer.writeSerializable(modRef)
+            res += buffer.writeSerializable(initName)
+            res += buffer.writeSerializable(param)
         case let .transfer(amount, receiver, memo):
             if let memo {
                 res += buffer.writeInteger(22, as: UInt8.self)
@@ -174,28 +214,29 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, Equatab
         case 0:
             guard let module = WasmModule.deserialize(&data) else { return nil }
             return AccountTransactionPayload.deployModule(module)
-        case 3, 22:
-            guard let receiver = AccountAddress.deserialize(&data) else { return nil }
-            var memo: Memo?
-            if type == 22 {
-                guard let m = Memo.deserialize(&data) else { return nil }
-                memo = m
-            }
-            guard let amount = data.parseUInt(UInt64.self) else { return nil }
+        case 1:
+            guard let amount = data.parseUInt(MicroCCDAmount.self),
+                  let modRef = ModuleReference.deserialize(&data),
+                  let initName = InitName.deserialize(&data),
+                  let param = Parameter.deserialize(&data) else { return nil }
+            return AccountTransactionPayload.initContract(amount: amount, modRef: modRef, initName: initName, param: param)
+        case 3:
+            guard let receiver = AccountAddress.deserialize(&data),
+                  let amount = data.parseUInt(UInt64.self) else { return nil }
+            return .transfer(amount: amount, receiver: receiver)
+        case 19:
+            guard let receiver = AccountAddress.deserialize(&data),
+                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, withLengthPrefix: UInt8.self) else { return nil }
+            return .transferWithSchedule(receiver: receiver, schedule: schedule)
+        case 22:
+            guard let receiver = AccountAddress.deserialize(&data),
+                  let memo = Memo.deserialize(&data),
+                  let amount = data.parseUInt(UInt64.self) else { return nil }
             return .transfer(amount: amount, receiver: receiver, memo: memo)
-        case 19, 24:
-            guard let receiver = AccountAddress.deserialize(&data) else { return nil }
-            var memo: Memo?
-            if type == 24 {
-                guard let m = Memo.deserialize(&data) else { return nil }
-                memo = m
-            }
-            guard let length = data.parseUInt(UInt8.self) else { return nil }
-            var schedule: [ScheduledTransfer] = []
-            for _ in 0 ..< length {
-                guard let s = ScheduledTransfer.deserialize(&data) else { return nil }
-                schedule.append(s)
-            }
+        case 24:
+            guard let receiver = AccountAddress.deserialize(&data),
+                  let memo = Memo.deserialize(&data),
+                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, withLengthPrefix: UInt8.self) else { return nil }
             return .transferWithSchedule(receiver: receiver, schedule: schedule, memo: memo)
         // TODO: handle the rest of the cases...
         default:

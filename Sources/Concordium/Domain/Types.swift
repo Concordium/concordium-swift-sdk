@@ -95,8 +95,16 @@ public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable {
 }
 
 /// Represents a Concordium smart contract module reference
-public struct ModuleReference: HashBytes, ToGRPC, FromGRPC, Equatable {
+public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     let value: Data
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeData(value)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> ModuleReference? {
+        try? data.read(num: HASH_BYTES_SIZE).map { try checked(Data($0)) }
+    }
 
     func toGRPC() -> Concordium_V2_ModuleRef {
         var t = GRPC()
@@ -123,10 +131,7 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var source: Data
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        var res = 0
-        res += buffer.writeInteger(version.rawValue)
-        res += buffer.writeData(source, lengthPrefix: UInt32.self)
-        return res
+        buffer.writeInteger(version.rawValue) + buffer.writeData(source, lengthPrefix: UInt32.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
@@ -169,9 +174,7 @@ public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var value: Data
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        var res = 0
-        res += buffer.writeData(value, lengthPrefix: UInt16.self)
-        return res
+        buffer.writeData(value, lengthPrefix: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Memo? {
@@ -195,10 +198,7 @@ public struct ScheduledTransfer: Serialize, Deserialize, Equatable {
     public var amount: MicroCCDAmount
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        var res = 0
-        res += buffer.writeInteger(timestamp)
-        res += buffer.writeInteger(amount)
-        return res
+        buffer.writeInteger(timestamp) + buffer.writeInteger(amount)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
@@ -213,7 +213,7 @@ public struct ParameterSizeError: Error {
     let max: Int = PARAMETER_SIZE_MAX
 }
 
-public struct Parameter: Equatable {
+public struct Parameter: Equatable, Serialize, Deserialize {
     public let value: Data
 
     /// Initializes a `Parameter` while checking the data
@@ -223,6 +223,15 @@ public struct Parameter: Equatable {
             throw ParameterSizeError(actual: value.count)
         }
         return Self(value: value)
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(UInt16(value.count)) + buffer.writeData(value)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> Parameter? {
+        guard let value = data.read(withLengthPrefix: UInt16.self) else { return nil }
+        return .init(value: value)
     }
 }
 
@@ -235,9 +244,7 @@ public struct InitName: Serialize, Deserialize, Equatable {
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        var res = 0
-        res += buffer.writeString(value, lengthPrefix: UInt16.self)
-        return res
+        buffer.writeString(value, lengthPrefix: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
@@ -255,9 +262,7 @@ public struct ContractName: Serialize, Deserialize, Equatable {
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        var res = 0
-        res += buffer.writeString(value, lengthPrefix: UInt16.self)
-        return res
+        buffer.writeString(value, lengthPrefix: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
@@ -275,9 +280,7 @@ public struct EntrypointName: Serialize, Deserialize, Equatable {
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        var res = 0
-        res += buffer.writeString(value, lengthPrefix: UInt16.self)
-        return res
+        buffer.writeString(value, lengthPrefix: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
@@ -295,9 +298,7 @@ public struct ReceiveName: Serialize, Deserialize, Equatable {
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        var res = 0
-        res += buffer.writeString(value, lengthPrefix: UInt16.self)
-        return res
+        buffer.writeString(value, lengthPrefix: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
