@@ -66,7 +66,7 @@ public struct AccountTransaction {
     }
 
     public static func updateContract(sender: AccountAddress, amount: MicroCCDAmount, contractAddress: ContractAddress, receiveName: ReceiveName, param: Parameter, energy: Energy) -> Self {
-        let payload = AccountTransactionPayload.updateContract(amount: amount, contractAddress: contractAddress, receiveName: receiveName, message: param)
+        let payload = AccountTransactionPayload.updateContract(amount: amount, address: contractAddress, receiveName: receiveName, message: param)
         return self.init(sender: sender, payload: payload, energy: energy)
     }
 
@@ -154,7 +154,7 @@ public struct SignedAccountTransaction: ToGRPC {
 public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
     case deployModule(_ module: WasmModule)
     case initContract(amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter)
-    case updateContract(amount: MicroCCDAmount, contractAddress: ContractAddress, receiveName: ReceiveName, message: Parameter)
+    case updateContract(amount: MicroCCDAmount, address: ContractAddress, receiveName: ReceiveName, message: Parameter)
     case transfer(amount: MicroCCDAmount, receiver: AccountAddress, memo: Memo? = nil)
     // case addBaker
     // case removeBaker
@@ -236,7 +236,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
                   let contractAddress = ContractAddress.deserialize(&data),
                   let receiveName = ReceiveName.deserialize(&data),
                   let message = Parameter.deserialize(&data) else { return nil }
-            return AccountTransactionPayload.updateContract(amount: amount, contractAddress: contractAddress, receiveName: receiveName, message: message)
+            return AccountTransactionPayload.updateContract(amount: amount, address: contractAddress, receiveName: receiveName, message: message)
         case 3:
             guard let receiver = AccountAddress.deserialize(&data),
                   let amount = data.parseUInt(UInt64.self) else { return nil }
@@ -270,15 +270,17 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
         case let .deployModule(src):
             return try .deployModule(WasmModule.fromGRPC(src))
         case let .transfer(payload):
-            return .transfer(amount: payload.amount.value, receiver: AccountAddress(payload.receiver.value))
+            return .transfer(amount: payload.amount.value, receiver: AccountAddress.fromGRPC(payload.receiver))
         case let .transferWithMemo(payload):
-            return try .transfer(amount: payload.amount.value, receiver: AccountAddress(payload.receiver.value), memo: Memo.fromGRPC(payload.memo))
-        // TODO: implement the rest...
-//        case let .initContract(payload):
-//        case let .updateContract(payload):
+            return try .transfer(amount: payload.amount.value, receiver: AccountAddress.fromGRPC(payload.receiver), memo: Memo.fromGRPC(payload.memo))
+        case let .initContract(payload):
+            return try .initContract(amount: payload.amount.value, modRef: ModuleReference.fromGRPC(payload.moduleRef), initName: InitName.fromGRPC(payload.initName), param: Parameter.fromGRPC(payload.parameter))
+        case let .updateContract(payload):
+            return try .updateContract(amount: payload.amount.value, address: ContractAddress.fromGRPC(payload.address), receiveName: ReceiveName.fromGRPC(payload.receiveName), message: Parameter.fromGRPC(payload.parameter))
 //        case let .registerData(data):
-//        case let .rawPayload(<#T##Data#>):
-
+        case let .rawPayload(data):
+            guard let payload = Self.deserialize(data) else { throw GRPCConversionError(message: "Failed to deserialize raw payload")}
+            return payload
         // TODO: ... and remove this
         default:
             throw GRPCConversionError(message: "Conversion not implemented for \(payload)")

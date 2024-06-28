@@ -46,7 +46,7 @@ final class TransactionTest: XCTestCase {
 
     func testUpdateContractSerialization() throws {
         let contractAddress = ContractAddress(index: 123, subindex: 0)
-        let t = try AccountTransactionPayload.updateContract(amount: 4321, contractAddress: contractAddress, receiveName: ReceiveName("test.function"), message: Parameter(Data([123, 23, 12, 45, 56])))
+        let t = try AccountTransactionPayload.updateContract(amount: 4321, address: contractAddress, receiveName: ReceiveName("test.function"), message: Parameter(Data([123, 23, 12, 45, 56])))
 
         // Generated from serializing payload in rust sdk
         let expected = Data([2, 0, 0, 0, 0, 0, 0, 16, 225, 0, 0, 0, 0, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 116, 101, 115, 116, 46, 102, 117, 110, 99, 116, 105, 111, 110, 0, 5, 123, 23, 12, 45, 56])

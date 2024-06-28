@@ -97,7 +97,7 @@ public enum AccountIdentifier: ToGRPC {
 }
 
 /// Address of an account as raw bytes.
-public struct AccountAddress: Hashable, Deserialize {
+public struct AccountAddress: Hashable, Deserialize, FromGRPC {
     private static let base58CheckVersion: UInt8 = 1
 
     public var data: Data // 32 bytes
@@ -125,6 +125,10 @@ public struct AccountAddress: Hashable, Deserialize {
 
     public static func deserialize(_ data: inout Cursor) -> AccountAddress? {
         data.read(num: 32).map { AccountAddress(Data($0)) }
+    }
+
+    static func fromGRPC(_ grpc: Concordium_V2_AccountAddress) -> Self {
+        .init(grpc.value)
     }
 }
 

@@ -217,7 +217,7 @@ public struct ScheduledTransfer: Serialize, Deserialize, Equatable {
     }
 }
 
-public struct ContractAddress: Serialize, Deserialize, Equatable {
+public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     public var index: UInt64
     public var subindex: UInt64
 
@@ -230,6 +230,17 @@ public struct ContractAddress: Serialize, Deserialize, Equatable {
               let subindex = data.parseUInt(UInt64.self) else { return nil }
         return Self(index: index, subindex: subindex)
     }
+    
+    func toGRPC() -> Concordium_V2_ContractAddress {
+        var g = GRPC()
+        g.index = index
+        g.subindex = subindex
+        return g
+    }
+    
+    static func fromGRPC(_ gRPC: Concordium_V2_ContractAddress) throws -> Self {
+        Self(index: gRPC.index, subindex: gRPC.subindex)
+    }
 }
 
 public struct ParameterSizeError: Error {
@@ -237,7 +248,8 @@ public struct ParameterSizeError: Error {
     let max: Int = PARAMETER_SIZE_MAX
 }
 
-public struct Parameter: Equatable, Serialize, Deserialize {
+public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
+    typealias GRPC = Concordium_V2_Parameter
     public let value: Data
 
     public init(unchecked value: Data) {
@@ -261,13 +273,24 @@ public struct Parameter: Equatable, Serialize, Deserialize {
         guard let value = data.read(withLengthPrefix: UInt16.self) else { return nil }
         return try? self.init(value)
     }
+    
+    func toGRPC() -> GRPC {
+        var g = GRPC()
+        g.value = value
+        return g
+    }
+    
+    static func fromGRPC(_ gRPC: GRPC) throws -> Self {
+        try Self(gRPC.value)
+    }
 }
 
 public struct ContractNameError: Error {
     let message: String
 }
 
-public struct InitName: Serialize, Deserialize, Equatable {
+public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
+    typealias GRPC = Concordium_V2_InitName
     public let value: String
 
     public init(unchecked value: String) {
@@ -290,6 +313,16 @@ public struct InitName: Serialize, Deserialize, Equatable {
     public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
         return try? Self(parsed)
+    }
+    
+    func toGRPC() -> GRPC {
+        var g = GRPC()
+        g.value = value
+        return g
+    }
+    
+    static func fromGRPC(_ gRPC: GRPC) throws -> Self {
+        try Self(gRPC.value)
     }
 }
 
@@ -342,7 +375,8 @@ public struct EntrypointName: Serialize, Deserialize, Equatable {
     }
 }
 
-public struct ReceiveName: Serialize, Deserialize, Equatable {
+public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
+    typealias GRPC = Concordium_V2_ReceiveName
     public let value: String
 
     public init(unchecked value: String) {
@@ -364,5 +398,15 @@ public struct ReceiveName: Serialize, Deserialize, Equatable {
     public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
         return try? Self(parsed)
+    }
+    
+    func toGRPC() -> GRPC {
+        var g = GRPC()
+        g.value = value
+        return g
+    }
+    
+    static func fromGRPC(_ gRPC: GRPC) throws -> Self {
+        try Self(gRPC.value)
     }
 }
