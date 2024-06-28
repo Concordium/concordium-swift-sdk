@@ -349,7 +349,7 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     }
 
     /// Initializes with the value, while checking the associated invariants
-    /// - Throws: ``ContractNameError`` if passed value exceeds the allowed parameter size
+    /// - Throws: ``ContractNameError`` if passed value is invalid
     public init(_ value: String) throws {
         guard value.count <= FUNC_NAME_MAX else { throw ContractNameError(message: "InitNames must be at most \(FUNC_NAME_MAX) characters long") }
         guard value.hasPrefix("init_") else { throw ContractNameError(message: "InitNames must be prefixed with 'init_'") }
@@ -357,6 +357,12 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
         guard value.allSatisfy(\.isASCII) else { throw ContractNameError(message: "InitNames must consist of only ASCII characters") }
 
         self.init(unchecked: value)
+    }
+
+    /// Initializes from the ``ContractName``
+    /// - Throws: ``ContractNameError`` if passed value is invalid
+    public init(fromContractName contractName: ContractName) throws {
+        try self.init("init_".appending(contractName.value))
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
@@ -388,12 +394,25 @@ public struct ContractName: Serialize, Deserialize, Equatable {
     }
 
     /// Initializes with the value, while checking the associated invariants
+    /// - Throws: ``ContractNameError`` if passed value is invalid
     public init(_ value: String) throws {
         guard value.count <= (FUNC_NAME_MAX - 5) else { throw ContractNameError(message: "ContractNames must be at most \(FUNC_NAME_MAX - 5) characters long") }
         guard !value.contains(".") else { throw ContractNameError(message: "ContractNames must not contain a '.' character") }
         guard value.allSatisfy(\.isASCII) else { throw ContractNameError(message: "ContractNames must consist of only ASCII characters") }
 
         self.init(unchecked: value)
+    }
+
+    /// Converts the contract name to a corresponding ``InitName``
+    /// - Throws: ``ContractNameError`` if passed value is invalid
+    public func initName() throws -> InitName {
+        try InitName(fromContractName: self)
+    }
+
+    /// Converts the contract name to a corresponding ``ReceiveName``
+    /// - Throws: ``ContractNameError`` if passed value is invalid
+    public func receiveName(forEntrypoint ep: EntrypointName) throws -> ReceiveName {
+        try ReceiveName(contractName: self, entrypoint: ep)
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
@@ -415,11 +434,18 @@ public struct EntrypointName: Serialize, Deserialize, Equatable {
     }
 
     /// Initializes with the value, while checking the associated invariants
+    /// - Throws: ``ContractNameError`` if passed value is invalid
     public init(_ value: String) throws {
         guard value.count <= (FUNC_NAME_MAX - 1) else { throw ContractNameError(message: "EntrypointNames must be at most \(FUNC_NAME_MAX - 1) characters long") }
         guard value.allSatisfy(\.isASCII) else { throw ContractNameError(message: "EntrypointNames must consist of only ASCII characters") }
 
         self.init(unchecked: value)
+    }
+
+    /// Converts the entrypoint name to a corresponding ``ReceiveName``
+    /// - Throws: ``ContractNameError`` if passed value is invalid
+    public func receiveName(forContractName contractName: ContractName) throws -> ReceiveName {
+        try ReceiveName(contractName: contractName, entrypoint: self)
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
@@ -448,6 +474,12 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
         guard value.allSatisfy(\.isASCII) else { throw ContractNameError(message: "ReceiveNames must consist of only ASCII characters") }
 
         self.init(unchecked: value)
+    }
+
+    /// Initializes with the value, while checking the associated invariants
+    /// - Throws: ``ContractNameError`` if passed value is invalid
+    public init(contractName: ContractName, entrypoint: EntrypointName) throws {
+        try self.init(contractName.value.appending(".\(entrypoint.value)"))
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
