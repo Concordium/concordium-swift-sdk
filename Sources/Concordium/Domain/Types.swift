@@ -30,6 +30,8 @@ public typealias TransactionTime = UInt64
 let HASH_BYTES_SIZE: Int = 32
 /// The max size of a `Parameter`
 let PARAMETER_SIZE_MAX: Int = 65535
+/// The max size of a `RegisteredData`
+let REGISTERED_DATA_SIZE_MAX: Int = 256
 /// The max length of a contract receive name
 let FUNC_NAME_MAX: Int = 100
 
@@ -230,22 +232,22 @@ public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGR
               let subindex = data.parseUInt(UInt64.self) else { return nil }
         return Self(index: index, subindex: subindex)
     }
-    
+
     func toGRPC() -> Concordium_V2_ContractAddress {
         var g = GRPC()
         g.index = index
         g.subindex = subindex
         return g
     }
-    
+
     static func fromGRPC(_ gRPC: Concordium_V2_ContractAddress) throws -> Self {
         Self(index: gRPC.index, subindex: gRPC.subindex)
     }
 }
 
-public struct ParameterSizeError: Error {
+public struct DataSizeError: Error {
     let actual: Int
-    let max: Int = PARAMETER_SIZE_MAX
+    let max: Int
 }
 
 public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
@@ -257,10 +259,10 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
     }
 
     /// Initializes a `Parameter` while checking the data
-    /// - Throws: `ParameterSizeError` if passed value exceeds the allowed parameter size
+    /// - Throws: `DataSizeError` if passed value exceeds the allowed parameter size
     public init(_ value: Data) throws {
         guard value.count <= PARAMETER_SIZE_MAX else {
-            throw ParameterSizeError(actual: value.count)
+            throw DataSizeError(actual: value.count, max: PARAMETER_SIZE_MAX)
         }
         self.init(unchecked: value)
     }
@@ -273,13 +275,50 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
         guard let value = data.read(withLengthPrefix: UInt16.self) else { return nil }
         return try? self.init(value)
     }
-    
+
     func toGRPC() -> GRPC {
         var g = GRPC()
         g.value = value
         return g
     }
-    
+
+    static func fromGRPC(_ gRPC: GRPC) throws -> Self {
+        try Self(gRPC.value)
+    }
+}
+
+public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
+    typealias GRPC = Concordium_V2_RegisteredData
+    public let value: Data
+
+    public init(unchecked value: Data) {
+        self.value = value
+    }
+
+    /// Initializes a `Parameter` while checking the data
+    /// - Throws: `DataSizeError` if passed value exceeds the allowed parameter size
+    public init(_ value: Data) throws {
+        guard value.count <= REGISTERED_DATA_SIZE_MAX else {
+            throw DataSizeError(actual: value.count, max: REGISTERED_DATA_SIZE_MAX)
+        }
+        self.init(unchecked: value)
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(UInt16(value.count)) + buffer.writeData(value)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> Self? {
+        guard let value = data.read(withLengthPrefix: UInt16.self) else { return nil }
+        return try? self.init(value)
+    }
+
+    func toGRPC() -> GRPC {
+        var g = GRPC()
+        g.value = value
+        return g
+    }
+
     static func fromGRPC(_ gRPC: GRPC) throws -> Self {
         try Self(gRPC.value)
     }
@@ -314,13 +353,13 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
         guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
-    
+
     func toGRPC() -> GRPC {
         var g = GRPC()
         g.value = value
         return g
     }
-    
+
     static func fromGRPC(_ gRPC: GRPC) throws -> Self {
         try Self(gRPC.value)
     }
@@ -399,13 +438,13 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
         guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
-    
+
     func toGRPC() -> GRPC {
         var g = GRPC()
         g.value = value
         return g
     }
-    
+
     static func fromGRPC(_ gRPC: GRPC) throws -> Self {
         try Self(gRPC.value)
     }

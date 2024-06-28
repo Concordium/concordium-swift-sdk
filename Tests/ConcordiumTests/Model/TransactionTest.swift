@@ -86,4 +86,13 @@ final class TransactionTest: XCTestCase {
         XCTAssertEqual(t.serialize(), expected)
         XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
     }
+
+    func testRegisterDataSerialization() throws {
+        let t = try AccountTransactionPayload.registerData(RegisteredData(Data([123, 231, 222, 0, 1, 2])))
+
+        // Generated from serializing payload in rust sdk
+        let expected = Data([21, 0, 6, 123, 231, 222, 0, 1, 2])
+        XCTAssertEqual(t.serialize(), expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+    }
 }

@@ -167,7 +167,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
     // case transferToPublic
     case transferWithSchedule(receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Memo? = nil)
     // case updateCredentials
-    // case registerData
+    case registerData(_ data: RegisteredData)
     // case configureBaker
     // case configureDelegation
 
@@ -213,6 +213,9 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
                 res += buffer.writeData(receiver.data)
                 res += buffer.writeSerializable(list: schedule, lengthPrefix: UInt8.self)
             }
+        case let .registerData(data):
+            res += buffer.writeInteger(21, as: UInt8.self)
+            res += buffer.writeSerializable(data)
         }
 
         return res
@@ -245,6 +248,9 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             guard let receiver = AccountAddress.deserialize(&data),
                   let schedule = data.deserialize(listOf: ScheduledTransfer.self, withLengthPrefix: UInt8.self) else { return nil }
             return .transferWithSchedule(receiver: receiver, schedule: schedule)
+        case 21:
+            guard let regData = RegisteredData.deserialize(&data) else { return nil }
+            return .registerData(regData)
         case 22:
             guard let receiver = AccountAddress.deserialize(&data),
                   let memo = Memo.deserialize(&data),
@@ -277,13 +283,11 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             return try .initContract(amount: payload.amount.value, modRef: ModuleReference.fromGRPC(payload.moduleRef), initName: InitName.fromGRPC(payload.initName), param: Parameter.fromGRPC(payload.parameter))
         case let .updateContract(payload):
             return try .updateContract(amount: payload.amount.value, address: ContractAddress.fromGRPC(payload.address), receiveName: ReceiveName.fromGRPC(payload.receiveName), message: Parameter.fromGRPC(payload.parameter))
-//        case let .registerData(data):
+        case let .registerData(data):
+            return try .registerData(RegisteredData.fromGRPC(data))
         case let .rawPayload(data):
-            guard let payload = Self.deserialize(data) else { throw GRPCConversionError(message: "Failed to deserialize raw payload")}
+            guard let payload = Self.deserialize(data) else { throw GRPCConversionError(message: "Failed to deserialize raw payload") }
             return payload
-        // TODO: ... and remove this
-        default:
-            throw GRPCConversionError(message: "Conversion not implemented for \(payload)")
         }
     }
 
