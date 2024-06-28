@@ -43,6 +43,7 @@ public struct ExactSizeError: Error {
 
 /// Describes a type wrapping `Data`
 protocol HashBytes {
+    /// The inner data
     var value: Data { get }
     /// Initializes the `HashBytes` implementation without checking the data
     init(value: Data)
@@ -51,12 +52,20 @@ protocol HashBytes {
 extension HashBytes {
     /// Creates the type from the passed data
     /// - Throws: `ExactSizeError` if the number of bytes does not match number of bytes expected.
-    static func checked(_ data: Data) throws -> Self {
-        guard data.count != HASH_BYTES_SIZE else {
+    init(_ data: Data) throws {
+        guard data.count == HASH_BYTES_SIZE else {
             throw ExactSizeError(actual: data.count)
         }
 
-        return Self(value: data)
+        self.init(value: data)
+    }
+
+    /// Creates the type from a hex string
+    /// - Throws: `DataHexError` if given string is not valid hex
+    /// - Throws: `ExactSizeError` if the number of bytes does not match number of bytes expected.
+    init(fromHex hex: String) throws {
+        let data = try Data(hex: hex)
+        try self.init(data)
     }
 }
 
@@ -73,7 +82,7 @@ public struct TransactionHash: HashBytes, ToGRPC, FromGRPC, Equatable {
     /// Initializes the type from the associated GRPC type
     /// - Throws: `ExactSizeError` if conversion could not be made
     static func fromGRPC(_ g: Concordium_V2_TransactionHash) throws -> Self {
-        try checked(g.value)
+        try Self(g.value)
     }
 }
 
@@ -90,7 +99,7 @@ public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable {
     /// Initializes the type from the associated GRPC type
     /// - Throws: `ExactSizeError` if conversion could not be made
     static func fromGRPC(_ g: Concordium_V2_BlockHash) throws -> Self {
-        try checked(g.value)
+        try Self(g.value)
     }
 }
 
@@ -103,7 +112,7 @@ public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGR
     }
 
     public static func deserialize(_ data: inout Cursor) -> ModuleReference? {
-        try? data.read(num: HASH_BYTES_SIZE).map { try checked(Data($0)) }
+        try? data.read(num: HASH_BYTES_SIZE).map { try Self(Data($0)) }
     }
 
     func toGRPC() -> Concordium_V2_ModuleRef {
@@ -115,7 +124,7 @@ public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGR
     /// Initializes the type from the associated GRPC type
     /// - Throws: `ExactSizeError` if conversion could not be made
     static func fromGRPC(_ g: Concordium_V2_ModuleRef) throws -> Self {
-        try checked(g.value)
+        try Self(g.value)
     }
 }
 
@@ -208,6 +217,21 @@ public struct ScheduledTransfer: Serialize, Deserialize, Equatable {
     }
 }
 
+public struct ContractAddress: Serialize, Deserialize, Equatable {
+    public var index: UInt64
+    public var subindex: UInt64
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(index) + buffer.writeInteger(subindex)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> ContractAddress? {
+        guard let index = data.parseUInt(UInt64.self),
+              let subindex = data.parseUInt(UInt64.self) else { return nil }
+        return Self(index: index, subindex: subindex)
+    }
+}
+
 public struct ParameterSizeError: Error {
     let actual: Int
     let max: Int = PARAMETER_SIZE_MAX
@@ -216,13 +240,17 @@ public struct ParameterSizeError: Error {
 public struct Parameter: Equatable, Serialize, Deserialize {
     public let value: Data
 
+    public init(unchecked value: Data) {
+        self.value = value
+    }
+
     /// Initializes a `Parameter` while checking the data
     /// - Throws: `ParameterSizeError` if passed value exceeds the allowed parameter size
-    static func checked(_ value: Data) throws -> Self {
+    public init(_ value: Data) throws {
         guard value.count <= PARAMETER_SIZE_MAX else {
             throw ParameterSizeError(actual: value.count)
         }
-        return Self(value: value)
+        self.init(unchecked: value)
     }
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
@@ -231,16 +259,28 @@ public struct Parameter: Equatable, Serialize, Deserialize {
 
     public static func deserialize(_ data: inout Cursor) -> Parameter? {
         guard let value = data.read(withLengthPrefix: UInt16.self) else { return nil }
-        return .init(value: value)
+        return try? self.init(value)
     }
+}
+
+public struct ContractNameError: Error {
+    let message: String
 }
 
 public struct InitName: Serialize, Deserialize, Equatable {
     public let value: String
 
-    static func checked(_ value: String) throws -> Self {
-        // TODO: check invariants
-        Self(value: value)
+    public init(unchecked value: String) {
+        self.value = value
+    }
+
+    public init(_ value: String) throws {
+        guard value.count <= FUNC_NAME_MAX else { throw ContractNameError(message: "InitNames must be at most \(FUNC_NAME_MAX) characters long") }
+        guard value.hasPrefix("init_") else { throw ContractNameError(message: "InitNames must be prefixed with 'init_'") }
+        guard !value.contains(".") else { throw ContractNameError(message: "InitNames must not contain a '.' character") }
+        guard value.allSatisfy(\.isASCII) else { throw ContractNameError(message: "InitNames must consist of only ASCII characters") }
+
+        self.init(unchecked: value)
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
@@ -249,16 +289,23 @@ public struct InitName: Serialize, Deserialize, Equatable {
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
-        return try? Self.checked(parsed)
+        return try? Self(parsed)
     }
 }
 
 public struct ContractName: Serialize, Deserialize, Equatable {
     public let value: String
 
-    static func checked(_ value: String) throws -> Self {
-        // TODO: check invariants
-        Self(value: value)
+    public init(unchecked value: String) {
+        self.value = value
+    }
+
+    public init(_ value: String) throws {
+        guard value.count <= (FUNC_NAME_MAX - 5) else { throw ContractNameError(message: "ContractNames must be at most \(FUNC_NAME_MAX - 5) characters long") }
+        guard !value.contains(".") else { throw ContractNameError(message: "ContractNames must not contain a '.' character") }
+        guard value.allSatisfy(\.isASCII) else { throw ContractNameError(message: "ContractNames must consist of only ASCII characters") }
+
+        self.init(unchecked: value)
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
@@ -267,16 +314,22 @@ public struct ContractName: Serialize, Deserialize, Equatable {
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
-        return try? Self.checked(parsed)
+        return try? Self(parsed)
     }
 }
 
 public struct EntrypointName: Serialize, Deserialize, Equatable {
     public let value: String
 
-    static func checked(_ value: String) throws -> Self {
-        // TODO: check invariants
-        Self(value: value)
+    public init(unchecked value: String) {
+        self.value = value
+    }
+
+    public init(_ value: String) throws {
+        guard value.count <= (FUNC_NAME_MAX - 1) else { throw ContractNameError(message: "EntrypointNames must be at most \(FUNC_NAME_MAX - 1) characters long") }
+        guard value.allSatisfy(\.isASCII) else { throw ContractNameError(message: "EntrypointNames must consist of only ASCII characters") }
+
+        self.init(unchecked: value)
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
@@ -285,16 +338,23 @@ public struct EntrypointName: Serialize, Deserialize, Equatable {
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
-        return try? Self.checked(parsed)
+        return try? Self(parsed)
     }
 }
 
 public struct ReceiveName: Serialize, Deserialize, Equatable {
     public let value: String
 
-    static func checked(_ value: String) throws -> Self {
-        // TODO: check invariants
-        Self(value: value)
+    public init(unchecked value: String) {
+        self.value = value
+    }
+
+    public init(_ value: String) throws {
+        guard value.count <= FUNC_NAME_MAX else { throw ContractNameError(message: "ReceiveNames must be at most \(FUNC_NAME_MAX) characters long") }
+        guard value.contains(".") else { throw ContractNameError(message: "ReceiveNames must not contain a '.' character") }
+        guard value.allSatisfy(\.isASCII) else { throw ContractNameError(message: "ReceiveNames must consist of only ASCII characters") }
+
+        self.init(unchecked: value)
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
@@ -303,6 +363,6 @@ public struct ReceiveName: Serialize, Deserialize, Equatable {
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
-        return try? Self.checked(parsed)
+        return try? Self(parsed)
     }
 }

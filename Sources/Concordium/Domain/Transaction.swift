@@ -65,6 +65,11 @@ public struct AccountTransaction {
         return self.init(sender: sender, payload: payload, energy: energy)
     }
 
+    public static func updateContract(sender: AccountAddress, amount: MicroCCDAmount, contractAddress: ContractAddress, receiveName: ReceiveName, param: Parameter, energy: Energy) -> Self {
+        let payload = AccountTransactionPayload.updateContract(amount: amount, contractAddress: contractAddress, receiveName: receiveName, message: param)
+        return self.init(sender: sender, payload: payload, energy: energy)
+    }
+
     public func prepare(sequenceNumber: SequenceNumber, expiry: UInt64, signatureCount: Int) -> PreparedAccountTransaction {
         let serializedPayload = payload.serialize()
         // While the header size is fixed at the moment, it isn't guaranteed to stay true in the future.
@@ -146,10 +151,10 @@ public struct SignedAccountTransaction: ToGRPC {
 }
 
 /// The payload for an account transaction (only transfer is supported for now).
-public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, Equatable {
+public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
     case deployModule(_ module: WasmModule)
     case initContract(amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter)
-    // case updateContract
+    case updateContract(amount: MicroCCDAmount, contractAddress: ContractAddress, receiveName: ReceiveName, message: Parameter)
     case transfer(amount: MicroCCDAmount, receiver: AccountAddress, memo: Memo? = nil)
     // case addBaker
     // case removeBaker
@@ -179,6 +184,12 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, Equatab
             res += buffer.writeInteger(amount)
             res += buffer.writeSerializable(modRef)
             res += buffer.writeSerializable(initName)
+            res += buffer.writeSerializable(param)
+        case let .updateContract(amount, contractAddress, receiveName, param):
+            res += buffer.writeInteger(2, as: UInt8.self)
+            res += buffer.writeInteger(amount)
+            res += buffer.writeSerializable(contractAddress)
+            res += buffer.writeSerializable(receiveName)
             res += buffer.writeSerializable(param)
         case let .transfer(amount, receiver, memo):
             if let memo {
@@ -220,6 +231,12 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, Equatab
                   let initName = InitName.deserialize(&data),
                   let param = Parameter.deserialize(&data) else { return nil }
             return AccountTransactionPayload.initContract(amount: amount, modRef: modRef, initName: initName, param: param)
+        case 2:
+            guard let amount = data.parseUInt(MicroCCDAmount.self),
+                  let contractAddress = ContractAddress.deserialize(&data),
+                  let receiveName = ReceiveName.deserialize(&data),
+                  let message = Parameter.deserialize(&data) else { return nil }
+            return AccountTransactionPayload.updateContract(amount: amount, contractAddress: contractAddress, receiveName: receiveName, message: message)
         case 3:
             guard let receiver = AccountAddress.deserialize(&data),
                   let amount = data.parseUInt(UInt64.self) else { return nil }
@@ -267,55 +284,12 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, Equatab
             throw GRPCConversionError(message: "Conversion not implemented for \(payload)")
         }
     }
-//
-//    func toGRPC() -> Concordium_V2_AccountTransactionPayload {
-//        var t = Concordium_V2_AccountTransactionPayload()
-//        switch self {
-//        case let .deployModule(module):
-//            t.deployModule = module.toGRPC()
-//        case let .transfer(amount, receiver, memo):
-//            var a = Concordium_V2_Amount()
-//            a.value = amount
-//            var r = Concordium_V2_AccountAddress()
-//            r.value = receiver.data
-//            if let memo {
-//                var m = Concordium_V2_Memo()
-//                m.value = memo
-//                var p = Concordium_V2_TransferWithMemoPayload()
-//                p.receiver = r
-//                p.memo = m
-//                p.amount = a
-//                var t = Concordium_V2_AccountTransactionPayload()
-//                t.transferWithMemo = p
-//            } else {
-//                var p = Concordium_V2_TransferPayload()
-//                p.receiver = r
-//                p.amount = a
-//                var t = Concordium_V2_AccountTransactionPayload()
-//                t.transfer = p
-//            }
-//        case let .transferWithSchedule(receiver, schedule, memo):
-//            if let memo {
-//                var m = Concordium_V2_Memo()
-//                m.value = memo
-//                var p = Concordium_V2_()
-//                p.receiver = r
-//                p.memo = m
-//                p.amount = a
-//                var t = Concordium_V2_AccountTransactionPayload()
-//                t.transferWithMemo = p
-//            } else {
-//                var p = Concordium_V2_TransferPayload()
-//                p.receiver = r
-//                p.amount = a
-//                var t = Concordium_V2_AccountTransactionPayload()
-//                t.transfer = p
-//            }
-//        }
-//
-//        return t
-//
-//    }
+
+    func toGRPC() -> Concordium_V2_AccountTransactionPayload {
+        var t = Concordium_V2_AccountTransactionPayload()
+        t.rawPayload = serialize()
+        return t
+    }
 }
 
 /// Header of an account transaction that contains basic data to check whether

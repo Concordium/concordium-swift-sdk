@@ -34,6 +34,26 @@ final class TransactionTest: XCTestCase {
         XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
     }
 
+    func testInitContractSerialization() throws {
+        let modRef = try ModuleReference(fromHex: "c14efbca1dcf314c73cc294cbbf1bd63e3906b20d35442943eb92f52e383fc38")
+        let t = try AccountTransactionPayload.initContract(amount: 1234, modRef: modRef, initName: InitName("init_test"), param: Parameter(Data([123, 23, 12, 45, 56])))
+
+        // Generated from serializing payload in rust sdk
+        let expected = Data([1, 0, 0, 0, 0, 0, 0, 4, 210, 193, 78, 251, 202, 29, 207, 49, 76, 115, 204, 41, 76, 187, 241, 189, 99, 227, 144, 107, 32, 211, 84, 66, 148, 62, 185, 47, 82, 227, 131, 252, 56, 0, 9, 105, 110, 105, 116, 95, 116, 101, 115, 116, 0, 5, 123, 23, 12, 45, 56])
+        XCTAssertEqual(t.serialize(), expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+    }
+
+    func testUpdateContractSerialization() throws {
+        let contractAddress = ContractAddress(index: 123, subindex: 0)
+        let t = try AccountTransactionPayload.updateContract(amount: 4321, contractAddress: contractAddress, receiveName: ReceiveName("test.function"), message: Parameter(Data([123, 23, 12, 45, 56])))
+
+        // Generated from serializing payload in rust sdk
+        let expected = Data([2, 0, 0, 0, 0, 0, 0, 16, 225, 0, 0, 0, 0, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 116, 101, 115, 116, 46, 102, 117, 110, 99, 116, 105, 111, 110, 0, 5, 123, 23, 12, 45, 56])
+        XCTAssertEqual(t.serialize(), expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+    }
+
     func testTransferSerialization() throws {
         let a = try AccountAddress(base58Check: "35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh")
         var t = AccountTransactionPayload.transfer(amount: 100, receiver: a, memo: nil)
