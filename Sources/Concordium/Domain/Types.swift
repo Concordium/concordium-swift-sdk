@@ -181,6 +181,7 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     }
 }
 
+/// A wrapper around a transaction memo
 public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var value: Data
 
@@ -205,7 +206,9 @@ public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
 
 /// Represents a single scheduled transfer in a transfer schedule, i.e. a list of `ScheduledTransfer`s
 public struct ScheduledTransfer: Serialize, Deserialize, Equatable {
+    /// The time the corresponding ``amount`` will be released
     public var timestamp: TransactionTime
+    /// The amount to release
     public var amount: MicroCCDAmount
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
@@ -219,6 +222,7 @@ public struct ScheduledTransfer: Serialize, Deserialize, Equatable {
     }
 }
 
+/// Represents a contract address on chain
 public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     public var index: UInt64
     public var subindex: UInt64
@@ -245,11 +249,15 @@ public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGR
     }
 }
 
+/// An error thrown when data supplied to a wrapper does not meet size requirements
 public struct DataSizeError: Error {
+    /// The size of the supplied data
     let actual: Int
+    /// The maximum size allowed
     let max: Int
 }
 
+/// Wrapper around ``Data`` supplied to a contract init/receive function
 public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
     typealias GRPC = Concordium_V2_Parameter
     public let value: Data
@@ -259,7 +267,7 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
     }
 
     /// Initializes a `Parameter` while checking the data
-    /// - Throws: `DataSizeError` if passed value exceeds the allowed parameter size
+    /// - Throws: ``DataSizeError`` if passed value exceeds the allowed parameter size
     public init(_ value: Data) throws {
         guard value.count <= PARAMETER_SIZE_MAX else {
             throw DataSizeError(actual: value.count, max: PARAMETER_SIZE_MAX)
@@ -287,6 +295,7 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
     }
 }
 
+/// Wrapper around ``Data`` to register on chain
 public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
     typealias GRPC = Concordium_V2_RegisteredData
     public let value: Data
@@ -295,8 +304,8 @@ public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRP
         self.value = value
     }
 
-    /// Initializes a `Parameter` while checking the data
-    /// - Throws: `DataSizeError` if passed value exceeds the allowed parameter size
+    /// Initializes a `Parameter` while checking the associated invariants
+    /// - Throws: ``DataSizeError`` if passed value exceeds the allowed parameter size
     public init(_ value: Data) throws {
         guard value.count <= REGISTERED_DATA_SIZE_MAX else {
             throw DataSizeError(actual: value.count, max: REGISTERED_DATA_SIZE_MAX)
@@ -324,10 +333,13 @@ public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRP
     }
 }
 
+/// Represents an error happening while checking invariants of some string associated with any contract name
 public struct ContractNameError: Error {
+    /// A message describing the error
     let message: String
 }
 
+/// A wrapper around a contract init name
 public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     typealias GRPC = Concordium_V2_InitName
     public let value: String
@@ -336,6 +348,8 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
         self.value = value
     }
 
+    /// Initializes with the value, while checking the associated invariants
+    /// - Throws: ``ContractNameError`` if passed value exceeds the allowed parameter size
     public init(_ value: String) throws {
         guard value.count <= FUNC_NAME_MAX else { throw ContractNameError(message: "InitNames must be at most \(FUNC_NAME_MAX) characters long") }
         guard value.hasPrefix("init_") else { throw ContractNameError(message: "InitNames must be prefixed with 'init_'") }
@@ -365,6 +379,7 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     }
 }
 
+/// A wrapper around a contract name, corresponding to the prefix of receive functions.
 public struct ContractName: Serialize, Deserialize, Equatable {
     public let value: String
 
@@ -372,6 +387,7 @@ public struct ContractName: Serialize, Deserialize, Equatable {
         self.value = value
     }
 
+    /// Initializes with the value, while checking the associated invariants
     public init(_ value: String) throws {
         guard value.count <= (FUNC_NAME_MAX - 5) else { throw ContractNameError(message: "ContractNames must be at most \(FUNC_NAME_MAX - 5) characters long") }
         guard !value.contains(".") else { throw ContractNameError(message: "ContractNames must not contain a '.' character") }
@@ -390,6 +406,7 @@ public struct ContractName: Serialize, Deserialize, Equatable {
     }
 }
 
+/// A wrapper around a contract entrypoint name, corresponding to the receive function in the contract without the contract name prefix
 public struct EntrypointName: Serialize, Deserialize, Equatable {
     public let value: String
 
@@ -397,6 +414,7 @@ public struct EntrypointName: Serialize, Deserialize, Equatable {
         self.value = value
     }
 
+    /// Initializes with the value, while checking the associated invariants
     public init(_ value: String) throws {
         guard value.count <= (FUNC_NAME_MAX - 1) else { throw ContractNameError(message: "EntrypointNames must be at most \(FUNC_NAME_MAX - 1) characters long") }
         guard value.allSatisfy(\.isASCII) else { throw ContractNameError(message: "EntrypointNames must consist of only ASCII characters") }
@@ -414,6 +432,7 @@ public struct EntrypointName: Serialize, Deserialize, Equatable {
     }
 }
 
+/// A wrapper around a receive name, consisting of a ``ContractName`` and an ``EntrypointName``
 public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     typealias GRPC = Concordium_V2_ReceiveName
     public let value: String
@@ -422,6 +441,7 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
         self.value = value
     }
 
+    /// Initializes with the value, while checking the associated invariants
     public init(_ value: String) throws {
         guard value.count <= FUNC_NAME_MAX else { throw ContractNameError(message: "ReceiveNames must be at most \(FUNC_NAME_MAX) characters long") }
         guard value.contains(".") else { throw ContractNameError(message: "ReceiveNames must not contain a '.' character") }

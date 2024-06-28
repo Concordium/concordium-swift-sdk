@@ -4,12 +4,19 @@ import NIOCore
 import NIOPosix
 
 public protocol NodeClient {
+    /// Get the global context for the chain
     func cryptographicParameters(block: BlockIdentifier) async throws -> CryptographicParameters
+    /// Get the list of identity providers registered for the chain
     func identityProviders(block: BlockIdentifier) async throws -> [IdentityProviderInfo]
+    /// Get the list of identity disclosure autorities registered for the chain
     func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevokerInfo]
+    /// Get the next account sequence number for the account
     func nextAccountSequenceNumber(address: AccountAddress) async throws -> NextAccountSequenceNumber
+    /// Get the account info for an account
     func info(account: AccountIdentifier, block: BlockIdentifier) async throws -> AccountInfo
+    /// Submit a transaction to the node
     func send(transaction: SignedAccountTransaction) async throws -> TransactionHash
+    /// Submit an account credential deployment to the node
     func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash
 }
 
@@ -20,6 +27,9 @@ public class GRPCNodeClient: NodeClient {
         self.grpc = grpc
     }
 
+    // TODO: initialize from URL components
+
+    /// Initialize a GRPC client from the supplied GRPC channel
     public convenience init(channel: GRPCChannel) {
         self.init(Concordium_V2_QueriesNIOClient(channel: channel))
     }

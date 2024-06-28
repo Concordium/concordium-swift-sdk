@@ -52,15 +52,18 @@ public struct Cursor {
         return read(num: len)
     }
 
+    /// Read a string prefixed with the associated length.
     public mutating func readString<UInt: UnsignedInteger>(withLengthPrefix _: UInt.Type) -> String? {
         guard let bytes = read(withLengthPrefix: UInt.self) else { return nil }
         return String(decoding: bytes, as: UTF8.self)
     }
 
+    /// Deserialize a deserializable type from the inner data.
     public mutating func deserialize<T: Deserialize>(_ _: T) -> T? {
         T.deserialize(&self)
     }
 
+    /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
     public mutating func deserialize<T: Deserialize, UInt: UnsignedInteger>(listOf _: T.Type, withLengthPrefix _: UInt.Type) -> [T]? {
         guard let length = parseUInt(UInt.self) else { return nil }
 
