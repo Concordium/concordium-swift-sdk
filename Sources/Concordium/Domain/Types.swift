@@ -44,14 +44,14 @@ public struct ExactSizeError: Error {
 }
 
 /// Describes a type wrapping `Data`
-protocol HashBytes {
+public protocol HashBytes {
     /// The inner data
     var value: Data { get }
     /// Initializes the `HashBytes` implementation without checking the data
-    init(value: Data)
+    init(unchecked value: Data)
 }
 
-extension HashBytes {
+public extension HashBytes {
     /// Creates the type from the passed data
     /// - Throws: `ExactSizeError` if the number of bytes does not match number of bytes expected.
     init(_ data: Data) throws {
@@ -59,7 +59,7 @@ extension HashBytes {
             throw ExactSizeError(actual: data.count)
         }
 
-        self.init(value: data)
+        self.init(unchecked: data)
     }
 
     /// Creates the type from a hex string
@@ -69,11 +69,16 @@ extension HashBytes {
         let data = try Data(hex: hex)
         try self.init(data)
     }
+
+    var hex: String { value.hex }
 }
 
 /// Represents a Concordium transaction hash
 public struct TransactionHash: HashBytes, ToGRPC, FromGRPC, Equatable {
-    let value: Data
+    public let value: Data
+    public init(unchecked value: Data) {
+        self.value = value
+    }
 
     func toGRPC() -> Concordium_V2_TransactionHash {
         var t = GRPC()
@@ -90,7 +95,10 @@ public struct TransactionHash: HashBytes, ToGRPC, FromGRPC, Equatable {
 
 /// Represents a Concordium block hash
 public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable {
-    let value: Data
+    public let value: Data
+    public init(unchecked value: Data) {
+        self.value = value
+    }
 
     func toGRPC() -> Concordium_V2_BlockHash {
         var t = GRPC()
@@ -107,7 +115,10 @@ public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable {
 
 /// Represents a Concordium smart contract module reference
 public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
-    let value: Data
+    public let value: Data
+    public init(unchecked value: Data) {
+        self.value = value
+    }
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeData(value)
@@ -185,16 +196,20 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
 public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var value: Data
 
+    public init(_ value: Data) {
+        self.value = value
+    }
+
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeData(value, lengthPrefix: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Memo? {
-        data.read(withLengthPrefix: UInt16.self).map { Self(value: Data($0)) }
+        data.read(withLengthPrefix: UInt16.self).map { Self(Data($0)) }
     }
 
     static func fromGRPC(_ gRPC: Concordium_V2_Memo) throws -> Memo {
-        Self(value: gRPC.value)
+        Self(gRPC.value)
     }
 
     func toGRPC() -> Concordium_V2_Memo {
@@ -211,6 +226,11 @@ public struct ScheduledTransfer: Serialize, Deserialize, Equatable {
     /// The amount to release
     public var amount: MicroCCDAmount
 
+    public init(timestamp: TransactionTime, amount: MicroCCDAmount) {
+        self.timestamp = timestamp
+        self.amount = amount
+    }
+
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
         buffer.writeInteger(timestamp) + buffer.writeInteger(amount)
     }
@@ -226,6 +246,11 @@ public struct ScheduledTransfer: Serialize, Deserialize, Equatable {
 public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     public var index: UInt64
     public var subindex: UInt64
+
+    public init(index: UInt64, subindex: UInt64) {
+        self.index = index
+        self.subindex = subindex
+    }
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(index) + buffer.writeInteger(subindex)
