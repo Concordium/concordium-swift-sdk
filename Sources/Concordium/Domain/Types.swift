@@ -1,3 +1,4 @@
+import ConcordiumWalletCrypto
 import Foundation
 import NIO
 
@@ -526,3 +527,7 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
         try Self(gRPC.value)
     }
 }
+
+public typealias InputEncryptedAmount = ConcordiumWalletCrypto.InputEncryptedAmount
+public typealias EncryptedAmountAggIndex = UInt64
+public typealias SecToPubAmountTransferProof = Data

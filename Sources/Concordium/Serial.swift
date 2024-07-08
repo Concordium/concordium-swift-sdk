@@ -52,6 +52,11 @@ public struct Cursor {
         return read(num: len)
     }
 
+    /// Read all bytes from the inner data, completely exhausting the `Cursor`
+    public mutating func readAll() -> Data.SubSequence {
+        read(num: data.count)! // We unwrap as we know the guard which checks the length will pass
+    }
+
     /// Read a string prefixed with the associated length.
     public mutating func readString<UInt: UnsignedInteger>(withLengthPrefix _: UInt.Type) -> String? {
         guard let bytes = read(withLengthPrefix: UInt.self) else { return nil }

@@ -85,6 +85,11 @@ CONCORDIUM_WALLET_CRYPTO_PATH=../concordium-wallet-crypto-swift swift test
 ```
 will build and test the project using the local crypto package and the binary framework compiled locally from it.
 
+To load local version of `ConcordiumWalletCrypto` in XCode, run the following in a terminal and subsequently restart XCode:
+```shell
+/bin/launchctl setenv CONCORDIUM_WALLET_CRYPTO_PATH "../concordium-wallet-crypto-swift" # Or preferably an absolute path
+``` 
+
 ### Build and test SDK
 
 With the Rust bindings in place, the SDK is built and tests executed using `swift test`.

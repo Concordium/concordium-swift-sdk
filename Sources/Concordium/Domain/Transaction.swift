@@ -18,6 +18,8 @@ public enum TransactionCost {
 
     /// The amount of additional energy required for a "transfer" transaction
     public static let TRANSFER: Energy = 300 // Including memo doesn't increase the cost
+    /// The amount of additional energy required for a "transfer to public" transaction
+    public static let TRANSFER_TO_PUBLIC: Energy = 14850
 
     /// The amount of additional energy required for a "transfer with schedule" transaction
     public static func transferWithSchedule(_ schedule: [ScheduledTransfer]) -> Energy {
@@ -99,6 +101,13 @@ public struct AccountTransaction {
     public static func registerData(sender: AccountAddress, data: RegisteredData) -> Self {
         let payload = AccountTransactionPayload.registerData(data)
         return self.init(sender: sender, payload: payload, energy: TransactionCost.REGISTER_DATA)
+    }
+
+    /// Creates a transaction for transferring CCD from shielded to public balance. Returns `nil` if the data could for the transaction could not be successfully created
+    public static func transferToPublic(sender: AccountAddress, global: GlobalContext, senderSecretKey: String, inputAmount: InputEncryptedAmount, toTransfer: MicroCCDAmount) -> Self? {
+        guard let data = try? secToPubTransferData(ctx: global, senderSecretKey: senderSecretKey, inputAmount: inputAmount, toTransfer: toTransfer) else { return nil }
+        let payload = AccountTransactionPayload.transferToPublic(data)
+        return self.init(sender: sender, payload: payload, energy: TransactionCost.TRANSFER_TO_PUBLIC)
     }
 
     /// Prepares the transaction for submission
@@ -197,21 +206,59 @@ public struct SignedAccountTransaction: ToGRPC {
     }
 }
 
+/// Describes the different transaction types available
+public enum TransactionType: UInt8, Serialize, Deserialize {
+    case deployModule = 0
+    case initContract = 1
+    case updateContract = 2
+    case transfer = 3
+    /// Only effective prior to protocol version 4
+    case addBaker = 4
+    /// Only effective prior to protocol version 4
+    case removeBaker = 5
+    /// Only effective prior to protocol version 4
+    case updateBakerStake = 6
+    /// Only effective prior to protocol version 4
+    case updateBakerRestakeEarnings = 7
+    /// Only effective prior to protocol version 4
+    case updateBakerKeys = 8
+    case updateCredentialKeys = 13
+    /// Only effective prior to protocol version 7
+    case encryptedAmountTransfer = 16
+    /// Only effective prior to protocol version 7
+    case transferToEncrypted = 17
+    case transferToPublic = 18
+    case transferWithSchedule = 19
+    case updateCredentials = 20
+    case registerData = 21
+    case transferWithMemo = 22
+    /// Only effective prior to protocol version 7
+    case encryptedAmountTransferWithMemo = 23
+    case transferWithScheduleAndMemo = 24
+    /// Effective from protocol version 4
+    case configureBaker = 25
+    /// Effective from protocol version 4
+    case configureDelegation = 26
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(rawValue)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> TransactionType? {
+        guard let tag = data.parseUInt(UInt8.self), let type = TransactionType(rawValue: tag) else { return nil }
+        return type
+    }
+}
+
 /// The payload for an account transaction.
 public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
     case deployModule(_ module: WasmModule)
     case initContract(amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter)
     case updateContract(amount: MicroCCDAmount, address: ContractAddress, receiveName: ReceiveName, message: Parameter)
     case transfer(amount: MicroCCDAmount, receiver: AccountAddress, memo: Memo? = nil)
-    // case addBaker
-    // case removeBaker
-    // case updateBakerStake
-    // case updateBakerStakeEarnings
-    // case updateBakerKeys
     // case updateCredentialKeys
-    // case encryptedAmountTransfer(memo: Data?)
-    // case transferToEncrypted
-    // case transferToPublic
+    // TODO: We don't need to support other shielded functionality, do we?
+    case transferToPublic(_ data: SecToPubTransferData)
     case transferWithSchedule(receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Memo? = nil)
     // case updateCredentials
     case registerData(_ data: RegisteredData)
@@ -224,44 +271,50 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
         // Based on 'https://github.com/Concordium/concordium-base/blob/2c3255f39afd73543b5b21bbae1074fb069a0abd/rust-src/concordium_base/src/transactions.rs#L931'.
         switch self {
         case let .deployModule(module):
-            res += buffer.writeInteger(0, as: UInt8.self)
+            res += buffer.writeSerializable(TransactionType.deployModule)
             res += buffer.writeSerializable(module)
         case let .initContract(amount, modRef, initName, param):
-            res += buffer.writeInteger(1, as: UInt8.self)
+            res += buffer.writeSerializable(TransactionType.initContract)
             res += buffer.writeInteger(amount)
             res += buffer.writeSerializable(modRef)
             res += buffer.writeSerializable(initName)
             res += buffer.writeSerializable(param)
         case let .updateContract(amount, contractAddress, receiveName, param):
-            res += buffer.writeInteger(2, as: UInt8.self)
+            res += buffer.writeSerializable(TransactionType.updateContract)
             res += buffer.writeInteger(amount)
             res += buffer.writeSerializable(contractAddress)
             res += buffer.writeSerializable(receiveName)
             res += buffer.writeSerializable(param)
         case let .transfer(amount, receiver, memo):
             if let memo {
-                res += buffer.writeInteger(22, as: UInt8.self)
+                res += buffer.writeSerializable(TransactionType.transferWithMemo)
                 res += buffer.writeData(receiver.data)
                 res += buffer.writeSerializable(memo)
                 res += buffer.writeInteger(amount)
             } else {
-                res += buffer.writeInteger(3, as: UInt8.self)
+                res += buffer.writeSerializable(TransactionType.transfer)
                 res += buffer.writeData(receiver.data)
                 res += buffer.writeInteger(amount)
             }
+        case let .transferToPublic(data):
+            res += buffer.writeSerializable(TransactionType.transferToPublic)
+            res += buffer.writeData(Data(data.serializedRemainingAmount))
+            res += buffer.writeInteger(data.transferAmount)
+            res += buffer.writeInteger(data.index)
+            res += buffer.writeData(Data(data.serializedProof))
         case let .transferWithSchedule(receiver, schedule, memo):
             if let memo {
-                res += buffer.writeInteger(24, as: UInt8.self)
+                res += buffer.writeSerializable(TransactionType.transferWithScheduleAndMemo)
                 res += buffer.writeData(receiver.data)
                 res += buffer.writeSerializable(memo)
                 res += buffer.writeSerializable(list: schedule, lengthPrefix: UInt8.self)
             } else {
-                res += buffer.writeInteger(19, as: UInt8.self)
+                res += buffer.writeSerializable(TransactionType.transferWithSchedule)
                 res += buffer.writeData(receiver.data)
                 res += buffer.writeSerializable(list: schedule, lengthPrefix: UInt8.self)
             }
         case let .registerData(data):
-            res += buffer.writeInteger(21, as: UInt8.self)
+            res += buffer.writeSerializable(TransactionType.registerData)
             res += buffer.writeSerializable(data)
         }
 
@@ -269,46 +322,49 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
     }
 
     public static func deserialize(_ data: inout Cursor) -> AccountTransactionPayload? {
-        guard let type = data.parseUInt(UInt8.self) else { return nil }
+        guard let type = TransactionType.deserialize(&data) else { return nil }
 
         switch type {
-        case 0:
+        case .deployModule:
             guard let module = WasmModule.deserialize(&data) else { return nil }
             return AccountTransactionPayload.deployModule(module)
-        case 1:
+        case .initContract:
             guard let amount = data.parseUInt(MicroCCDAmount.self),
                   let modRef = ModuleReference.deserialize(&data),
                   let initName = InitName.deserialize(&data),
                   let param = Parameter.deserialize(&data) else { return nil }
             return AccountTransactionPayload.initContract(amount: amount, modRef: modRef, initName: initName, param: param)
-        case 2:
+        case .updateContract:
             guard let amount = data.parseUInt(MicroCCDAmount.self),
                   let contractAddress = ContractAddress.deserialize(&data),
                   let receiveName = ReceiveName.deserialize(&data),
                   let message = Parameter.deserialize(&data) else { return nil }
             return AccountTransactionPayload.updateContract(amount: amount, address: contractAddress, receiveName: receiveName, message: message)
-        case 3:
+        case .transfer:
             guard let receiver = AccountAddress.deserialize(&data),
                   let amount = data.parseUInt(UInt64.self) else { return nil }
             return .transfer(amount: amount, receiver: receiver)
-        case 19:
+        case .transferToPublic:
+            guard let transferData = try? deserializeSecToPubTransferData(bytes: [UInt8](data.readAll())) else { return nil }
+            return .transferToPublic(transferData)
+        case .transferWithSchedule:
             guard let receiver = AccountAddress.deserialize(&data),
                   let schedule = data.deserialize(listOf: ScheduledTransfer.self, withLengthPrefix: UInt8.self) else { return nil }
             return .transferWithSchedule(receiver: receiver, schedule: schedule)
-        case 21:
+        case .registerData:
             guard let regData = RegisteredData.deserialize(&data) else { return nil }
             return .registerData(regData)
-        case 22:
+        case .transferWithMemo:
             guard let receiver = AccountAddress.deserialize(&data),
                   let memo = Memo.deserialize(&data),
                   let amount = data.parseUInt(UInt64.self) else { return nil }
             return .transfer(amount: amount, receiver: receiver, memo: memo)
-        case 24:
+        case .transferWithScheduleAndMemo:
             guard let receiver = AccountAddress.deserialize(&data),
                   let memo = Memo.deserialize(&data),
                   let schedule = data.deserialize(listOf: ScheduledTransfer.self, withLengthPrefix: UInt8.self) else { return nil }
             return .transferWithSchedule(receiver: receiver, schedule: schedule, memo: memo)
-        // TODO: handle the rest of the cases...
+        // TODO: handle the rest of the cases, and remove default...
         default:
             // TODO: should this be an error instead?
             return nil
