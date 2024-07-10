@@ -95,4 +95,14 @@ final class TransactionTest: XCTestCase {
         XCTAssertEqual(t.serialize(), expected)
         XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
     }
+
+    func testUpdateCredentialKeysSerialization() throws {
+        let credId = try CredentialRegistrationID(Data(hex: "a5727a5f217a0abaa6bba7f6037478051a49d5011e045eb0d86fce393e0c7b4a96382c60e09a489ebb6d800dc0d88d05"))
+        let keys = try CredentialPublicKeys(keys: [2: VerifyKey(ed25519KeyHex: "d684ac5fd786d33c82701ce9f05017bb6f3114bec77c0e836e7d5c211de9acc6")], threshold: 1)
+        let t = AccountTransactionPayload.updateCredentialKeys(credId: credId, keys: keys)
+
+        let expected = Data([13, 165, 114, 122, 95, 33, 122, 10, 186, 166, 187, 167, 246, 3, 116, 120, 5, 26, 73, 213, 1, 30, 4, 94, 176, 216, 111, 206, 57, 62, 12, 123, 74, 150, 56, 44, 96, 224, 154, 72, 158, 187, 109, 128, 13, 192, 216, 141, 5, 1, 2, 0, 214, 132, 172, 95, 215, 134, 211, 60, 130, 112, 28, 233, 240, 80, 23, 187, 111, 49, 20, 190, 199, 124, 14, 131, 110, 125, 92, 33, 29, 233, 172, 198, 1])
+        XCTAssertEqual(t.serialize(), expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+    }
 }

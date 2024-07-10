@@ -358,7 +358,9 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
                   let amount = data.parseUInt(UInt64.self) else { return nil }
             return .transfer(amount: amount, receiver: receiver)
         case .updateCredentialKeys:
-            return nil // TODO: missing impl
+            guard let credId = CredentialRegistrationID.deserialize(&data),
+                  let keys = CredentialPublicKeys.deserialize(&data) else { return nil }
+            return .updateCredentialKeys(credId: credId, keys: keys)
         case .transferToPublic:
             guard let transferData = try? deserializeSecToPubTransferData(bytes: [UInt8](data.readAll())) else { return nil }
             return .transferToPublic(transferData)

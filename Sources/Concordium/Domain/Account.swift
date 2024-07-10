@@ -34,7 +34,7 @@ public struct CredentialRegistrationID: Serialize, Deserialize, FromGRPC, ToGRPC
 
     public init(_ value: Data) throws {
         guard value.count == Self.SIZE else { throw CredentialRegistrationIDError.unexpectedSize(actual: value.count) }
-        guard value[0] >> 7 == 1 else { throw CredentialRegistrationIDError.invalid("Expected first bit in data to be 1") }
+        guard value.first! >> 7 == 1 else { throw CredentialRegistrationIDError.invalid("Expected first bit in data to be 1") }
         self.value = value
     }
 
