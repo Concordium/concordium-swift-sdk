@@ -39,7 +39,7 @@ func makeTransfer(
     _ seq: SequenceNumber,
     _ expiry: TransactionTime
 ) throws -> SignedAccountTransaction {
-    let tx = AccountTransaction(sender: account.address, payload: .transfer(amount: amount, receiver: receiver))
+    let tx = AccountTransaction.transfer(sender: account.address, receiver: receiver, amount: amount)
     return try account.keys.sign(transaction: tx, sequenceNumber: seq, expiry: expiry)
 }
 

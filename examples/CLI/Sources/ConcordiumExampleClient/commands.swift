@@ -33,7 +33,7 @@ struct WalletProxyOptions: ParsableArguments {
 extension BlockIdentifier: ExpressibleByArgument {
     public init?(argument: String) {
         do {
-            self = try .hash(BlockHash(hex: argument))
+            self = try .hash(BlockHash(fromHex: argument))
         } catch {
             return nil
         }
@@ -603,9 +603,9 @@ func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amo
     let next = try await client.nextAccountSequenceNumber(address: sender.address)
     print("Preparing and signing transaction.")
     let tx = try sender.keys.sign(
-        transaction: AccountTransaction(
+        transaction: AccountTransaction.transfer(
             sender: sender.address,
-            payload: .transfer(amount: amount, receiver: receiver, memo: memo)
+            receiver: receiver, amount: amount, memo: memo != nil ? Memo(memo!) : nil
         ),
         sequenceNumber: next.sequenceNumber,
         expiry: expiry

@@ -1,15 +1,13 @@
 import Foundation
 
-public typealias BlockHash = Data // 32 bytes
-
-public enum BlockIdentifier {
+public enum BlockIdentifier: ToGRPC {
     case lastFinal
     case best
     case hash(BlockHash)
     case absoluteHeight(UInt64)
     case relativeHeight(genesisIndex: UInt32, height: UInt64, restrictedToGenesisIndex: Bool)
 
-    func toGRPCType() -> Concordium_V2_BlockHashInput {
+    func toGRPC() -> Concordium_V2_BlockHashInput {
         switch self {
         case .lastFinal:
             var b = Concordium_V2_BlockHashInput()
@@ -20,8 +18,7 @@ public enum BlockIdentifier {
             b.best = Concordium_V2_Empty()
             return b
         case let .hash(hash):
-            var h = Concordium_V2_BlockHash()
-            h.value = hash
+            let h = hash.toGRPC()
             var b = Concordium_V2_BlockHashInput()
             b.given = h
             return b
@@ -46,5 +43,3 @@ public enum BlockIdentifier {
         }
     }
 }
-
-public typealias TransactionHash = Data // 32 bytes (SHA256)
