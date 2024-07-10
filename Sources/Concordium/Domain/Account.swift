@@ -1,6 +1,7 @@
 import Base58Check
 import ConcordiumWalletCrypto
 import Foundation
+import NIO
 
 /// Index of an account in the account table.
 /// These are assigned sequentially in the order of creation of accounts.
@@ -16,11 +17,46 @@ public typealias CredentialIndex = UInt32
 /// Index of an account key that is to be used.
 public typealias KeyIndex = UInt8
 
+public enum CredentialRegistrationIDError: Error {
+    case unexpectedSize(actual: Int)
+    case invalid(String)
+}
+
 /// A registration ID of a credential.
 /// This ID is generated from the user's PRF key and a sequential counter.
 /// ``CredentialRegistrationID``'s generated from the same PRF key,
 /// but different counter values cannot easily be linked together.
-public typealias CredentialRegistrationID = Data // 48 bytes
+/// - Throws: ``CredentialRegistrationIDError``
+public struct CredentialRegistrationID: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
+    public static let SIZE = 48
+    typealias GRPC = Concordium_V2_CredentialRegistrationId
+    public let value: Data // 48 bytes
+
+    public init(_ value: Data) throws {
+        guard value.count == Self.SIZE else { throw CredentialRegistrationIDError.unexpectedSize(actual: value.count) }
+        guard value[0] >> 7 == 1 else { throw CredentialRegistrationIDError.invalid("Expected first bit in data to be 1") }
+        self.value = value
+    }
+
+    static func fromGRPC(_ gRPC: Concordium_V2_CredentialRegistrationId) throws -> CredentialRegistrationID {
+        try Self(gRPC.value)
+    }
+
+    func toGRPC() -> Concordium_V2_CredentialRegistrationId {
+        var g = GRPC()
+        g.value = value
+        return g
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeData(value)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> CredentialRegistrationID? {
+        guard let value = data.read(num: SIZE) else { return nil }
+        return try? Self(value)
+    }
+}
 
 /// A succinct identifier of an identity provider on the chain.
 /// In credential deployments and other interactions with the chain, this is used to identify which identity provider is meant.
@@ -75,16 +111,12 @@ public enum AccountIdentifier: ToGRPC {
     func toGRPC() -> Concordium_V2_AccountIdentifierInput {
         switch self {
         case let .address(addr):
-            var a = Concordium_V2_AccountAddress()
-            a.value = addr.data
             var i = Concordium_V2_AccountIdentifierInput()
-            i.address = a
+            i.address = addr.toGRPC()
             return i
         case let .credentialRegistrationID(id):
-            var c = Concordium_V2_CredentialRegistrationId()
-            c.value = id
             var i = Concordium_V2_AccountIdentifierInput()
-            i.credID = c
+            i.credID = id.toGRPC()
             return i
         case let .index(idx):
             var a = Concordium_V2_AccountIndex()
@@ -97,7 +129,16 @@ public enum AccountIdentifier: ToGRPC {
 }
 
 /// Address of an account as raw bytes.
-public struct AccountAddress: Hashable, Deserialize, FromGRPC {
+public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC {
+    public static let SIZE = 32
+    func toGRPC() -> Concordium_V2_AccountAddress {
+        var g = GRPC()
+        g.value = data
+        return g
+    }
+
+    typealias GRPC = Concordium_V2_AccountAddress
+
     private static let base58CheckVersion: UInt8 = 1
 
     public var data: Data // 32 bytes
@@ -124,11 +165,15 @@ public struct AccountAddress: Hashable, Deserialize, FromGRPC {
     }
 
     public static func deserialize(_ data: inout Cursor) -> AccountAddress? {
-        data.read(num: 32).map { AccountAddress(Data($0)) }
+        data.read(num: SIZE).map { AccountAddress(Data($0)) }
     }
 
-    static func fromGRPC(_ grpc: Concordium_V2_AccountAddress) -> Self {
+    static func fromGRPC(_ grpc: GRPC) -> Self {
         .init(grpc.value)
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeData(data)
     }
 }
 
@@ -190,7 +235,7 @@ public struct ReleaseSchedule: FromGRPC {
 /// needed for a valid signature on a transaction.
 public typealias CredentialPublicKeys = ConcordiumWalletCrypto.CredentialPublicKeys
 
-extension CredentialPublicKeys: FromGRPC {
+extension CredentialPublicKeys: FromGRPC, Serialize, Deserialize {
     static func fromGRPC(_ grpc: Concordium_V2_CredentialPublicKeys) throws -> Self {
         try .init(
             keys: grpc.keys.reduce(into: [:]) { res, e in
@@ -200,12 +245,50 @@ extension CredentialPublicKeys: FromGRPC {
             threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GRPCError.valueOutOfBounds
         )
     }
+
+    public func serializeInto(buffer: inout ByteBuffer) -> Int {
+        var res = 0
+        res += buffer.writeSerializable(map: keys, lengthPrefix: UInt8.self)
+        res += buffer.writeInteger(threshold)
+        return res
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> CredentialPublicKeys? {
+        guard let keys = data.deserialize(mapOf: VerifyKey.self, keys: UInt8.self, lengthPrefix: UInt8.self),
+              let threshold = data.parseUInt(UInt8.self) else { return nil }
+        return CredentialPublicKeys(keys: keys, threshold: threshold)
+    }
 }
 
 public typealias VerifyKey = ConcordiumWalletCrypto.VerifyKey
 
-extension VerifyKey: FromGRPC {
-    public init(ed25519KeyHex: String) {
+public enum VerifyKeyError: Error, Equatable {
+    case unexpectedLength(actual: UInt8)
+    case invalidHex
+}
+
+extension VerifyKey: FromGRPC, Serialize, Deserialize {
+    public static let SIZE = 32
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(0, as: UInt8.self) + buffer.writeData(try! Data(hex: keyHex)) // We unwrap, as initializing safely will mean this always succeeds
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> ConcordiumWalletCrypto.VerifyKey? {
+        guard let tag = data.parseUInt(UInt8.self) else { return nil }
+        switch tag {
+        case 0: // schemeId = Ed25519
+            guard let key = data.read(num: Self.SIZE).map({ try? Self(ed25519KeyHex: $0.hex) }) else { return nil }
+            return key
+        default:
+            return nil
+        }
+    }
+
+    /// Safely initialize a verify key from a 32 length byte sequence in hex format
+    /// - Throws: ``VerifyKeyError`` in case the passed hex string is not a valid ed25519 verify key
+    public init(ed25519KeyHex: String) throws {
+        let parsed = try Data(hex: ed25519KeyHex) ?! VerifyKeyError.invalidHex // Check that the data is hex
+        guard parsed.count == Self.SIZE else { throw VerifyKeyError.unexpectedLength(actual: UInt8(parsed.count)) }
         self.init(schemeId: "Ed25519", keyHex: ed25519KeyHex)
     }
 
@@ -214,7 +297,7 @@ extension VerifyKey: FromGRPC {
         case nil:
             throw GRPCError.missingRequiredValue("verify key")
         case let .ed25519Key(d):
-            return .init(ed25519KeyHex: d.hex)
+            return try .init(ed25519KeyHex: d.hex) ?! GRPCError.unsupportedValue("Invalid hex string")
         }
     }
 }
@@ -255,7 +338,7 @@ public struct CredentialDeploymentValuesInitial: FromGRPC {
     static func fromGRPC(_ grpc: Concordium_V2_InitialCredentialValues) throws -> Self {
         try .init(
             credentialPublicKeys: .fromGRPC(grpc.keys),
-            credentialID: grpc.credID.value,
+            credentialID: CredentialRegistrationID.fromGRPC(grpc.credID),
             identityProviderID: grpc.ipID.value,
             policy: .fromGRPC(grpc.policy)
         )
@@ -283,7 +366,7 @@ public struct CredentialDeploymentValuesNormal: FromGRPC {
         try .init(
             initial: CredentialDeploymentValuesInitial(
                 credentialPublicKeys: .fromGRPC(grpc.keys),
-                credentialID: grpc.credID.value,
+                credentialID: CredentialRegistrationID.fromGRPC(grpc.credID),
                 identityProviderID: grpc.ipID.value,
                 policy: .fromGRPC(grpc.policy)
             ),
@@ -295,7 +378,7 @@ public struct CredentialDeploymentValuesNormal: FromGRPC {
     public func toCryptoType(proofs: Proofs) -> AccountCredential {
         .init(
             arData: anonymityRevokerData,
-            credIdHex: initial.credentialID.hex,
+            credIdHex: initial.credentialID.value.hex,
             credentialPublicKeys: initial.credentialPublicKeys,
             ipIdentity: initial.identityProviderID,
             policy: initial.policy,

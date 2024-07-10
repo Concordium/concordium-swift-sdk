@@ -43,6 +43,10 @@ public enum TransactionCost {
 
     /// The amount of additional energy required for a "register data" transaction
     public static let REGISTER_DATA: Energy = 300
+
+    public static func updateCredentialKeys(numCredentialsBefore: UInt16, numKeys: UInt16) -> Energy {
+        500 * UInt64(numCredentialsBefore) + 100 * UInt64(numKeys)
+    }
 }
 
 /// Represents an account transaction consisting of the transaction components necessary for submission
@@ -96,8 +100,7 @@ public struct AccountTransaction {
         return self.init(sender: sender, payload: payload, energy: energy)
     }
 
-    /// Creates a transaction for invoking a smart contract entrypoint
-    /// - Parameter maxEnergy: the max amount of energy to spend for the corresponding receive function of the smart contract module. If this is not enough to execute the transaction on the node, the transaction will be rejected.
+    /// Creates a transaction for registering data on chain
     public static func registerData(sender: AccountAddress, data: RegisteredData) -> Self {
         let payload = AccountTransactionPayload.registerData(data)
         return self.init(sender: sender, payload: payload, energy: TransactionCost.REGISTER_DATA)
@@ -108,6 +111,13 @@ public struct AccountTransaction {
         guard let data = try? secToPubTransferData(ctx: global, senderSecretKey: senderSecretKey, inputAmount: inputAmount, toTransfer: toTransfer) else { return nil }
         let payload = AccountTransactionPayload.transferToPublic(data)
         return self.init(sender: sender, payload: payload, energy: TransactionCost.TRANSFER_TO_PUBLIC)
+    }
+
+    /// Creates a transaction for updating the keys of a credential corresponding to the given ``CredentialRegistrationID``
+    public static func updateCredentialKeys(sender: AccountAddress, numExistingCredentials: UInt16, credId: CredentialRegistrationID, keys: CredentialPublicKeys) -> Self {
+        let payload = AccountTransactionPayload.updateCredentialKeys(credId: credId, keys: keys)
+        let energy = TransactionCost.updateCredentialKeys(numCredentialsBefore: numExistingCredentials, numKeys: UInt16(keys.keys.count))
+        return self.init(sender: sender, payload: payload, energy: energy)
     }
 
     /// Prepares the transaction for submission
@@ -250,14 +260,13 @@ public enum TransactionType: UInt8, Serialize, Deserialize {
     }
 }
 
-/// The payload for an account transaction.
+/// The payload for an account transaction. Only contains payloads valid from protocol version 7
 public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
     case deployModule(_ module: WasmModule)
     case initContract(amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter)
     case updateContract(amount: MicroCCDAmount, address: ContractAddress, receiveName: ReceiveName, message: Parameter)
     case transfer(amount: MicroCCDAmount, receiver: AccountAddress, memo: Memo? = nil)
-    // case updateCredentialKeys
-    // TODO: We don't need to support other shielded functionality, do we?
+    case updateCredentialKeys(credId: CredentialRegistrationID, keys: CredentialPublicKeys)
     case transferToPublic(_ data: SecToPubTransferData)
     case transferWithSchedule(receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Memo? = nil)
     // case updateCredentials
@@ -296,6 +305,10 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
                 res += buffer.writeData(receiver.data)
                 res += buffer.writeInteger(amount)
             }
+        case let .updateCredentialKeys(credId, keys):
+            res += buffer.writeSerializable(TransactionType.updateCredentialKeys)
+            res += buffer.writeSerializable(credId)
+            res += buffer.writeSerializable(keys)
         case let .transferToPublic(data):
             res += buffer.writeSerializable(TransactionType.transferToPublic)
             res += buffer.writeData(Data(data.serializedRemainingAmount))
@@ -344,13 +357,17 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             guard let receiver = AccountAddress.deserialize(&data),
                   let amount = data.parseUInt(UInt64.self) else { return nil }
             return .transfer(amount: amount, receiver: receiver)
+        case .updateCredentialKeys:
+            return nil // TODO: missing impl
         case .transferToPublic:
             guard let transferData = try? deserializeSecToPubTransferData(bytes: [UInt8](data.readAll())) else { return nil }
             return .transferToPublic(transferData)
         case .transferWithSchedule:
             guard let receiver = AccountAddress.deserialize(&data),
-                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, withLengthPrefix: UInt8.self) else { return nil }
+                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, lengthPrefix: UInt8.self) else { return nil }
             return .transferWithSchedule(receiver: receiver, schedule: schedule)
+        case .updateCredentials:
+            return nil // TODO: missing impl
         case .registerData:
             guard let regData = RegisteredData.deserialize(&data) else { return nil }
             return .registerData(regData)
@@ -362,12 +379,16 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
         case .transferWithScheduleAndMemo:
             guard let receiver = AccountAddress.deserialize(&data),
                   let memo = Memo.deserialize(&data),
-                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, withLengthPrefix: UInt8.self) else { return nil }
+                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, lengthPrefix: UInt8.self) else { return nil }
             return .transferWithSchedule(receiver: receiver, schedule: schedule, memo: memo)
-        // TODO: handle the rest of the cases, and remove default...
-        default:
-            // TODO: should this be an error instead?
-            return nil
+        case .configureBaker:
+            return nil // TODO: missing impl
+        case .configureDelegation:
+            return nil // TODO: missing impl
+        case .addBaker, .removeBaker, .updateBakerStake, .updateBakerRestakeEarnings, .updateBakerKeys:
+            return nil // Not supported, invalid since protocol version 4
+        case .encryptedAmountTransfer, .encryptedAmountTransferWithMemo, .transferToEncrypted:
+            return nil // Not supported, invalid since protocol version 7
         }
     }
 

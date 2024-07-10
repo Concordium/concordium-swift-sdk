@@ -28,7 +28,7 @@ public typealias Energy = UInt64
 public typealias TransactionTime = UInt64
 
 /// The number of bytes in a sha256 hash
-let HASH_BYTES_SIZE: Int = 32
+public let HASH_BYTES_SIZE: Int = 32
 /// The max size of a `Parameter`
 let PARAMETER_SIZE_MAX: Int = 65535
 /// The max size of a `RegisteredData`
@@ -36,12 +36,17 @@ let REGISTERED_DATA_SIZE_MAX: Int = 256
 /// The max length of a contract receive name
 let FUNC_NAME_MAX: Int = 100
 
-/// Represents an error from not being able to deserialize into a type due to mismatch between the bytes expected/received
+/// Represents an error from not being able to a value of a given type due to mismatch between the bytes expected/received
 public struct ExactSizeError: Error {
-    /// The number of bytes attempted to deserialize
+    /// The number of bytes given
     public let actual: Int
     /// The expected number of bytes
-    public let expected = HASH_BYTES_SIZE
+    public let expected: Int
+
+    public init(actual: Int, expected: Int = HASH_BYTES_SIZE) {
+        self.actual = actual
+        self.expected = expected
+    }
 }
 
 /// Describes a type wrapping `Data`
@@ -396,7 +401,7 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
+        guard let parsed = data.readString(lengthPrefix: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
 
@@ -446,7 +451,7 @@ public struct ContractName: Serialize, Deserialize, Equatable {
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
+        guard let parsed = data.readString(lengthPrefix: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
 }
@@ -479,7 +484,7 @@ public struct EntrypointName: Serialize, Deserialize, Equatable {
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
+        guard let parsed = data.readString(lengthPrefix: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
 }
@@ -513,7 +518,7 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
+        guard let parsed = data.readString(lengthPrefix: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
 
