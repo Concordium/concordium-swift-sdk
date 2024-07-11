@@ -536,3 +536,12 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
 public typealias InputEncryptedAmount = ConcordiumWalletCrypto.InputEncryptedAmount
 public typealias EncryptedAmountAggIndex = UInt64
 public typealias SecToPubAmountTransferProof = Data
+
+public typealias CredentialDeploymentInfo = ConcordiumWalletCrypto.CredentialDeploymentInfo
+
+extension CredentialDeploymentInfo: Serialize {
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        let bytes = try! serializeCredentialDeploymentInfo(credInfo: self) // In practice, this will type will never be generated manually, so unwrap is relatively safe...
+        return buffer.writeData(Data(bytes))
+    }
+}

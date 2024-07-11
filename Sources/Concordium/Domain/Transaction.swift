@@ -47,6 +47,10 @@ public enum TransactionCost {
     public static func updateCredentialKeys(numCredentialsBefore: UInt16, numKeys: UInt16) -> Energy {
         500 * UInt64(numCredentialsBefore) + 100 * UInt64(numKeys)
     }
+
+    public static func updateCredentials(numCredentialsBefore: UInt16, numKeys: [UInt16]) -> Energy {
+        500 * UInt64(numCredentialsBefore) + 100 * numKeys.map { 54000 + 100 * UInt64($0) }.reduce(0, +)
+    }
 }
 
 /// Represents an account transaction consisting of the transaction components necessary for submission
@@ -117,6 +121,14 @@ public struct AccountTransaction {
     public static func updateCredentialKeys(sender: AccountAddress, numExistingCredentials: UInt16, credId: CredentialRegistrationID, keys: CredentialPublicKeys) -> Self {
         let payload = AccountTransactionPayload.updateCredentialKeys(credId: credId, keys: keys)
         let energy = TransactionCost.updateCredentialKeys(numCredentialsBefore: numExistingCredentials, numKeys: UInt16(keys.keys.count))
+        return self.init(sender: sender, payload: payload, energy: energy)
+    }
+
+    /// Creates a transaction for updating the credentials of the `sender` account
+    public static func updateCredentials(sender: AccountAddress, numExistingCredentials: UInt16, newCredentials: [CredentialIndex: CredentialDeploymentInfo], removeCredentials: [CredentialRegistrationID], newThreshold: UInt8) -> Self {
+        let payload = AccountTransactionPayload.updateCredentials(newCredInfos: newCredentials, removeCredIds: removeCredentials, newThreshold: newThreshold)
+        let numKeys = newCredentials.values.map { UInt16($0.credentialPublicKeys.keys.count) }
+        let energy = TransactionCost.updateCredentials(numCredentialsBefore: numExistingCredentials, numKeys: numKeys)
         return self.init(sender: sender, payload: payload, energy: energy)
     }
 
@@ -260,6 +272,22 @@ public enum TransactionType: UInt8, Serialize, Deserialize {
     }
 }
 
+extension UpdateCredentialsPayload: Deserialize {
+    public static func deserialize(_ data: inout Cursor) -> ConcordiumWalletCrypto.UpdateCredentialsPayload? {
+        guard let result = try? deserializeUpdateCredentialsPayload(bytes: data.remaining) else { return nil }
+        data.advance(by: result.bytesRead)
+        return result.value
+    }
+}
+
+extension SecToPubTransferData: Deserialize {
+    public static func deserialize(_ data: inout Cursor) -> ConcordiumWalletCrypto.SecToPubTransferData? {
+        guard let result = try? deserializeSecToPubTransferData(bytes: data.remaining) else { return nil }
+        data.advance(by: result.bytesRead)
+        return result.value
+    }
+}
+
 /// The payload for an account transaction. Only contains payloads valid from protocol version 7
 public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
     case deployModule(_ module: WasmModule)
@@ -269,7 +297,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
     case updateCredentialKeys(credId: CredentialRegistrationID, keys: CredentialPublicKeys)
     case transferToPublic(_ data: SecToPubTransferData)
     case transferWithSchedule(receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Memo? = nil)
-    // case updateCredentials
+    case updateCredentials(newCredInfos: [CredentialIndex: CredentialDeploymentInfo], removeCredIds: [CredentialRegistrationID], newThreshold: UInt8)
     case registerData(_ data: RegisteredData)
     // case configureBaker
     // case configureDelegation
@@ -326,6 +354,11 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
                 res += buffer.writeData(receiver.data)
                 res += buffer.writeSerializable(list: schedule, lengthPrefix: UInt8.self)
             }
+        case let .updateCredentials(newCredInfos, removeCredIds, newThreshold):
+            res += buffer.writeSerializable(TransactionType.updateCredentials)
+            res += buffer.writeSerializable(map: newCredInfos, lengthPrefix: UInt64.self)
+            res += buffer.writeSerializable(list: removeCredIds, lengthPrefix: UInt64.self)
+            res += buffer.writeInteger(newThreshold)
         case let .registerData(data):
             res += buffer.writeSerializable(TransactionType.registerData)
             res += buffer.writeSerializable(data)
@@ -362,14 +395,16 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
                   let keys = CredentialPublicKeys.deserialize(&data) else { return nil }
             return .updateCredentialKeys(credId: credId, keys: keys)
         case .transferToPublic:
-            guard let transferData = try? deserializeSecToPubTransferData(bytes: [UInt8](data.readAll())) else { return nil }
+            guard let transferData = SecToPubTransferData.deserialize(&data) else { return nil }
             return .transferToPublic(transferData)
         case .transferWithSchedule:
             guard let receiver = AccountAddress.deserialize(&data),
                   let schedule = data.deserialize(listOf: ScheduledTransfer.self, lengthPrefix: UInt8.self) else { return nil }
             return .transferWithSchedule(receiver: receiver, schedule: schedule)
         case .updateCredentials:
-            return nil // TODO: missing impl
+            guard let data = UpdateCredentialsPayload.deserialize(&data),
+                  let removeCredIds = try? data.removeCredIdsHex.map({ try CredentialRegistrationID(Data(hex: $0)) }) else { return nil }
+            return .updateCredentials(newCredInfos: data.newCredInfos, removeCredIds: removeCredIds, newThreshold: data.newThreshold)
         case .registerData:
             guard let regData = RegisteredData.deserialize(&data) else { return nil }
             return .registerData(regData)

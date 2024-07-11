@@ -24,9 +24,11 @@ public struct Cursor {
         self.data = data
     }
 
+    public var remaining: Data { data }
+
     /// Parse an arbitrary ``UnsignedInteger`` from the data, optionally supplying endianness (defaults to big endian).
     public mutating func parseUInt<UInt: UnsignedInteger>(_: UInt.Type, endianness: Endianness = .big) -> UInt? {
-        let expected = MemoryLayout<UInt>.size
+        let expected = UInt(MemoryLayout<UInt>.size)
         guard var bytes = read(num: expected) else { return nil }
 
         if endianness == .little { bytes.reverse() }
@@ -34,16 +36,11 @@ public struct Cursor {
     }
 
     /// Read a number of bytes from the inner data.
-    public mutating func read(num: Int) -> Data? {
-        guard data.count >= num else { return nil }
-        defer { self.data = self.data.dropFirst(Int(num)) }
-
-        return data.prefix(num)
-    }
-
-    /// Read a number of bytes from the inner data.
     public mutating func read(num: any UnsignedInteger) -> Data? {
-        read(num: Int(num))
+        guard data.count >= num else { return nil }
+        defer { advance(by: num) }
+
+        return data.prefix(Int(num))
     }
 
     /// Read a number of bytes from the inner data, where the number of bytes to read is declared in the data with an ``UnsignedInteger`` prefix
@@ -54,7 +51,7 @@ public struct Cursor {
 
     /// Read all bytes from the inner data, completely exhausting the ``Cursor``
     public mutating func readAll() -> Data.SubSequence {
-        read(num: data.count)! // We unwrap as we know the guard which checks the length will pass
+        read(num: UInt(data.count))! // We unwrap as we know the guard which checks the length will pass
     }
 
     /// Read a string prefixed with the associated length.
@@ -92,6 +89,11 @@ public struct Cursor {
         return map
     }
 
+    /// Advande the cursor by a number of bytes
+    public mutating func advance(by numBytes: any UnsignedInteger) {
+        data = data.dropFirst(Int(numBytes))
+    }
+
     /// Whether there is no more data to read
     public var empty: Bool { data.count == 0 }
 }
@@ -114,7 +116,37 @@ public extension Deserialize {
 }
 
 extension UInt8: Serialize, Deserialize {
-    public static func deserialize(_ data: inout Cursor) -> UInt8? {
+    public static func deserialize(_ data: inout Cursor) -> Self? {
+        data.parseUInt(Self.self)
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(self)
+    }
+}
+
+extension UInt16: Serialize, Deserialize {
+    public static func deserialize(_ data: inout Cursor) -> Self? {
+        data.parseUInt(Self.self)
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(self)
+    }
+}
+
+extension UInt32: Serialize, Deserialize {
+    public static func deserialize(_ data: inout Cursor) -> Self? {
+        data.parseUInt(Self.self)
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(self)
+    }
+}
+
+extension UInt64: Serialize, Deserialize {
+    public static func deserialize(_ data: inout Cursor) -> Self? {
         data.parseUInt(Self.self)
     }
 
