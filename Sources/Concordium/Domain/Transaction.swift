@@ -51,6 +51,12 @@ public enum TransactionCost {
     public static func updateCredentials(numCredentialsBefore: UInt16, numKeys: [UInt16]) -> Energy {
         500 * UInt64(numCredentialsBefore) + 100 * numKeys.map { 54000 + 100 * UInt64($0) }.reduce(0, +)
     }
+
+    public static func configureBaker(withKeys hasKeys: Bool) -> Energy {
+        hasKeys ? 4050 : 300
+    }
+
+    public static let CONFIGURE_DELEGATION: Energy = 300
 }
 
 /// Represents an account transaction consisting of the transaction components necessary for submission
@@ -130,6 +136,12 @@ public struct AccountTransaction {
         let numKeys = newCredentials.values.map { UInt16($0.credentialPublicKeys.keys.count) }
         let energy = TransactionCost.updateCredentials(numCredentialsBefore: numExistingCredentials, numKeys: numKeys)
         return self.init(sender: sender, payload: payload, energy: energy)
+    }
+
+    public static func configureBaker(sender: AccountAddress, payload: ConfigureBakerPayload) -> Self {
+        let p = AccountTransactionPayload.configureBaker(payload)
+        let energy = TransactionCost.configureBaker(withKeys: payload.keys_with_proofs != nil)
+        return self.init(sender: sender, payload: p, energy: energy)
     }
 
     /// Prepares the transaction for submission
@@ -288,6 +300,25 @@ extension SecToPubTransferData: Deserialize {
     }
 }
 
+public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
+    /// The equity capital of the baker
+    public let capital: MicroCCDAmount?
+    /// Whether the baker's earnings are restaked
+    public let restakeEarnings: Bool?
+    /// Whether the pool is open for delegators
+    public let open_for_delegation: OpenStatus?
+    /// The key/proof pairs to verify the baker.
+    public let keys_with_proofs: BakerKeysPayload?
+    /// The URL referencing the baker's metadata.
+    public let metadata_url: String? // At most 2048 bytes
+    /// The commission the pool owner takes on transaction fees.
+    public let transaction_fee_commission: AmountFraction?
+    /// The commission the pool owner takes on baking rewards.
+    public let baking_reward_commission: AmountFraction?
+    /// The commission the pool owner takes on finalization rewards.
+    public let finalization_reward_commission: AmountFraction?
+}
+
 /// The payload for an account transaction. Only contains payloads valid from protocol version 7
 public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
     case deployModule(_ module: WasmModule)
@@ -299,7 +330,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
     case transferWithSchedule(receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Memo? = nil)
     case updateCredentials(newCredInfos: [CredentialIndex: CredentialDeploymentInfo], removeCredIds: [CredentialRegistrationID], newThreshold: UInt8)
     case registerData(_ data: RegisteredData)
-    // case configureBaker
+    case configureBaker(_ data: ConfigureBakerPayload)
     // case configureDelegation
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
@@ -362,6 +393,9 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
         case let .registerData(data):
             res += buffer.writeSerializable(TransactionType.registerData)
             res += buffer.writeSerializable(data)
+        case let .configureBaker(data):
+            res += buffer.writeSerializable(TransactionType.configureBaker)
+            res += buffer.writeSerializable(data)
         }
 
         return res
@@ -403,7 +437,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             return .transferWithSchedule(receiver: receiver, schedule: schedule)
         case .updateCredentials:
             guard let data = UpdateCredentialsPayload.deserialize(&data),
-                  let removeCredIds = try? data.removeCredIdsHex.map({ try CredentialRegistrationID(Data(hex: $0)) }) else { return nil }
+                  let removeCredIds = try? data.removeCredIds.map({ try CredentialRegistrationID($0) }) else { return nil }
             return .updateCredentials(newCredInfos: data.newCredInfos, removeCredIds: removeCredIds, newThreshold: data.newThreshold)
         case .registerData:
             guard let regData = RegisteredData.deserialize(&data) else { return nil }
@@ -419,7 +453,8 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
                   let schedule = data.deserialize(listOf: ScheduledTransfer.self, lengthPrefix: UInt8.self) else { return nil }
             return .transferWithSchedule(receiver: receiver, schedule: schedule, memo: memo)
         case .configureBaker:
-            return nil // TODO: missing impl
+            guard let payload = ConfigureBakerPayload.deserialize(&data) else { return nil }
+            return .configureBaker(payload)
         case .configureDelegation:
             return nil // TODO: missing impl
         case .addBaker, .removeBaker, .updateBakerStake, .updateBakerRestakeEarnings, .updateBakerKeys:

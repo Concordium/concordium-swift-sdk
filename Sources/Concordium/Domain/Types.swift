@@ -28,22 +28,22 @@ public typealias Energy = UInt64
 public typealias TransactionTime = UInt64
 
 /// The number of bytes in a sha256 hash
-public let HASH_BYTES_SIZE: Int = 32
+public let HASH_BYTES_SIZE: UInt8 = 32
 /// The max size of a `Parameter`
-let PARAMETER_SIZE_MAX: Int = 65535
+let PARAMETER_SIZE_MAX: UInt16 = 65535
 /// The max size of a `RegisteredData`
-let REGISTERED_DATA_SIZE_MAX: Int = 256
+let REGISTERED_DATA_SIZE_MAX: UInt16 = 256
 /// The max length of a contract receive name
-let FUNC_NAME_MAX: Int = 100
+let FUNC_NAME_MAX: UInt8 = 100
 
 /// Represents an error from not being able to a value of a given type due to mismatch between the bytes expected/received
 public struct ExactSizeError: Error {
     /// The number of bytes given
-    public let actual: Int
+    public let actual: UInt
     /// The expected number of bytes
-    public let expected: Int
+    public let expected: UInt
 
-    public init(actual: Int, expected: Int = HASH_BYTES_SIZE) {
+    public init(actual: UInt, expected: UInt = UInt(HASH_BYTES_SIZE)) {
         self.actual = actual
         self.expected = expected
     }
@@ -62,7 +62,7 @@ public extension HashBytes {
     /// - Throws: `ExactSizeError` if the number of bytes does not match number of bytes expected.
     init(_ data: Data) throws {
         guard data.count == HASH_BYTES_SIZE else {
-            throw ExactSizeError(actual: data.count)
+            throw ExactSizeError(actual: UInt(data.count))
         }
 
         self.init(unchecked: data)
@@ -283,9 +283,9 @@ public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGR
 /// An error thrown when data supplied to a wrapper does not meet size requirements
 public struct DataSizeError: Error {
     /// The size of the supplied data
-    let actual: Int
+    let actual: UInt
     /// The maximum size allowed
-    let max: Int
+    let max: UInt
 }
 
 /// Wrapper around ``Data`` supplied to a contract init/receive function
@@ -301,7 +301,7 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
     /// - Throws: ``DataSizeError`` if passed value exceeds the allowed parameter size
     public init(_ value: Data) throws {
         guard value.count <= PARAMETER_SIZE_MAX else {
-            throw DataSizeError(actual: value.count, max: PARAMETER_SIZE_MAX)
+            throw DataSizeError(actual: UInt(value.count), max: UInt(PARAMETER_SIZE_MAX))
         }
         self.init(unchecked: value)
     }
@@ -339,7 +339,7 @@ public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRP
     /// - Throws: ``DataSizeError`` if passed value exceeds the allowed parameter size
     public init(_ value: Data) throws {
         guard value.count <= REGISTERED_DATA_SIZE_MAX else {
-            throw DataSizeError(actual: value.count, max: REGISTERED_DATA_SIZE_MAX)
+            throw DataSizeError(actual: UInt(value.count), max: UInt(REGISTERED_DATA_SIZE_MAX))
         }
         self.init(unchecked: value)
     }

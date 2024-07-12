@@ -28,7 +28,7 @@ public enum CredentialRegistrationIDError: Error {
 /// but different counter values cannot easily be linked together.
 /// - Throws: ``CredentialRegistrationIDError``
 public struct CredentialRegistrationID: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
-    public static let SIZE = 48
+    public static let SIZE: UInt8 = 48
     typealias GRPC = Concordium_V2_CredentialRegistrationId
     public let value: Data // 48 bytes
 
@@ -130,7 +130,7 @@ public enum AccountIdentifier: ToGRPC {
 
 /// Address of an account as raw bytes.
 public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC {
-    public static let SIZE = 32
+    public static let SIZE: UInt8 = 32
     func toGRPC() -> Concordium_V2_AccountAddress {
         var g = GRPC()
         g.value = data
@@ -268,7 +268,7 @@ public enum VerifyKeyError: Error, Equatable {
 }
 
 extension VerifyKey: FromGRPC, Serialize, Deserialize {
-    public static let SIZE = 32
+    public static let SIZE: UInt8 = 32
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(0, as: UInt8.self) + buffer.writeData(try! Data(hex: keyHex)) // We unwrap, as initializing safely will mean this always succeeds
     }
