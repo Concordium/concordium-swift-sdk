@@ -28,14 +28,17 @@ func createAccount(client: NodeClient) async throws {
 
     // Derive seed based credential and account from the given coordinates of the given seed.
     let accountDerivation = SeedBasedAccountDerivation(seed: seed, cryptoParams: cryptoParams)
-    let seedIndexes = AccountCredentialSeedIndexes(
-        identity: .init(providerID: identityProviderID, index: identityIndex),
-        counter: credentialCounter
-    )
     // Credential to deploy.
+    let idxs = IdentitySeedIndexes(
+        providerID: identityProviderID,
+        index: identityIndex
+    )
     let credential = try accountDerivation.deriveCredential(
-        seedIndexes: seedIndexes,
-        identity: identity.value,
+        credentialCounter: credentialCounter,
+        identity: .init(
+            identity: identity.value,
+            indexes: idxs
+        ),
         provider: identityProvider,
         threshold: 1
     )
@@ -43,10 +46,10 @@ func createAccount(client: NodeClient) async throws {
     // The account is composed from just the credential derived above.
     // From this call the credential's signing key will be derived;
     // in the previous only the public key was.
-    let account = try accountDerivation.deriveAccount(credentials: [seedIndexes])
+    let account = try accountDerivation.deriveAccount(credentials: [.init(identity: idxs, counter: credentialCounter)])
 
     // Construct, sign, and send deployment transaction.
-    let signedTx = try account.keys.sign(deployment: credential, expiry: expiry)
+    let signedTx = try account.keys.sign(deployment: credential.credential, expiry: expiry)
     let serializedTx = try signedTx.serialize()
     let hash = try await client.send(deployment: serializedTx)
     print("Transaction with hash '\(hash.hex)' successfully submitted.")

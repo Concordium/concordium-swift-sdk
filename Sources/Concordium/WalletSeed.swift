@@ -33,6 +33,28 @@ public struct AccountCredentialSeedIndexes {
     }
 }
 
+public class SeedBasedIdentityObject {
+    public var identity: IdentityObject
+    public var indexes: IdentitySeedIndexes
+
+    public init(identity: IdentityObject, indexes: IdentitySeedIndexes) {
+        self.identity = identity
+        self.indexes = indexes
+    }
+}
+
+public class SeedBasedAccountCredential {
+    public var credential: AccountCredential
+    public var identity: SeedBasedIdentityObject
+    public var credentialCounter: CredentialCounter
+
+    public init(credential: AccountCredential, identity: SeedBasedIdentityObject, credentialCounter: CredentialCounter) {
+        self.credential = credential
+        self.identity = identity
+        self.credentialCounter = credentialCounter
+    }
+}
+
 public struct IssuerSeedIndexes {
     public var index: IssuerIndex
     public var subindex: IssuerSubindex
@@ -56,7 +78,7 @@ public struct VerifiableCredentialSeedIndexes {
 /// Class for deterministically deriving cryptographic values related to credentials from a seed.
 public class WalletSeed {
     private let seedHex: String
-    private let network: Network
+    public let network: Network
 
     public init(seedHex: String, network: Network) {
         self.seedHex = seedHex
@@ -165,7 +187,7 @@ public enum AccountDerivationError: Error {
 }
 
 public class SeedBasedAccountDerivation {
-    public let seed: WalletSeed
+    private let seed: WalletSeed
     private let cryptoParams: CryptographicParameters
 
     public init(seed: WalletSeed, cryptoParams: CryptographicParameters) {
@@ -174,25 +196,26 @@ public class SeedBasedAccountDerivation {
     }
 
     public func deriveCredential(
-        seedIndexes: AccountCredentialSeedIndexes, // TODO: shouldn't identity know its own indexes?
-        identity: IdentityObject,
+        credentialCounter: CredentialCounter,
+        identity: SeedBasedIdentityObject,
         provider: IdentityProvider,
         revealedAttributes: [UInt8] = [],
         threshold: SignatureThreshold
-    ) throws -> AccountCredential {
+    ) throws -> SeedBasedAccountCredential {
+        let seedIdxs = AccountCredentialSeedIndexes(identity: identity.indexes, counter: credentialCounter)
         // TODO: Must provide exactly the IP's ARs?
         let anonymityRevokers = provider.anonymityRevokers
-        let idCredSecHex = try seed.credSecHex(identityIndexes: seedIndexes.identity)
-        let prfKeyHex = try seed.prfKeyHex(identityIndexes: seedIndexes.identity)
-        let blindingRandomnessHex = try seed.signatureBlindingRandomnessHex(identityIndexes: seedIndexes.identity)
+        let idCredSecHex = try seed.credSecHex(identityIndexes: seedIdxs.identity)
+        let prfKeyHex = try seed.prfKeyHex(identityIndexes: seedIdxs.identity)
+        let blindingRandomnessHex = try seed.signatureBlindingRandomnessHex(identityIndexes: seedIdxs.identity)
         let attributeRandomnessHex = try AttributeTag.allCases.reduce(into: [:]) { res, attr in
             res["\(attr)"] = try seed.attributeCommitmentRandomnessHex(
-                accountCredentialIndexes: seedIndexes,
+                accountCredentialIndexes: seedIdxs,
                 attribute: attr.rawValue
             )
         }
-        let keyHex = try seed.publicKeyHex(accountCredentialIndexes: seedIndexes)
-        let credentialPublicKeys = CredentialPublicKeys(
+        let keyHex = try seed.publicKeyHex(accountCredentialIndexes: seedIdxs)
+        let credPublicKeys = CredentialPublicKeys(
             keys: [KeyIndex(0): VerifyKey(ed25519KeyHex: keyHex)],
             threshold: threshold
         )
@@ -201,17 +224,21 @@ public class SeedBasedAccountDerivation {
                 ipInfo: provider.info,
                 globalContext: cryptoParams,
                 arsInfos: anonymityRevokers,
-                idObject: identity,
+                idObject: identity.identity,
                 revealedAttributes: revealedAttributes,
-                credNumber: seedIndexes.counter,
+                credNumber: seedIdxs.counter,
                 idCredSecHex: idCredSecHex,
                 prfKeyHex: prfKeyHex,
                 blindingRandomnessHex: blindingRandomnessHex,
                 attributeRandomnessHex: attributeRandomnessHex,
-                credentialPublicKeys: credentialPublicKeys
+                credentialPublicKeys: credPublicKeys
             )
         )
-        return res.credential
+        return SeedBasedAccountCredential(
+            credential: res.credential,
+            identity: identity,
+            credentialCounter: credentialCounter
+        )
     }
 
     public func deriveAccount(credentials: [AccountCredentialSeedIndexes]) throws -> Account {
@@ -225,7 +252,10 @@ public class SeedBasedAccountDerivation {
     }
 
     public func deriveAccountAddress(firstCredential: AccountCredentialSeedIndexes) throws -> AccountAddress {
-        let id = try seed.idHex(accountCredentialIndexes: firstCredential, commitmentKey: cryptoParams.onChainCommitmentKeyHex)
+        let id = try seed.idHex(
+            accountCredentialIndexes: firstCredential,
+            commitmentKey: cryptoParams.onChainCommitmentKeyHex
+        )
         let hash = try SHA256.hash(data: Data(hex: id))
         return AccountAddress(Data(hash))
     }
