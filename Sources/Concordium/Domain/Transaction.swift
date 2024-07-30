@@ -44,18 +44,22 @@ public enum TransactionCost {
     /// The amount of additional energy required for a "register data" transaction
     public static let REGISTER_DATA: Energy = 300
 
+    /// The amount of additional energy required for a "update credential keys" transaction
     public static func updateCredentialKeys(numCredentialsBefore: UInt16, numKeys: UInt16) -> Energy {
         500 * UInt64(numCredentialsBefore) + 100 * UInt64(numKeys)
     }
 
+    /// The amount of additional energy required for a "update credentials" transaction
     public static func updateCredentials(numCredentialsBefore: UInt16, numKeys: [UInt16]) -> Energy {
         500 * UInt64(numCredentialsBefore) + 100 * numKeys.map { 54000 + 100 * UInt64($0) }.reduce(0, +)
     }
 
+    /// The amount of additional energy required for a "configure baker" transaction
     public static func configureBaker(withKeys hasKeys: Bool) -> Energy {
         hasKeys ? 4050 : 300
     }
 
+    /// The amount of additional energy required for a "configure delegation" transaction
     public static let CONFIGURE_DELEGATION: Energy = 300
 }
 
@@ -138,9 +142,10 @@ public struct AccountTransaction {
         return self.init(sender: sender, payload: payload, energy: energy)
     }
 
+    /// Creates a transaction for configuring the sender as a baker
     public static func configureBaker(sender: AccountAddress, payload: ConfigureBakerPayload) -> Self {
         let p = AccountTransactionPayload.configureBaker(payload)
-        let energy = TransactionCost.configureBaker(withKeys: payload.keys_with_proofs != nil)
+        let energy = TransactionCost.configureBaker(withKeys: payload.keysWithProofs != nil)
         return self.init(sender: sender, payload: p, energy: energy)
     }
 
@@ -300,23 +305,132 @@ extension SecToPubTransferData: Deserialize {
     }
 }
 
+extension BakerKeysPayload: Serialize, Deserialize {
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeData(electionVerifyKey) + buffer.writeData(proofElection) + buffer.writeData(signatureVerifyKey) + buffer.writeData(proofSig) + buffer.writeData(aggregationVerifyKey) + buffer.writeData(proofAggregation)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> ConcordiumWalletCrypto.BakerKeysPayload? {
+        guard let electionVerifyKey = data.read(num: 192 as UInt),
+              let proofElection = data.read(num: 64 as UInt),
+              let signatureVerifyKey = data.read(num: 192 as UInt),
+              let proofSig = data.read(num: 64 as UInt),
+              let aggregationVerifyKey = data.read(num: 288 as UInt),
+              let proofAggregation = data.read(num: 64 as UInt) else { return nil }
+
+        return Self(signatureVerifyKey: signatureVerifyKey, electionVerifyKey: electionVerifyKey, aggregationVerifyKey: aggregationVerifyKey, proofSig: proofSig, proofElection: proofElection, proofAggregation: proofAggregation)
+    }
+}
+
 public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
     /// The equity capital of the baker
     public let capital: MicroCCDAmount?
     /// Whether the baker's earnings are restaked
     public let restakeEarnings: Bool?
     /// Whether the pool is open for delegators
-    public let open_for_delegation: OpenStatus?
+    public let openForDelegation: OpenStatus?
     /// The key/proof pairs to verify the baker.
-    public let keys_with_proofs: BakerKeysPayload?
+    public let keysWithProofs: BakerKeysPayload?
     /// The URL referencing the baker's metadata.
-    public let metadata_url: String? // At most 2048 bytes
+    public let metadataUrl: String? // At most 2048 bytes
     /// The commission the pool owner takes on transaction fees.
-    public let transaction_fee_commission: AmountFraction?
+    public let transactionFeeCommission: AmountFraction?
     /// The commission the pool owner takes on baking rewards.
-    public let baking_reward_commission: AmountFraction?
+    public let bakingRewardCommission: AmountFraction?
     /// The commission the pool owner takes on finalization rewards.
-    public let finalization_reward_commission: AmountFraction?
+    public let finalizationRewardCommission: AmountFraction?
+
+    public static func deserialize(_ data: inout Cursor) -> ConfigureBakerPayload? {
+        var capital: MicroCCDAmount?
+        var restakeEarnings: Bool?
+        var openForDelegation: OpenStatus?
+        var keysWithProofs: BakerKeysPayload?
+        var metadataUrl: String?
+        var transactionFeeCommission: AmountFraction?
+        var bakingRewardCommission: AmountFraction?
+        var finalizationRewardCommission: AmountFraction?
+
+        guard let bitmap = data.parseUInt(UInt16.self) else { return nil }
+        if bitmap & 1 == 1 {
+            guard let amount = data.parseUInt(MicroCCDAmount.self) else { return nil }
+            capital = amount
+        }
+        if bitmap & (1 << 1) != 0 {
+            guard let restake = data.parseBool() else { return nil }
+            restakeEarnings = restake
+        }
+        if bitmap & (1 << 2) != 0 {
+            guard let openStatus = OpenStatus.deserialize(&data) else { return nil }
+            openForDelegation = openStatus
+        }
+        if bitmap & (1 << 3) != 0 {
+            guard let keys = BakerKeysPayload.deserialize(&data) else { return nil }
+            keysWithProofs = keys
+        }
+        if bitmap & (1 << 4) != 0 {
+            guard let url = data.readString(lengthPrefix: UInt16.self) else { return nil }
+            metadataUrl = url
+        }
+        if bitmap & (1 << 5) != 0 {
+            guard let commission = AmountFraction.deserialize(&data) else { return nil }
+            transactionFeeCommission = commission
+        }
+        if bitmap & (1 << 6) != 0 {
+            guard let commission = AmountFraction.deserialize(&data) else { return nil }
+            bakingRewardCommission = commission
+        }
+        if bitmap & (1 << 7) != 0 {
+            guard let commission = AmountFraction.deserialize(&data) else { return nil }
+            finalizationRewardCommission = commission
+        }
+
+        return .init(capital: capital, restakeEarnings: restakeEarnings, openForDelegation: openForDelegation, keysWithProofs: keysWithProofs, metadataUrl: metadataUrl, transactionFeeCommission: transactionFeeCommission, bakingRewardCommission: bakingRewardCommission, finalizationRewardCommission: finalizationRewardCommission)
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        var res = 0
+
+        var bitmap: UInt16 = 0
+        func setBit(_ pos: Int, cond: Bool) {
+            if cond { bitmap = bitmap | (1 << pos) }
+        }
+
+        setBit(0, cond: capital != nil)
+        setBit(1, cond: restakeEarnings != nil)
+        setBit(2, cond: openForDelegation != nil)
+        setBit(3, cond: keysWithProofs != nil)
+        setBit(4, cond: metadataUrl != nil)
+        setBit(5, cond: transactionFeeCommission != nil)
+        setBit(6, cond: bakingRewardCommission != nil)
+        setBit(7, cond: finalizationRewardCommission != nil)
+        res += buffer.writeInteger(bitmap)
+
+        if let capital = capital {
+            res += buffer.writeInteger(capital)
+        }
+        if let restakeEarnings = restakeEarnings {
+            res += buffer.writeBool(restakeEarnings)
+        }
+        if let openForDelegation = openForDelegation {
+            res += buffer.writeSerializable(openForDelegation)
+        }
+        if let keysWithProofs = keysWithProofs {
+            res += buffer.writeSerializable(keysWithProofs)
+        }
+        if let metadataUrl = metadataUrl {
+            res += buffer.writeString(metadataUrl, lengthPrefix: UInt16.self)
+        }
+        if let transactionFeeCommission = transactionFeeCommission {
+            res += buffer.writeSerializable(transactionFeeCommission)
+        }
+        if let bakingRewardCommission = bakingRewardCommission {
+            res += buffer.writeSerializable(bakingRewardCommission)
+        }
+        if let finalizationRewardCommission = finalizationRewardCommission {
+            res += buffer.writeSerializable(finalizationRewardCommission)
+        }
+        return res
+    }
 }
 
 /// The payload for an account transaction. Only contains payloads valid from protocol version 7

@@ -35,6 +35,12 @@ public struct Cursor {
         return bytes.reduce(0) { soFar, new in (soFar << 8) | UInt(new) }
     }
 
+    /// Parse an arbitrary ``Bool`` from the data
+    public mutating func parseBool() -> Bool? {
+        guard let res = parseUInt(UInt8.self), res <= 1 else { return nil }
+        return res != 0
+    }
+
     /// Read a number of bytes from the inner data.
     public mutating func read(num: any UnsignedInteger) -> Data? {
         guard data.count >= num else { return nil }
@@ -210,5 +216,10 @@ extension ByteBuffer {
         res += writeInteger(T(value.lengthOfBytes(using: .utf8)))
         res += writeString(value)
         return res
+    }
+
+    /// Writes bool into buffer
+    @discardableResult mutating func writeBool(_ value: Bool) -> Int {
+        writeInteger(value ? 1 : 0, as: UInt8.self)
     }
 }

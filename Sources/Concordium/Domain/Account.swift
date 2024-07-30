@@ -482,16 +482,24 @@ public enum StakePendingChange: FromGRPC {
 }
 
 /// A fraction of an amount with a precision of 1/100000.
-public struct AmountFraction: FromGRPC {
+public struct AmountFraction: FromGRPC, Equatable, Serialize, Deserialize {
     public var partsPerHundredThousand: UInt32
 
     static func fromGRPC(_ grpc: Concordium_V2_AmountFraction) -> Self {
         .init(partsPerHundredThousand: grpc.partsPerHundredThousand)
     }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(partsPerHundredThousand)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> AmountFraction? {
+        data.parseUInt(UInt32.self).flatMap { Self(partsPerHundredThousand: $0) }
+    }
 }
 
 /// Information about how open the pool is to new delegators.
-public enum OpenStatus: Int, FromGRPC {
+public enum OpenStatus: Int, FromGRPC, Equatable, Serialize, Deserialize {
     /// New delegators may join the pool.
     case openForAll = 0
     /// New delegators may not join, but existing delegators are kept.
@@ -501,6 +509,14 @@ public enum OpenStatus: Int, FromGRPC {
 
     static func fromGRPC(_ grpc: Concordium_V2_OpenStatus) throws -> Self {
         try .init(rawValue: grpc.rawValue) ?! GRPCError.unsupportedValue("open status '\(grpc.rawValue)'")
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(rawValue)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> OpenStatus? {
+        data.parseUInt(UInt8.self).flatMap { Self(rawValue: Int($0)) }
     }
 }
 
