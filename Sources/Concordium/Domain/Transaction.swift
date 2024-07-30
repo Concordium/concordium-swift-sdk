@@ -305,6 +305,8 @@ extension SecToPubTransferData: Deserialize {
     }
 }
 
+public typealias BakerKeysPayload = ConcordiumWalletCrypto.BakerKeysPayload
+
 extension BakerKeysPayload: Serialize, Deserialize {
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeData(electionVerifyKey) + buffer.writeData(proofElection) + buffer.writeData(signatureVerifyKey) + buffer.writeData(proofSig) + buffer.writeData(aggregationVerifyKey) + buffer.writeData(proofAggregation)
@@ -319,6 +321,11 @@ extension BakerKeysPayload: Serialize, Deserialize {
               let proofAggregation = data.read(num: 64 as UInt) else { return nil }
 
         return Self(signatureVerifyKey: signatureVerifyKey, electionVerifyKey: electionVerifyKey, aggregationVerifyKey: aggregationVerifyKey, proofSig: proofSig, proofElection: proofElection, proofAggregation: proofAggregation)
+    }
+
+    /// Create a baker keys payload from a set of baker keys and the account the should be deployed for
+    public static func create(account: AccountAddress, bakerKeys: BakerKeyPairs) throws -> Self {
+        try makeConfigureBakerKeysPayload(accountBase58: account.base58Check, bakerKeys: bakerKeys)
     }
 }
 

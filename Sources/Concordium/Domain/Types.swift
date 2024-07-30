@@ -545,3 +545,12 @@ extension CredentialDeploymentInfo: Serialize {
         return buffer.writeData(Data(bytes))
     }
 }
+
+public typealias BakerKeyPairs = ConcordiumWalletCrypto.BakerKeyPairs
+
+public extension BakerKeyPairs {
+    /// Generate a set of baker keys
+    static func generate() -> Self {
+        generateBakerKeys()
+    }
+}
