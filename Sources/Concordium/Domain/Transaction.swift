@@ -316,6 +316,7 @@ extension UpdateCredentialsPayload: Deserialize {
     }
 }
 
+public typealias SecToPubTransferData = ConcordiumWalletCrypto.SecToPubTransferData
 extension SecToPubTransferData: Deserialize {
     public static func deserialize(_ data: inout Cursor) -> ConcordiumWalletCrypto.SecToPubTransferData? {
         guard let result = try? deserializeSecToPubTransferData(bytes: data.remaining) else { return nil }
