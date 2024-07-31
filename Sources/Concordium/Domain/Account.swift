@@ -499,7 +499,7 @@ public struct AmountFraction: FromGRPC, Equatable, Serialize, Deserialize {
 }
 
 /// Information about how open the pool is to new delegators.
-public enum OpenStatus: Int, FromGRPC, Equatable, Serialize, Deserialize {
+public enum OpenStatus: UInt8, FromGRPC, Equatable, Serialize, Deserialize {
     /// New delegators may join the pool.
     case openForAll = 0
     /// New delegators may not join, but existing delegators are kept.
@@ -508,7 +508,7 @@ public enum OpenStatus: Int, FromGRPC, Equatable, Serialize, Deserialize {
     case closedForAll = 2
 
     static func fromGRPC(_ grpc: Concordium_V2_OpenStatus) throws -> Self {
-        try .init(rawValue: grpc.rawValue) ?! GRPCError.unsupportedValue("open status '\(grpc.rawValue)'")
+        try .init(rawValue: UInt8(grpc.rawValue)) ?! GRPCError.unsupportedValue("open status '\(grpc.rawValue)'")
     }
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
@@ -516,7 +516,7 @@ public enum OpenStatus: Int, FromGRPC, Equatable, Serialize, Deserialize {
     }
 
     public static func deserialize(_ data: inout Cursor) -> OpenStatus? {
-        data.parseUInt(UInt8.self).flatMap { Self(rawValue: Int($0)) }
+        data.parseUInt(UInt8.self).flatMap { Self(rawValue: $0) }
     }
 }
 

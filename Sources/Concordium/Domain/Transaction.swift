@@ -332,11 +332,11 @@ extension BakerKeysPayload: Serialize, Deserialize {
     }
 
     public static func deserialize(_ data: inout Cursor) -> ConcordiumWalletCrypto.BakerKeysPayload? {
-        guard let electionVerifyKey = data.read(num: 192 as UInt),
+        guard let electionVerifyKey = data.read(num: 32 as UInt),
               let proofElection = data.read(num: 64 as UInt),
-              let signatureVerifyKey = data.read(num: 192 as UInt),
+              let signatureVerifyKey = data.read(num: 32 as UInt),
               let proofSig = data.read(num: 64 as UInt),
-              let aggregationVerifyKey = data.read(num: 288 as UInt),
+              let aggregationVerifyKey = data.read(num: 96 as UInt),
               let proofAggregation = data.read(num: 64 as UInt) else { return nil }
 
         return Self(signatureVerifyKey: signatureVerifyKey, electionVerifyKey: electionVerifyKey, aggregationVerifyKey: aggregationVerifyKey, proofSig: proofSig, proofElection: proofElection, proofAggregation: proofAggregation)
@@ -388,7 +388,7 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
         var finalizationRewardCommission: AmountFraction?
 
         guard let bitmap = data.parseUInt(UInt16.self) else { return nil }
-        if bitmap & 1 == 1 {
+        if bitmap & 1 != 0 {
             guard let amount = data.parseUInt(MicroCCDAmount.self) else { return nil }
             capital = amount
         }

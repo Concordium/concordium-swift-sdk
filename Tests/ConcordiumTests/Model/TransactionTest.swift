@@ -1,4 +1,5 @@
 @testable import Concordium
+import Foundation
 import XCTest
 
 final class TransactionTest: XCTestCase {
@@ -31,7 +32,7 @@ final class TransactionTest: XCTestCase {
         // Generated from serializing payload in rust sdk
         let expected = Data([0, 0, 0, 0, 1, 0, 0, 0, 4, 1, 2, 3, 50])
         XCTAssertEqual(t.serialize(), expected)
-        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
     }
 
     func testInitContractSerialization() throws {
@@ -41,7 +42,7 @@ final class TransactionTest: XCTestCase {
         // Generated from serializing payload in rust sdk
         let expected = Data([1, 0, 0, 0, 0, 0, 0, 4, 210, 193, 78, 251, 202, 29, 207, 49, 76, 115, 204, 41, 76, 187, 241, 189, 99, 227, 144, 107, 32, 211, 84, 66, 148, 62, 185, 47, 82, 227, 131, 252, 56, 0, 9, 105, 110, 105, 116, 95, 116, 101, 115, 116, 0, 5, 123, 23, 12, 45, 56])
         XCTAssertEqual(t.serialize(), expected)
-        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
     }
 
     func testUpdateContractSerialization() throws {
@@ -51,7 +52,7 @@ final class TransactionTest: XCTestCase {
         // Generated from serializing payload in rust sdk
         let expected = Data([2, 0, 0, 0, 0, 0, 0, 16, 225, 0, 0, 0, 0, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 116, 101, 115, 116, 46, 102, 117, 110, 99, 116, 105, 111, 110, 0, 5, 123, 23, 12, 45, 56])
         XCTAssertEqual(t.serialize(), expected)
-        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
     }
 
     func testTransferSerialization() throws {
@@ -61,13 +62,13 @@ final class TransactionTest: XCTestCase {
         // Generated from serializing payload in rust sdk
         var expected = Data([3, 16, 234, 195, 243, 10, 162, 72, 149, 8, 200, 110, 176, 147, 40, 255, 138, 84, 117, 249, 254, 92, 148, 88, 204, 60, 112, 149, 111, 207, 203, 34, 191, 0, 0, 0, 0, 0, 0, 0, 100])
         XCTAssertEqual(t.serialize(), expected)
-        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
 
         t = AccountTransactionPayload.transfer(amount: 100, receiver: a, memo: Memo(Data([0, 23, 55])))
         // Generated from serializing payload in rust sdk
         expected = Data([22, 16, 234, 195, 243, 10, 162, 72, 149, 8, 200, 110, 176, 147, 40, 255, 138, 84, 117, 249, 254, 92, 148, 88, 204, 60, 112, 149, 111, 207, 203, 34, 191, 0, 3, 0, 23, 55, 0, 0, 0, 0, 0, 0, 0, 100])
         XCTAssertEqual(t.serialize(), expected)
-        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
     }
 
     func testTransferWithScheduleSerialization() throws {
@@ -78,13 +79,13 @@ final class TransactionTest: XCTestCase {
         // Generated from serializing payload in rust sdk
         var expected = Data([19, 16, 234, 195, 243, 10, 162, 72, 149, 8, 200, 110, 176, 147, 40, 255, 138, 84, 117, 249, 254, 92, 148, 88, 204, 60, 112, 149, 111, 207, 203, 34, 191, 2, 0, 0, 0, 0, 0, 1, 226, 64, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 0, 0, 3, 147, 216, 0, 0, 0, 0, 0, 0, 4, 210])
         XCTAssertEqual(t.serialize(), expected)
-        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
 
         t = AccountTransactionPayload.transferWithSchedule(receiver: a, schedule: schedule, memo: Memo(Data([1, 2, 3, 4])))
         // Generated from serializing payload in rust sdk
         expected = Data([24, 16, 234, 195, 243, 10, 162, 72, 149, 8, 200, 110, 176, 147, 40, 255, 138, 84, 117, 249, 254, 92, 148, 88, 204, 60, 112, 149, 111, 207, 203, 34, 191, 0, 4, 1, 2, 3, 4, 2, 0, 0, 0, 0, 0, 1, 226, 64, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 0, 0, 3, 147, 216, 0, 0, 0, 0, 0, 0, 4, 210])
         XCTAssertEqual(t.serialize(), expected)
-        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
     }
 
     func testRegisterDataSerialization() throws {
@@ -93,10 +94,10 @@ final class TransactionTest: XCTestCase {
         // Generated from serializing payload in rust sdk
         let expected = Data([21, 0, 6, 123, 231, 222, 0, 1, 2])
         XCTAssertEqual(t.serialize(), expected)
-        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
     }
 
-//    func testTransferToPublicSerialization() throws {}
+//    func testTransferToPublicSerialization() throws {} FIXME: implement
 
     func testUpdateCredentialKeysSerialization() throws {
         let credId = try CredentialRegistrationID(Data(hex: "a5727a5f217a0abaa6bba7f6037478051a49d5011e045eb0d86fce393e0c7b4a96382c60e09a489ebb6d800dc0d88d05"))
@@ -105,11 +106,80 @@ final class TransactionTest: XCTestCase {
 
         let expected = Data([13, 165, 114, 122, 95, 33, 122, 10, 186, 166, 187, 167, 246, 3, 116, 120, 5, 26, 73, 213, 1, 30, 4, 94, 176, 216, 111, 206, 57, 62, 12, 123, 74, 150, 56, 44, 96, 224, 154, 72, 158, 187, 109, 128, 13, 192, 216, 141, 5, 1, 2, 0, 214, 132, 172, 95, 215, 134, 211, 60, 130, 112, 28, 233, 240, 80, 23, 187, 111, 49, 20, 190, 199, 124, 14, 131, 110, 125, 92, 33, 29, 233, 172, 198, 1])
         XCTAssertEqual(t.serialize(), expected)
-        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
     }
 
-    // func testUpdateCredentialsSerialization() throws { }
-    // func testConfigureBakerSerialization() throws { }
+    func testCanCreateBakerKeys() throws {
+        let account = try AccountAddress(base58Check: "35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh")
+        let bakerKeys = BakerKeyPairs.generate()
+        let _ = try BakerKeysPayload.create(account: account, bakerKeys: bakerKeys)
+    }
+
+    // func testUpdateCredentialsSerialization() throws { } FIXME: implement
+
+    func testConfigureBakerSerialization() throws {
+        let signatureVerifyKey = Data([247, 193, 33, 152, 127, 222, 9, 217, 38, 58, 30, 84, 214, 143, 194, 7, 99, 168, 111, 194, 57, 149, 108, 94, 213, 206, 244, 99, 39, 250, 108, 93])
+        let electionVerifyKey = Data([178, 57, 219, 237, 5, 241, 101, 120, 212, 13, 95, 125, 88, 119, 48, 215, 9, 86, 181, 4, 19, 87, 54, 192, 17, 84, 235, 124, 93, 101, 169, 78])
+        let aggregationVerifyKey = Data([143, 45, 244, 130, 96, 225, 106, 28, 201, 134, 86, 84, 95, 62, 163, 1, 26, 240, 3, 61, 241, 213, 198, 87, 176, 234, 21, 240, 32, 248, 213, 239, 34, 193, 121, 239, 93, 202, 57, 75, 27, 180, 52, 230, 190, 19, 38, 18, 22, 249, 92, 162, 5, 83, 200, 245, 148, 43, 159, 232, 209, 72, 23, 178, 211, 210, 39, 158, 205, 134, 232, 140, 127, 223, 78, 70, 133, 4, 76, 203, 48, 115, 131, 246, 253, 203, 206, 115, 225, 38, 81, 105, 166, 67, 220, 71])
+        let proofSig = Data([11, 46, 77, 245, 199, 21, 221, 29, 36, 155, 150, 134, 175, 125, 228, 250, 50, 134, 139, 206, 247, 34, 22, 118, 31, 234, 52, 119, 189, 114, 32, 3, 125, 136, 124, 125, 155, 6, 157, 158, 197, 165, 70, 242, 183, 234, 149, 120, 232, 2, 141, 155, 172, 142, 221, 133, 62, 71, 34, 70, 19, 144, 175, 14])
+        let proofElection = Data([82, 121, 251, 107, 209, 88, 161, 195, 131, 16, 188, 8, 13, 5, 79, 234, 127, 109, 72, 174, 205, 208, 165, 199, 138, 42, 59, 40, 122, 145, 221, 14, 218, 49, 39, 170, 5, 6, 239, 142, 193, 106, 33, 233, 44, 230, 218, 187, 63, 42, 72, 190, 147, 18, 240, 29, 29, 45, 105, 182, 146, 170, 146, 5])
+        let proofAggregation = Data([132, 244, 27, 33, 127, 164, 95, 185, 214, 199, 185, 237, 77, 222, 159, 109, 227, 127, 52, 32, 197, 90, 185, 46, 25, 239, 228, 177, 220, 107, 236, 186, 9, 91, 230, 208, 101, 197, 217, 133, 68, 88, 65, 31, 116, 97, 191, 177, 108, 162, 188, 56, 165, 120, 133, 230, 138, 98, 129, 199, 205, 149, 163, 194])
+
+        let capital: MicroCCDAmount = 1_234_567
+        let restakeEarnings = true
+        let openForDelegation = OpenStatus.closedForAll
+        let metadataUrl = "https://url.com/test"
+        let keysWithProofs = BakerKeysPayload(signatureVerifyKey: signatureVerifyKey, electionVerifyKey: electionVerifyKey, aggregationVerifyKey: aggregationVerifyKey, proofSig: proofSig, proofElection: proofElection, proofAggregation: proofAggregation)
+        let tfCommission = AmountFraction(partsPerHundredThousand: 4321)
+        let brCommission = AmountFraction(partsPerHundredThousand: 6545)
+        let frCommission = AmountFraction(partsPerHundredThousand: 18989)
+
+        var data = ConfigureBakerPayload()
+        var t = AccountTransactionPayload.configureBaker(data)
+
+        var expected = Data([25, 0, 0])
+        var actual = t.serialize()
+
+        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
+
+        data = ConfigureBakerPayload(capital: capital)
+        t = AccountTransactionPayload.configureBaker(data)
+
+        expected = Data([25, 0, 1, 0, 0, 0, 0, 0, 18, 214, 135])
+        actual = t.serialize()
+
+        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
+
+        data = ConfigureBakerPayload(restakeEarnings: restakeEarnings)
+        t = AccountTransactionPayload.configureBaker(data)
+
+        expected = Data([25, 0, 2, 1])
+        actual = t.serialize()
+
+        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
+
+        data = ConfigureBakerPayload(metadataUrl: metadataUrl)
+        t = AccountTransactionPayload.configureBaker(data)
+
+        expected = Data([25, 0, 16, 0, 20, 104, 116, 116, 112, 115, 58, 47, 47, 117, 114, 108, 46, 99, 111, 109, 47, 116, 101, 115, 116])
+        actual = t.serialize()
+
+        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
+
+        data = ConfigureBakerPayload(capital: capital, restakeEarnings: restakeEarnings, openForDelegation: openForDelegation, keysWithProofs: keysWithProofs, metadataUrl: metadataUrl, transactionFeeCommission: tfCommission, bakingRewardCommission: brCommission, finalizationRewardCommission: frCommission)
+        t = AccountTransactionPayload.configureBaker(data)
+
+        expected = Data([25, 0, 255, 0, 0, 0, 0, 0, 18, 214, 135, 1, 2, 178, 57, 219, 237, 5, 241, 101, 120, 212, 13, 95, 125, 88, 119, 48, 215, 9, 86, 181, 4, 19, 87, 54, 192, 17, 84, 235, 124, 93, 101, 169, 78, 82, 121, 251, 107, 209, 88, 161, 195, 131, 16, 188, 8, 13, 5, 79, 234, 127, 109, 72, 174, 205, 208, 165, 199, 138, 42, 59, 40, 122, 145, 221, 14, 218, 49, 39, 170, 5, 6, 239, 142, 193, 106, 33, 233, 44, 230, 218, 187, 63, 42, 72, 190, 147, 18, 240, 29, 29, 45, 105, 182, 146, 170, 146, 5, 247, 193, 33, 152, 127, 222, 9, 217, 38, 58, 30, 84, 214, 143, 194, 7, 99, 168, 111, 194, 57, 149, 108, 94, 213, 206, 244, 99, 39, 250, 108, 93, 11, 46, 77, 245, 199, 21, 221, 29, 36, 155, 150, 134, 175, 125, 228, 250, 50, 134, 139, 206, 247, 34, 22, 118, 31, 234, 52, 119, 189, 114, 32, 3, 125, 136, 124, 125, 155, 6, 157, 158, 197, 165, 70, 242, 183, 234, 149, 120, 232, 2, 141, 155, 172, 142, 221, 133, 62, 71, 34, 70, 19, 144, 175, 14, 143, 45, 244, 130, 96, 225, 106, 28, 201, 134, 86, 84, 95, 62, 163, 1, 26, 240, 3, 61, 241, 213, 198, 87, 176, 234, 21, 240, 32, 248, 213, 239, 34, 193, 121, 239, 93, 202, 57, 75, 27, 180, 52, 230, 190, 19, 38, 18, 22, 249, 92, 162, 5, 83, 200, 245, 148, 43, 159, 232, 209, 72, 23, 178, 211, 210, 39, 158, 205, 134, 232, 140, 127, 223, 78, 70, 133, 4, 76, 203, 48, 115, 131, 246, 253, 203, 206, 115, 225, 38, 81, 105, 166, 67, 220, 71, 132, 244, 27, 33, 127, 164, 95, 185, 214, 199, 185, 237, 77, 222, 159, 109, 227, 127, 52, 32, 197, 90, 185, 46, 25, 239, 228, 177, 220, 107, 236, 186, 9, 91, 230, 208, 101, 197, 217, 133, 68, 88, 65, 31, 116, 97, 191, 177, 108, 162, 188, 56, 165, 120, 133, 230, 138, 98, 129, 199, 205, 149, 163, 194, 0, 20, 104, 116, 116, 112, 115, 58, 47, 47, 117, 114, 108, 46, 99, 111, 109, 47, 116, 101, 115, 116, 0, 0, 16, 225, 0, 0, 25, 145, 0, 0, 74, 45])
+        actual = t.serialize()
+
+        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
+    }
+
     func testConfigureDelegationSerialization() throws {
         var data = ConfigureDelegationPayload(capital: 12_000_000, delegationTarget: DelegationTarget.passive)
         var t = AccountTransactionPayload.configureDelegation(data)
@@ -118,7 +188,7 @@ final class TransactionTest: XCTestCase {
         var actual = t.serialize()
 
         XCTAssertEqual(actual, expected)
-        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
 
         data = ConfigureDelegationPayload(delegationTarget: DelegationTarget.baker(1234))
         t = AccountTransactionPayload.configureDelegation(data)
@@ -127,7 +197,7 @@ final class TransactionTest: XCTestCase {
         actual = t.serialize()
 
         XCTAssertEqual(actual, expected)
-        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
 
         data = ConfigureDelegationPayload(capital: 432, restakeEarnings: true, delegationTarget: DelegationTarget.baker(12))
         t = AccountTransactionPayload.configureDelegation(data)
@@ -136,6 +206,15 @@ final class TransactionTest: XCTestCase {
         actual = t.serialize()
 
         XCTAssertEqual(actual, expected)
-        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
+
+        data = ConfigureDelegationPayload()
+        t = AccountTransactionPayload.configureDelegation(data)
+
+        expected = Data([26, 0, 0])
+        actual = t.serialize()
+
+        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
     }
 }
