@@ -578,9 +578,9 @@ public enum DelegationTarget: FromGRPC, Equatable, Serialize, Deserialize {
         var res = 0
         switch self {
         case .passive:
-            res += buffer.writeInteger(0)
+            res += buffer.writeInteger(0 as UInt8)
         case let .baker(bakerId):
-            res += buffer.writeInteger(1)
+            res += buffer.writeInteger(1 as UInt8)
             buffer.writeInteger(bakerId)
         }
         return res

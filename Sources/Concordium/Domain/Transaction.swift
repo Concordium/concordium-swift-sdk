@@ -366,6 +366,17 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
     /// The commission the pool owner takes on finalization rewards.
     public let finalizationRewardCommission: AmountFraction?
 
+    public init(capital: MicroCCDAmount? = nil, restakeEarnings: Bool? = nil, openForDelegation: OpenStatus? = nil, keysWithProofs: BakerKeysPayload? = nil, metadataUrl: String? = nil, transactionFeeCommission: AmountFraction? = nil, bakingRewardCommission: AmountFraction? = nil, finalizationRewardCommission: AmountFraction? = nil) {
+        self.capital = capital
+        self.restakeEarnings = restakeEarnings
+        self.openForDelegation = openForDelegation
+        self.keysWithProofs = keysWithProofs
+        self.metadataUrl = metadataUrl
+        self.transactionFeeCommission = transactionFeeCommission
+        self.bakingRewardCommission = bakingRewardCommission
+        self.finalizationRewardCommission = finalizationRewardCommission
+    }
+
     public static func deserialize(_ data: inout Cursor) -> ConfigureBakerPayload? {
         var capital: MicroCCDAmount?
         var restakeEarnings: Bool?
@@ -466,6 +477,12 @@ public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize {
     public let restakeEarnings: Bool?
     /// The delegation target to add the stake to
     public let delegationTarget: DelegationTarget?
+
+    public init(capital: MicroCCDAmount? = nil, restakeEarnings: Bool? = nil, delegationTarget: DelegationTarget? = nil) {
+        self.capital = capital
+        self.restakeEarnings = restakeEarnings
+        self.delegationTarget = delegationTarget
+    }
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         var res = 0

@@ -110,5 +110,32 @@ final class TransactionTest: XCTestCase {
 
     // func testUpdateCredentialsSerialization() throws { }
     // func testConfigureBakerSerialization() throws { }
-    // func testConfigureDelegationSerialization() throws { }
+    func testConfigureDelegationSerialization() throws {
+        var data = ConfigureDelegationPayload(capital: 12_000_000, delegationTarget: DelegationTarget.passive)
+        var t = AccountTransactionPayload.configureDelegation(data)
+
+        var expected = Data([26, 0, 5, 0, 0, 0, 0, 0, 183, 27, 0, 0])
+        var actual = t.serialize()
+
+        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+
+        data = ConfigureDelegationPayload(delegationTarget: DelegationTarget.baker(1234))
+        t = AccountTransactionPayload.configureDelegation(data)
+
+        expected = Data([26, 0, 4, 1, 0, 0, 0, 0, 0, 0, 4, 210])
+        actual = t.serialize()
+
+        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+
+        data = ConfigureDelegationPayload(capital: 432, restakeEarnings: true, delegationTarget: DelegationTarget.baker(12))
+        t = AccountTransactionPayload.configureDelegation(data)
+
+        expected = Data([26, 0, 7, 0, 0, 0, 0, 0, 0, 1, 176, 1, 1, 0, 0, 0, 0, 0, 0, 0, 12])
+        actual = t.serialize()
+
+        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(AccountTransactionPayload.deserialize(expected)!, t)
+    }
 }
