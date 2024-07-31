@@ -92,7 +92,7 @@ public struct AccountTransaction {
     }
 
     /// Creates a transaction for transferring CCD with a release schedule from one account to another, with an optional memo
-    public static func transferWithSchedule(sender: AccountAddress, receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Memo?) -> Self {
+    public static func transferWithSchedule(sender: AccountAddress, receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Memo? = nil) -> Self {
         let payload = AccountTransactionPayload.transferWithSchedule(receiver: receiver, schedule: schedule, memo: memo)
         let energy = TransactionCost.transferWithSchedule(schedule)
         return self.init(sender: sender, payload: payload, energy: energy)
@@ -147,6 +147,25 @@ public struct AccountTransaction {
         let p = AccountTransactionPayload.configureBaker(payload)
         let energy = TransactionCost.configureBaker(withKeys: payload.keysWithProofs != nil)
         return self.init(sender: sender, payload: p, energy: energy)
+    }
+
+    /// Creates a transaction for configuring the sender as a baker
+    public static func configureBaker(sender: AccountAddress, capital: MicroCCDAmount? = nil, restakeEarnings: Bool? = nil, openForDelegation: OpenStatus? = nil, bakerKeys: BakerKeyPairs? = nil, metadataUrl: String? = nil, transactionFeeCommission: AmountFraction? = nil, bakingRewardCommission: AmountFraction? = nil, finalizationRewardCommission: AmountFraction? = nil) -> Self {
+        let keysWithProofs = try? bakerKeys.map { try BakerKeysPayload.create(account: sender, bakerKeys: $0) }
+        let payload = ConfigureBakerPayload(capital: capital, restakeEarnings: restakeEarnings, openForDelegation: openForDelegation, keysWithProofs: keysWithProofs, metadataUrl: metadataUrl, transactionFeeCommission: transactionFeeCommission, bakingRewardCommission: bakingRewardCommission, finalizationRewardCommission: finalizationRewardCommission)
+        return configureBaker(sender: sender, payload: payload)
+    }
+
+    /// Creates a transaction for configuring the sender as a delegator.
+    public static func configureDelegation(sender: AccountAddress, payload: ConfigureDelegationPayload) -> Self {
+        let p = AccountTransactionPayload.configureDelegation(payload)
+        return self.init(sender: sender, payload: p, energy: TransactionCost.CONFIGURE_DELEGATION)
+    }
+
+    /// Creates a transaction for configuring the sender as a delegator
+    public static func configureDelegation(sender: AccountAddress, capital: MicroCCDAmount? = nil, restakeEarnings: Bool? = nil, delegationTarget: DelegationTarget? = nil) -> Self {
+        let payload = ConfigureDelegationPayload(capital: capital, restakeEarnings: restakeEarnings, delegationTarget: delegationTarget)
+        return configureDelegation(sender: sender, payload: payload)
     }
 
     /// Prepares the transaction for submission
@@ -440,6 +459,63 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
     }
 }
 
+public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize {
+    /// The equity capital of the baker
+    public let capital: MicroCCDAmount?
+    /// Whether the baker's earnings are restaked
+    public let restakeEarnings: Bool?
+    /// The delegation target to add the stake to
+    public let delegationTarget: DelegationTarget?
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        var res = 0
+
+        var bitmap: UInt16 = 0
+        func setBit(_ pos: Int, cond: Bool) {
+            if cond { bitmap = bitmap | (1 << pos) }
+        }
+
+        setBit(0, cond: capital != nil)
+        setBit(1, cond: restakeEarnings != nil)
+        setBit(2, cond: delegationTarget != nil)
+        res += buffer.writeInteger(bitmap)
+
+        if let capital = capital {
+            res += buffer.writeInteger(capital)
+        }
+        if let restakeEarnings = restakeEarnings {
+            res += buffer.writeBool(restakeEarnings)
+        }
+        if let delegationTarget = delegationTarget {
+            res += buffer.writeSerializable(delegationTarget)
+        }
+
+        return res
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> ConfigureDelegationPayload? {
+        var capital: MicroCCDAmount?
+        var restakeEarnings: Bool?
+        var delegationTarget: DelegationTarget?
+
+        guard let bitmap = data.parseUInt(UInt16.self) else { return nil }
+        if bitmap & 1 == 1 {
+            guard let amount = data.parseUInt(MicroCCDAmount.self) else { return nil }
+            capital = amount
+        }
+        if bitmap & (1 << 1) != 0 {
+            guard let restake = data.parseBool() else { return nil }
+            restakeEarnings = restake
+        }
+        if bitmap & (1 << 2) != 0 {
+            guard let target = DelegationTarget.deserialize(&data) else { return nil }
+            delegationTarget = target
+        }
+
+        return .init(capital: capital, restakeEarnings: restakeEarnings, delegationTarget: delegationTarget)
+    }
+}
+
 /// The payload for an account transaction. Only contains payloads valid from protocol version 7
 public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
     case deployModule(_ module: WasmModule)
@@ -452,7 +528,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
     case updateCredentials(newCredInfos: [CredentialIndex: CredentialDeploymentInfo], removeCredIds: [CredentialRegistrationID], newThreshold: UInt8)
     case registerData(_ data: RegisteredData)
     case configureBaker(_ data: ConfigureBakerPayload)
-    // case configureDelegation
+    case configureDelegation(_ data: ConfigureDelegationPayload)
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
         var res = 0
@@ -517,6 +593,9 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
         case let .configureBaker(data):
             res += buffer.writeSerializable(TransactionType.configureBaker)
             res += buffer.writeSerializable(data)
+        case let .configureDelegation(data):
+            res += buffer.writeSerializable(TransactionType.configureDelegation)
+            res += buffer.writeSerializable(data)
         }
 
         return res
@@ -577,7 +656,8 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             guard let payload = ConfigureBakerPayload.deserialize(&data) else { return nil }
             return .configureBaker(payload)
         case .configureDelegation:
-            return nil // TODO: missing impl
+            guard let payload = ConfigureDelegationPayload.deserialize(&data) else { return nil }
+            return .configureDelegation(payload)
         case .addBaker, .removeBaker, .updateBakerStake, .updateBakerRestakeEarnings, .updateBakerKeys:
             return nil // Not supported, invalid since protocol version 4
         case .encryptedAmountTransfer, .encryptedAmountTransferWithMemo, .transferToEncrypted:

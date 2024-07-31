@@ -557,7 +557,7 @@ public struct BakerPoolInfo: FromGRPC {
 }
 
 /// Target of delegation.
-public enum DelegationTarget: FromGRPC {
+public enum DelegationTarget: FromGRPC, Equatable, Serialize, Deserialize {
     /// Delegate passively, i.e., to no specific baker.
     case passive
     /// Delegate to a specific baker.
@@ -572,6 +572,26 @@ public enum DelegationTarget: FromGRPC {
         case let .baker(b):
             return .baker(b.value)
         }
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        var res = 0
+        switch self {
+        case .passive:
+            res += buffer.writeInteger(0)
+        case let .baker(bakerId):
+            res += buffer.writeInteger(1)
+            buffer.writeInteger(bakerId)
+        }
+        return res
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> DelegationTarget? {
+        guard let tag = data.parseUInt(UInt8.self) else { return nil }
+        if tag == 0 { return .passive }
+
+        guard let bakerId = data.parseUInt(BakerID.self) else { return nil }
+        return .baker(bakerId)
     }
 }
 

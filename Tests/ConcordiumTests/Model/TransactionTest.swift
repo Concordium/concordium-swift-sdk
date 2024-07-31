@@ -109,4 +109,6 @@ final class TransactionTest: XCTestCase {
     }
 
     // func testUpdateCredentialsSerialization() throws { }
+    // func testConfigureBakerSerialization() throws { }
+    // func testConfigureDelegationSerialization() throws { }
 }
