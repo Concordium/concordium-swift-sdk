@@ -12,7 +12,7 @@ public typealias AccountIndex = UInt64
 public typealias BakerID = AccountIndex
 
 /// Index of the credential that is to be used.
-public typealias CredentialIndex = UInt32
+public typealias CredentialIndex = UInt8
 
 /// Index of an account key that is to be used.
 public typealias KeyIndex = UInt8
@@ -268,10 +268,15 @@ extension CredentialPublicKeys: Codable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.keys, forKey: .keys)
-        try container.encode(self.threshold, forKey: .threshold)
+        try container.encode(threshold, forKey: .threshold)
+
+        var keysJson: [String: VerifyKey] = [:]
+        for (k, v) in keys {
+            keysJson["\(k)"] = v
+        }
+        try container.encode(keysJson, forKey: .keys)
     }
-    
+
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -338,10 +343,10 @@ extension VerifyKey: Codable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.schemeId, forKey: .schemeId)
-        try container.encode(self.keyHex, forKey: .verifyKey)
+        try container.encode(schemeId, forKey: .schemeId)
+        try container.encode(keyHex, forKey: .verifyKey)
     }
-    
+
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let schemeId = try container.decode(String.self, forKey: .schemeId)
@@ -382,11 +387,11 @@ extension Policy: Codable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.createdAtYearMonth, forKey: .createdAt)
-        try container.encode(self.validToYearMonth, forKey: .validTo)
-        try container.encode(self.revealedAttributes, forKey: .revealedAttributes)
+        try container.encode(createdAtYearMonth, forKey: .createdAt)
+        try container.encode(validToYearMonth, forKey: .validTo)
+        try container.encode(revealedAttributes, forKey: .revealedAttributes)
     }
-    
+
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -431,9 +436,9 @@ extension ChainArData: FromGRPC, Codable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.encIdCredPubShareHex, forKey: .encIdCredPubShare)
+        try container.encode(encIdCredPubShareHex, forKey: .encIdCredPubShare)
     }
-    
+
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let encIdCredPubShareHex = try container.decode(String.self, forKey: .encIdCredPubShare)
@@ -757,16 +762,12 @@ public struct AccountInfo: FromGRPC {
     public var address: AccountAddress
 
     static func fromGRPC(_ grpc: Concordium_V2_AccountInfo) throws -> Self {
-        try .init(
+        let credentials = try grpc.creds.reduce(into: [:]) { r, v in r[UInt8(v.key)] = try Versioned(version: 0, value: AccountCredentialDeploymentValues.fromGRPC(v.value)) }
+        return try self.init(
             sequenceNumber: grpc.sequenceNumber.value,
             amount: grpc.amount.value,
             releaseSchedule: .fromGRPC(grpc.schedule),
-            credentials: grpc.creds.mapValues {
-                try Versioned(
-                    version: 0, // mirroring Rust SDK
-                    value: .fromGRPC($0)
-                )
-            },
+            credentials: credentials,
             threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GRPCError.valueOutOfBounds,
             encryptedAmount: .fromGRPC(grpc.encryptedBalance),
             encryptionKey: grpc.encryptionKey.value.hex,

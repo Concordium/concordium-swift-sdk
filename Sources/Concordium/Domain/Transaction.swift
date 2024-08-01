@@ -246,16 +246,18 @@ public struct SignedAccountTransaction: ToGRPC {
     func toGRPC() -> Concordium_V2_AccountTransaction {
         var p = Concordium_V2_AccountTransactionPayload()
         p.rawPayload = transaction.serializedPayload
+
         var s = Concordium_V2_AccountTransactionSignature()
-        s.signatures = signatures.mapValues {
+        s.signatures = signatures.reduce(into: [:]) { res, v in
             var m = Concordium_V2_AccountSignatureMap()
-            m.signatures = $0.reduce(into: [:]) { res, e in
+            m.signatures = v.value.reduce(into: [:]) { res, e in
                 var s = Concordium_V2_Signature()
                 s.value = e.value
                 res[UInt32(e.key)] = s
             }
-            return m
+            res[UInt32(v.key)] = m
         }
+
         var t = Concordium_V2_AccountTransaction()
         t.header = transaction.header.toGRPC()
         t.payload = p
@@ -310,6 +312,7 @@ public enum TransactionType: UInt8, Serialize, Deserialize {
 
 extension UpdateCredentialsPayload: Deserialize {
     public static func deserialize(_ data: inout Cursor) -> ConcordiumWalletCrypto.UpdateCredentialsPayload? {
+//        let result = try! deserializeUpdateCredentialsPayload(bytes: data.remaining)
         guard let result = try? deserializeUpdateCredentialsPayload(bytes: data.remaining) else { return nil }
         data.advance(by: result.bytesRead)
         return result.value
@@ -602,8 +605,8 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             }
         case let .updateCredentials(newCredInfos, removeCredIds, newThreshold):
             res += buffer.writeSerializable(TransactionType.updateCredentials)
-            res += buffer.writeSerializable(map: newCredInfos, lengthPrefix: UInt64.self)
-            res += buffer.writeSerializable(list: removeCredIds, lengthPrefix: UInt64.self)
+            res += buffer.writeSerializable(map: newCredInfos, lengthPrefix: UInt8.self)
+            res += buffer.writeSerializable(list: removeCredIds, lengthPrefix: UInt8.self)
             res += buffer.writeInteger(newThreshold)
         case let .registerData(data):
             res += buffer.writeSerializable(TransactionType.registerData)
