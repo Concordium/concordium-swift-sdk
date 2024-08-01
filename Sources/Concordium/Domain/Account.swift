@@ -260,6 +260,34 @@ extension CredentialPublicKeys: FromGRPC, Serialize, Deserialize {
     }
 }
 
+extension CredentialPublicKeys: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case keys
+        case threshold
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.keys, forKey: .keys)
+        try container.encode(self.threshold, forKey: .threshold)
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let parsedKeys = try container.decode([String: VerifyKey].self, forKey: .keys)
+        var keys: [UInt8: VerifyKey] = [:]
+        for (k, v) in parsedKeys {
+            let key = UInt8(k)
+            keys[key!] = v
+        }
+
+        let threshold = try container.decode(UInt8.self, forKey: .threshold)
+
+        self.init(keys: keys, threshold: threshold)
+    }
+}
+
 public typealias VerifyKey = ConcordiumWalletCrypto.VerifyKey
 
 public enum VerifyKeyError: Error, Equatable {
@@ -302,6 +330,26 @@ extension VerifyKey: FromGRPC, Serialize, Deserialize {
     }
 }
 
+extension VerifyKey: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case schemeId
+        case verifyKey
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.schemeId, forKey: .schemeId)
+        try container.encode(self.keyHex, forKey: .verifyKey)
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let schemeId = try container.decode(String.self, forKey: .schemeId)
+        let keyHex = try container.decode(String.self, forKey: .verifyKey)
+        self.init(schemeId: schemeId, keyHex: keyHex)
+    }
+}
+
 func yearMonthString(year: UInt32, month: UInt32) -> String {
     String(format: "%04d%02d", year, month)
 }
@@ -322,6 +370,31 @@ extension Policy: FromGRPC {
                 res["\(attr)"] = String(data: e.value, encoding: .utf8) // TODO: correct to treat attribute value as UTF-8?
             }
         )
+    }
+}
+
+extension Policy: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case createdAt
+        case validTo
+        case revealedAttributes
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.createdAtYearMonth, forKey: .createdAt)
+        try container.encode(self.validToYearMonth, forKey: .validTo)
+        try container.encode(self.revealedAttributes, forKey: .revealedAttributes)
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let createdAtYearMonth = try container.decode(String.self, forKey: .createdAt)
+        let validToYearMonth = try container.decode(String.self, forKey: .validTo)
+        let revealedAttributes = try container.decode([String: String].self, forKey: .revealedAttributes)
+
+        self.init(createdAtYearMonth: createdAtYearMonth, validToYearMonth: validToYearMonth, revealedAttributes: revealedAttributes)
     }
 }
 
@@ -347,9 +420,24 @@ public struct CredentialDeploymentValuesInitial: FromGRPC {
 
 public typealias ChainArData = ConcordiumWalletCrypto.ChainArData
 
-extension ChainArData: FromGRPC {
+extension ChainArData: FromGRPC, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case encIdCredPubShare
+    }
+
     static func fromGRPC(_ grpc: Concordium_V2_ChainArData) -> Self {
         .init(encIdCredPubShareHex: grpc.encIDCredPubShare.hex)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.encIdCredPubShareHex, forKey: .encIdCredPubShare)
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let encIdCredPubShareHex = try container.decode(String.self, forKey: .encIdCredPubShare)
+        self.init(encIdCredPubShareHex: encIdCredPubShareHex)
     }
 }
 

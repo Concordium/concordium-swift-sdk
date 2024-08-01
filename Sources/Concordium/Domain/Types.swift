@@ -546,6 +546,50 @@ extension CredentialDeploymentInfo: Serialize {
     }
 }
 
+extension CredentialDeploymentInfo: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case arData
+        case credId
+        case credentialPublicKeys
+        case ipIdentity
+        case policy
+        case proofs
+        case revocationThreshold
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.arData, forKey: .arData)
+        try container.encode(self.credId.hex, forKey: .credId)
+        try container.encode(self.credentialPublicKeys, forKey: .credentialPublicKeys)
+        try container.encode(self.ipIdentity, forKey: .ipIdentity)
+        try container.encode(self.policy, forKey: .policy)
+        try container.encode(self.proofs.hex, forKey: .proofs)
+        try container.encode(self.revocationThreshold, forKey: .revocationThreshold)
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let credId = try Data(hex: try container.decode(String.self, forKey: .credId))
+        let ipIdentity = try container.decode(UInt32.self, forKey: .ipIdentity)
+        let policy = try container.decode(Policy.self, forKey: .policy)
+        let proofs = try Data(hex: try container.decode(String.self, forKey: .proofs))
+        let revocationThreshold = try container.decode(UInt8.self, forKey: .revocationThreshold)
+
+        let parsedArData = try container.decode([String: ChainArData].self, forKey: .arData)
+        var arData: [UInt32: ChainArData] = [:]
+        for (k, v) in parsedArData {
+            let key = UInt32(k)
+            arData[key!] = v
+        }
+
+        let credentialPublicKeys = try container.decode(CredentialPublicKeys.self, forKey: .credentialPublicKeys)
+
+        self.init(arData: arData, credId: credId, credentialPublicKeys: credentialPublicKeys, ipIdentity: ipIdentity, policy: policy, proofs: proofs, revocationThreshold: revocationThreshold)
+    }
+}
+
 public typealias BakerKeyPairs = ConcordiumWalletCrypto.BakerKeyPairs
 
 public extension BakerKeyPairs {
