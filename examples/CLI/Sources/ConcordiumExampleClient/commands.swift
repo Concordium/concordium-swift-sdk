@@ -238,11 +238,6 @@ struct Root: AsyncParsableCommand {
                 let seedHex = try Mnemonic.deterministicSeedString(from: walletCmd.seedPhrase)
                 print("Resolved seed hex '\(seedHex)'.")
 
-                guard let microCCDAmount = amount.microCCD else {
-                    print("CCD amount is out of bounds.")
-                    return
-                }
-
                 let memo = memo.map { Data(CBOR.encode($0)) }
 
                 print("Fetching crypto parameters (for commitment key).")
@@ -267,7 +262,7 @@ struct Root: AsyncParsableCommand {
                         client: client,
                         sender: account,
                         receiver: receiver,
-                        amount: microCCDAmount,
+                        amount: amount,
                         memo: memo,
                         expiry: expiry
                     )
@@ -549,16 +544,11 @@ struct Root: AsyncParsableCommand {
                     print("Account \(walletCmd.account) not found in export.")
                     return
                 }
-                guard let microCCDAmount = amount.microCCD else {
-                    print("CCD amount is out of bounds.")
-                    return
-                }
-
                 let memo = memo.map { Data(CBOR.encode($0)) }
 
                 // Construct and send transaction.
                 let hash = try await withGRPCClient(rootCmd.opts) { client in
-                    try await transfer(client: client, sender: sender, receiver: receiver, amount: microCCDAmount, memo: memo, expiry: expiry)
+                    try await transfer(client: client, sender: sender, receiver: receiver, amount: amount, memo: memo, expiry: expiry)
                 }
                 print("Transaction with hash '\(hash.hex)' successfully submitted.")
             }
@@ -597,7 +587,7 @@ struct Root: AsyncParsableCommand {
     }
 }
 
-func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amount: MicroCCDAmount, memo: Data?, expiry: TransactionTime) async throws -> TransactionHash {
+func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amount: CCD, memo: Data?, expiry: TransactionTime) async throws -> TransactionHash {
     print("Attempting to send \(amount) uCCD from account '\(sender.address.base58Check)' to '\(receiver.base58Check)'...")
     print("Resolving next sequence number of sender account.")
     let next = try await client.nextAccountSequenceNumber(address: sender.address)

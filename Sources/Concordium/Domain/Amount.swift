@@ -84,7 +84,7 @@ public struct CCDError: Error {
 }
 
 /// Unsigned amount of CCD.
-/// 
+///
 /// This is encoded/decoded as a ``String`` when the ``Codable`` protocol is used to make it compatible with other SDK's.
 public struct CCD: CustomStringConvertible, Codable, Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     typealias GRPC = Concordium_V2_Amount
@@ -132,9 +132,9 @@ public struct CCD: CustomStringConvertible, Codable, Serialize, Deserialize, ToG
 
     /// Initialize by parsing a decimal number represented as a string.
     public init(_ string: String, decimalSeparator: String? = nil) throws {
-        let amount = try Amount.init(string, decimalCount: Self.DECIMAL_COUNT, decimalSeparator: decimalSeparator)
-        guard amount.value.bitWidth <= 64 else {throw CCDError(message: "Parsed amount does not fit into UInt64") }
-        self.microCCD = MicroCCDAmount(amount.value)
+        let amount = try Amount(string, decimalCount: Self.DECIMAL_COUNT, decimalSeparator: decimalSeparator)
+        guard amount.value.bitWidth <= 64 else { throw CCDError(message: "Parsed amount does not fit into UInt64") }
+        microCCD = MicroCCDAmount(amount.value)
     }
 
     public var description: String {
@@ -148,7 +148,7 @@ public struct CCD: CustomStringConvertible, Codable, Serialize, Deserialize, ToG
     ///   - decimalSeparator: Symbol printed to separate the integer from the fractional parts of the amount number. Defaults to the value specified by the locale.
     /// - Returns: A string representing the amount in decimal notation.
     public func format(minDecimalDigits: Int? = nil, decimalSeparator: String? = nil) -> String {
-        let amount = Amount.init(BigUInt(microCCD), decimalCount: Self.DECIMAL_COUNT)
+        let amount = Amount(BigUInt(microCCD), decimalCount: Self.DECIMAL_COUNT)
         var a = amount
         if let minDecimalDigits {
             a = amount.withoutTrailingZeros(minDecimalCount: minDecimalDigits)

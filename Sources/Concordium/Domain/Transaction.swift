@@ -694,13 +694,13 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
         case let .deployModule(src):
             return try .deployModule(WasmModule.fromGRPC(src))
         case let .transfer(payload):
-            return .transfer(amount: try CCD.fromGRPC(payload.amount), receiver: AccountAddress.fromGRPC(payload.receiver))
+            return try .transfer(amount: CCD.fromGRPC(payload.amount), receiver: AccountAddress.fromGRPC(payload.receiver))
         case let .transferWithMemo(payload):
-            return try .transfer(amount: try CCD.fromGRPC(payload.amount), receiver: AccountAddress.fromGRPC(payload.receiver), memo: Memo.fromGRPC(payload.memo))
+            return try .transfer(amount: CCD.fromGRPC(payload.amount), receiver: AccountAddress.fromGRPC(payload.receiver), memo: Memo.fromGRPC(payload.memo))
         case let .initContract(payload):
-            return try .initContract(amount: try CCD.fromGRPC(payload.amount), modRef: ModuleReference.fromGRPC(payload.moduleRef), initName: InitName.fromGRPC(payload.initName), param: Parameter.fromGRPC(payload.parameter))
+            return try .initContract(amount: CCD.fromGRPC(payload.amount), modRef: ModuleReference.fromGRPC(payload.moduleRef), initName: InitName.fromGRPC(payload.initName), param: Parameter.fromGRPC(payload.parameter))
         case let .updateContract(payload):
-            return try .updateContract(amount: try CCD.fromGRPC(payload.amount), address: ContractAddress.fromGRPC(payload.address), receiveName: ReceiveName.fromGRPC(payload.receiveName), message: Parameter.fromGRPC(payload.parameter))
+            return try .updateContract(amount: CCD.fromGRPC(payload.amount), address: ContractAddress.fromGRPC(payload.address), receiveName: ReceiveName.fromGRPC(payload.receiveName), message: Parameter.fromGRPC(payload.parameter))
         case let .registerData(data):
             return try .registerData(RegisteredData.fromGRPC(data))
         case let .rawPayload(data):
