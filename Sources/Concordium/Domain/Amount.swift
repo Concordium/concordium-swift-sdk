@@ -78,7 +78,24 @@ public struct Amount: Equatable {
 }
 
 /// Unsigned amount of CCD.
-public struct CCD: CustomStringConvertible {
+/// 
+/// This is encoded/decoded as a ``String`` when the ``Codable`` protocol is used to make it compatible with other SDK's.
+public struct CCD: CustomStringConvertible, Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        // This is decoded as ``String`` to align with serialization in other SDK's
+        let value = try container.decode(String.self)
+        guard let value = MicroCCDAmount(value) else { throw DecodingError.dataCorruptedError(in: container, debugDescription: "Expected UInt64 string") }
+        self.init(microCCD: value)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        guard let microCCD = microCCD else { throw EncodingError.invalidValue(amount.value, EncodingError.Context(codingPath: [], debugDescription: "CCD amount expected to fit inside UInt64")) }
+        // This is encoded as ``String`` to align with serialization in other SDK's
+        try container.encode("\(microCCD)")
+    }
+
     public static let decimalCount: UInt16 = 6
 
     public var amount: Amount
