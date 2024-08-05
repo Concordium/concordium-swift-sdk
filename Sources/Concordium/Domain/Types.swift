@@ -119,6 +119,27 @@ public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable {
     }
 }
 
+/// Represents the hash of the state of a block
+public struct StateHash: HashBytes, ToGRPC, FromGRPC, Equatable {
+    typealias GRPC = Concordium_V2_StateHash
+    public let value: Data
+    public init(unchecked value: Data) {
+        self.value = value
+    }
+
+    func toGRPC() -> GRPC {
+        var t = GRPC()
+        t.value = value
+        return t
+    }
+
+    /// Initializes the type from the associated GRPC type
+    /// - Throws: `ExactSizeError` if conversion could not be made
+    static func fromGRPC(_ g: GRPC) throws -> Self {
+        try Self(g.value)
+    }
+}
+
 /// Represents a Concordium smart contract module reference
 public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public let value: Data
@@ -603,3 +624,40 @@ public extension BakerKeyPairs {
         generateBakerKeys()
     }
 }
+
+/// Represents a protocol version of a Concordium blockchain
+public enum ProtocolVersion: FromGRPC {
+    case protocolVersion1 // = 0
+    case protocolVersion2 // = 1
+    case protocolVersion3 // = 2
+    case protocolVersion4 // = 3
+    case protocolVersion5 // = 4
+    case protocolVersion6 // = 5
+    case protocolVersion7 // = 6
+
+    static func fromGRPC(_ gRPC: Concordium_V2_ProtocolVersion) throws -> ProtocolVersion {
+        switch gRPC {
+        case .protocolVersion1:
+            return .protocolVersion1
+        case .protocolVersion2:
+            return .protocolVersion2
+        case .protocolVersion3:
+            return .protocolVersion3
+        case .protocolVersion4:
+            return .protocolVersion4
+        case .protocolVersion5:
+            return .protocolVersion5
+        case .protocolVersion6:
+            return .protocolVersion6
+        case .protocolVersion7:
+            return .protocolVersion7
+        case .UNRECOGNIZED:
+            throw GRPCConversionError(message: "Unrecognized protocol version")
+        }
+    }
+}
+
+public typealias Slot = UInt64
+public typealias Round = UInt64
+public typealias Epoch = UInt64
+public typealias GenesisIndex = UInt32

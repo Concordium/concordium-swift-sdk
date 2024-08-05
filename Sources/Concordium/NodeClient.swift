@@ -3,6 +3,7 @@ import GRPC
 import NIOCore
 import NIOPosix
 
+/// Protocol for Concordium node clients targetting the GRPC v2 API
 public protocol NodeClient {
     /// Get the global context for the chain
     func cryptographicParameters(block: BlockIdentifier) async throws -> CryptographicParameters
@@ -14,6 +15,8 @@ public protocol NodeClient {
     func nextAccountSequenceNumber(address: AccountAddress) async throws -> NextAccountSequenceNumber
     /// Get the account info for an account
     func info(account: AccountIdentifier, block: BlockIdentifier) async throws -> AccountInfo
+    /// Get the account info for a block
+    func info(block: BlockIdentifier) async throws -> BlockInfo
     /// Submit a transaction to the node
     func send(transaction: SignedAccountTransaction) async throws -> TransactionHash
     /// Submit an account credential deployment to the node
@@ -25,6 +28,7 @@ public struct NodeClientError: Error {
     public let message: String
 }
 
+/// Defines a GRPC client for communicating with the GRPC v2 API of a given Concordium node.
 public class GRPCNodeClient: NodeClient {
     let grpc: Concordium_V2_QueriesClientProtocol
 
@@ -89,6 +93,11 @@ public class GRPCNodeClient: NodeClient {
         req.accountIdentifier = account.toGRPC()
         req.blockHash = block.toGRPC()
         let res = try await grpc.getAccountInfo(req).response.get()
+        return try .fromGRPC(res)
+    }
+
+    public func info(block: BlockIdentifier) async throws -> BlockInfo {
+        let res = try await grpc.getBlockInfo(block.toGRPC()).response.get()
         return try .fromGRPC(res)
     }
 
