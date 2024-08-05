@@ -121,7 +121,7 @@ public struct AccountTransaction {
     }
 
     /// Creates a transaction for transferring CCD from shielded to public balance. Returns `nil` if the data could for the transaction could not be successfully created
-    public static func transferToPublic(sender: AccountAddress, global: GlobalContext, senderSecretKey: String, inputAmount: InputEncryptedAmount, toTransfer: CCD) -> Self? {
+    public static func transferToPublic(sender: AccountAddress, global: GlobalContext, senderSecretKey: Data, inputAmount: InputEncryptedAmount, toTransfer: CCD) -> Self? {
         guard let data = try? secToPubTransferData(ctx: global, senderSecretKey: senderSecretKey, inputAmount: inputAmount, toTransfer: toTransfer.microCCD) else { return nil }
         let payload = AccountTransactionPayload.transferToPublic(data)
         return self.init(sender: sender, payload: payload, energy: TransactionCost.TRANSFER_TO_PUBLIC)
