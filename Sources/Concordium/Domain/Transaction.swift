@@ -86,7 +86,7 @@ public struct AccountTransaction {
     }
 
     /// Creates a transaction for transferring CCD from one account to another, with an optional memo
-    public static func transfer(sender: AccountAddress, receiver: AccountAddress, amount: MicroCCDAmount, memo: Memo? = nil) -> Self {
+    public static func transfer(sender: AccountAddress, receiver: AccountAddress, amount: CCD, memo: Memo? = nil) -> Self {
         let payload = AccountTransactionPayload.transfer(amount: amount, receiver: receiver, memo: memo)
         return self.init(sender: sender, payload: payload, energy: TransactionCost.TRANSFER)
     }
@@ -100,7 +100,7 @@ public struct AccountTransaction {
 
     /// Creates a transaction for initializing a smart contract from a given module reference.
     /// - Parameter maxEnergy: the max amount of energy to spend for the corresponding init function of the smart contract module. If this is not enough to execute the transaction on the node, the transaction will be rejected.
-    public static func initContract(sender: AccountAddress, amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter, maxEnergy: Energy) -> Self {
+    public static func initContract(sender: AccountAddress, amount: CCD, modRef: ModuleReference, initName: InitName, param: Parameter, maxEnergy: Energy) -> Self {
         let payload = AccountTransactionPayload.initContract(amount: amount, modRef: modRef, initName: initName, param: param)
         let energy = TransactionCost.initContract(maxEnergy: maxEnergy)
         return self.init(sender: sender, payload: payload, energy: energy)
@@ -108,7 +108,7 @@ public struct AccountTransaction {
 
     /// Creates a transaction for invoking a smart contract entrypoint
     /// - Parameter maxEnergy: the max amount of energy to spend for the corresponding receive function of the smart contract module. If this is not enough to execute the transaction on the node, the transaction will be rejected.
-    public static func updateContract(sender: AccountAddress, amount: MicroCCDAmount, contractAddress: ContractAddress, receiveName: ReceiveName, param: Parameter, maxEnergy: Energy) -> Self {
+    public static func updateContract(sender: AccountAddress, amount: CCD, contractAddress: ContractAddress, receiveName: ReceiveName, param: Parameter, maxEnergy: Energy) -> Self {
         let payload = AccountTransactionPayload.updateContract(amount: amount, address: contractAddress, receiveName: receiveName, message: param)
         let energy = TransactionCost.updateContract(maxEnergy: maxEnergy)
         return self.init(sender: sender, payload: payload, energy: energy)
@@ -121,8 +121,8 @@ public struct AccountTransaction {
     }
 
     /// Creates a transaction for transferring CCD from shielded to public balance. Returns `nil` if the data could for the transaction could not be successfully created
-    public static func transferToPublic(sender: AccountAddress, global: GlobalContext, senderSecretKey: String, inputAmount: InputEncryptedAmount, toTransfer: MicroCCDAmount) -> Self? {
-        guard let data = try? secToPubTransferData(ctx: global, senderSecretKey: senderSecretKey, inputAmount: inputAmount, toTransfer: toTransfer) else { return nil }
+    public static func transferToPublic(sender: AccountAddress, global: GlobalContext, senderSecretKey: String, inputAmount: InputEncryptedAmount, toTransfer: CCD) -> Self? {
+        guard let data = try? secToPubTransferData(ctx: global, senderSecretKey: senderSecretKey, inputAmount: inputAmount, toTransfer: toTransfer.microCCD) else { return nil }
         let payload = AccountTransactionPayload.transferToPublic(data)
         return self.init(sender: sender, payload: payload, energy: TransactionCost.TRANSFER_TO_PUBLIC)
     }
@@ -150,7 +150,7 @@ public struct AccountTransaction {
     }
 
     /// Creates a transaction for configuring the sender as a baker
-    public static func configureBaker(sender: AccountAddress, capital: MicroCCDAmount? = nil, restakeEarnings: Bool? = nil, openForDelegation: OpenStatus? = nil, bakerKeys: BakerKeyPairs? = nil, metadataUrl: String? = nil, transactionFeeCommission: AmountFraction? = nil, bakingRewardCommission: AmountFraction? = nil, finalizationRewardCommission: AmountFraction? = nil) -> Self {
+    public static func configureBaker(sender: AccountAddress, capital: CCD? = nil, restakeEarnings: Bool? = nil, openForDelegation: OpenStatus? = nil, bakerKeys: BakerKeyPairs? = nil, metadataUrl: String? = nil, transactionFeeCommission: AmountFraction? = nil, bakingRewardCommission: AmountFraction? = nil, finalizationRewardCommission: AmountFraction? = nil) -> Self {
         let keysWithProofs = try? bakerKeys.map { try BakerKeysPayload.create(account: sender, bakerKeys: $0) }
         let payload = ConfigureBakerPayload(capital: capital, restakeEarnings: restakeEarnings, openForDelegation: openForDelegation, keysWithProofs: keysWithProofs, metadataUrl: metadataUrl, transactionFeeCommission: transactionFeeCommission, bakingRewardCommission: bakingRewardCommission, finalizationRewardCommission: finalizationRewardCommission)
         return configureBaker(sender: sender, payload: payload)
@@ -163,7 +163,7 @@ public struct AccountTransaction {
     }
 
     /// Creates a transaction for configuring the sender as a delegator
-    public static func configureDelegation(sender: AccountAddress, capital: MicroCCDAmount? = nil, restakeEarnings: Bool? = nil, delegationTarget: DelegationTarget? = nil) -> Self {
+    public static func configureDelegation(sender: AccountAddress, capital: CCD? = nil, restakeEarnings: Bool? = nil, delegationTarget: DelegationTarget? = nil) -> Self {
         let payload = ConfigureDelegationPayload(capital: capital, restakeEarnings: restakeEarnings, delegationTarget: delegationTarget)
         return configureDelegation(sender: sender, payload: payload)
     }
@@ -354,7 +354,7 @@ extension BakerKeysPayload: Serialize, Deserialize {
 
 public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
     /// The equity capital of the baker
-    public let capital: MicroCCDAmount?
+    public let capital: CCD?
     /// Whether the baker's earnings are restaked
     public let restakeEarnings: Bool?
     /// Whether the pool is open for delegators
@@ -370,7 +370,7 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
     /// The commission the pool owner takes on finalization rewards.
     public let finalizationRewardCommission: AmountFraction?
 
-    public init(capital: MicroCCDAmount? = nil, restakeEarnings: Bool? = nil, openForDelegation: OpenStatus? = nil, keysWithProofs: BakerKeysPayload? = nil, metadataUrl: String? = nil, transactionFeeCommission: AmountFraction? = nil, bakingRewardCommission: AmountFraction? = nil, finalizationRewardCommission: AmountFraction? = nil) {
+    public init(capital: CCD? = nil, restakeEarnings: Bool? = nil, openForDelegation: OpenStatus? = nil, keysWithProofs: BakerKeysPayload? = nil, metadataUrl: String? = nil, transactionFeeCommission: AmountFraction? = nil, bakingRewardCommission: AmountFraction? = nil, finalizationRewardCommission: AmountFraction? = nil) {
         self.capital = capital
         self.restakeEarnings = restakeEarnings
         self.openForDelegation = openForDelegation
@@ -382,7 +382,7 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
     }
 
     public static func deserialize(_ data: inout Cursor) -> ConfigureBakerPayload? {
-        var capital: MicroCCDAmount?
+        var capital: CCD?
         var restakeEarnings: Bool?
         var openForDelegation: OpenStatus?
         var keysWithProofs: BakerKeysPayload?
@@ -393,7 +393,7 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
 
         guard let bitmap = data.parseUInt(UInt16.self) else { return nil }
         if bitmap & 1 != 0 {
-            guard let amount = data.parseUInt(MicroCCDAmount.self) else { return nil }
+            guard let amount = CCD.deserialize(&data) else { return nil }
             capital = amount
         }
         if bitmap & (1 << 1) != 0 {
@@ -447,7 +447,7 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
         res += buffer.writeInteger(bitmap)
 
         if let capital = capital {
-            res += buffer.writeInteger(capital)
+            res += buffer.writeSerializable(capital)
         }
         if let restakeEarnings = restakeEarnings {
             res += buffer.writeBool(restakeEarnings)
@@ -476,13 +476,13 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
 
 public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize {
     /// The equity capital of the baker
-    public let capital: MicroCCDAmount?
+    public let capital: CCD?
     /// Whether the baker's earnings are restaked
     public let restakeEarnings: Bool?
     /// The delegation target to add the stake to
     public let delegationTarget: DelegationTarget?
 
-    public init(capital: MicroCCDAmount? = nil, restakeEarnings: Bool? = nil, delegationTarget: DelegationTarget? = nil) {
+    public init(capital: CCD? = nil, restakeEarnings: Bool? = nil, delegationTarget: DelegationTarget? = nil) {
         self.capital = capital
         self.restakeEarnings = restakeEarnings
         self.delegationTarget = delegationTarget
@@ -502,7 +502,7 @@ public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize {
         res += buffer.writeInteger(bitmap)
 
         if let capital = capital {
-            res += buffer.writeInteger(capital)
+            res += buffer.writeSerializable(capital)
         }
         if let restakeEarnings = restakeEarnings {
             res += buffer.writeBool(restakeEarnings)
@@ -515,13 +515,13 @@ public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize {
     }
 
     public static func deserialize(_ data: inout Cursor) -> ConfigureDelegationPayload? {
-        var capital: MicroCCDAmount?
+        var capital: CCD?
         var restakeEarnings: Bool?
         var delegationTarget: DelegationTarget?
 
         guard let bitmap = data.parseUInt(UInt16.self) else { return nil }
         if bitmap & 1 == 1 {
-            guard let amount = data.parseUInt(MicroCCDAmount.self) else { return nil }
+            guard let amount = CCD.deserialize(&data) else { return nil }
             capital = amount
         }
         if bitmap & (1 << 1) != 0 {
@@ -540,9 +540,9 @@ public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize {
 /// The payload for an account transaction. Only contains payloads valid from protocol version 7
 public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
     case deployModule(_ module: WasmModule)
-    case initContract(amount: MicroCCDAmount, modRef: ModuleReference, initName: InitName, param: Parameter)
-    case updateContract(amount: MicroCCDAmount, address: ContractAddress, receiveName: ReceiveName, message: Parameter)
-    case transfer(amount: MicroCCDAmount, receiver: AccountAddress, memo: Memo? = nil)
+    case initContract(amount: CCD, modRef: ModuleReference, initName: InitName, param: Parameter)
+    case updateContract(amount: CCD, address: ContractAddress, receiveName: ReceiveName, message: Parameter)
+    case transfer(amount: CCD, receiver: AccountAddress, memo: Memo? = nil)
     case updateCredentialKeys(credId: CredentialRegistrationID, keys: CredentialPublicKeys)
     case transferToPublic(_ data: SecToPubTransferData)
     case transferWithSchedule(receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Memo? = nil)
@@ -561,13 +561,13 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             res += buffer.writeSerializable(module)
         case let .initContract(amount, modRef, initName, param):
             res += buffer.writeSerializable(TransactionType.initContract)
-            res += buffer.writeInteger(amount)
+            res += buffer.writeSerializable(amount)
             res += buffer.writeSerializable(modRef)
             res += buffer.writeSerializable(initName)
             res += buffer.writeSerializable(param)
         case let .updateContract(amount, contractAddress, receiveName, param):
             res += buffer.writeSerializable(TransactionType.updateContract)
-            res += buffer.writeInteger(amount)
+            res += buffer.writeSerializable(amount)
             res += buffer.writeSerializable(contractAddress)
             res += buffer.writeSerializable(receiveName)
             res += buffer.writeSerializable(param)
@@ -576,11 +576,11 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
                 res += buffer.writeSerializable(TransactionType.transferWithMemo)
                 res += buffer.writeData(receiver.data)
                 res += buffer.writeSerializable(memo)
-                res += buffer.writeInteger(amount)
+                res += buffer.writeSerializable(amount)
             } else {
                 res += buffer.writeSerializable(TransactionType.transfer)
                 res += buffer.writeData(receiver.data)
-                res += buffer.writeInteger(amount)
+                res += buffer.writeSerializable(amount)
             }
         case let .updateCredentialKeys(credId, keys):
             res += buffer.writeSerializable(TransactionType.updateCredentialKeys)
@@ -630,20 +630,20 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             guard let module = WasmModule.deserialize(&data) else { return nil }
             return AccountTransactionPayload.deployModule(module)
         case .initContract:
-            guard let amount = data.parseUInt(MicroCCDAmount.self),
+            guard let amount = CCD.deserialize(&data),
                   let modRef = ModuleReference.deserialize(&data),
                   let initName = InitName.deserialize(&data),
                   let param = Parameter.deserialize(&data) else { return nil }
             return AccountTransactionPayload.initContract(amount: amount, modRef: modRef, initName: initName, param: param)
         case .updateContract:
-            guard let amount = data.parseUInt(MicroCCDAmount.self),
+            guard let amount = CCD.deserialize(&data),
                   let contractAddress = ContractAddress.deserialize(&data),
                   let receiveName = ReceiveName.deserialize(&data),
                   let message = Parameter.deserialize(&data) else { return nil }
             return AccountTransactionPayload.updateContract(amount: amount, address: contractAddress, receiveName: receiveName, message: message)
         case .transfer:
             guard let receiver = AccountAddress.deserialize(&data),
-                  let amount = data.parseUInt(UInt64.self) else { return nil }
+                  let amount = CCD.deserialize(&data) else { return nil }
             return .transfer(amount: amount, receiver: receiver)
         case .updateCredentialKeys:
             guard let credId = CredentialRegistrationID.deserialize(&data),
@@ -666,7 +666,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
         case .transferWithMemo:
             guard let receiver = AccountAddress.deserialize(&data),
                   let memo = Memo.deserialize(&data),
-                  let amount = data.parseUInt(UInt64.self) else { return nil }
+                  let amount = CCD.deserialize(&data) else { return nil }
             return .transfer(amount: amount, receiver: receiver, memo: memo)
         case .transferWithScheduleAndMemo:
             guard let receiver = AccountAddress.deserialize(&data),
@@ -694,13 +694,13 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
         case let .deployModule(src):
             return try .deployModule(WasmModule.fromGRPC(src))
         case let .transfer(payload):
-            return .transfer(amount: payload.amount.value, receiver: AccountAddress.fromGRPC(payload.receiver))
+            return .transfer(amount: try CCD.fromGRPC(payload.amount), receiver: AccountAddress.fromGRPC(payload.receiver))
         case let .transferWithMemo(payload):
-            return try .transfer(amount: payload.amount.value, receiver: AccountAddress.fromGRPC(payload.receiver), memo: Memo.fromGRPC(payload.memo))
+            return try .transfer(amount: try CCD.fromGRPC(payload.amount), receiver: AccountAddress.fromGRPC(payload.receiver), memo: Memo.fromGRPC(payload.memo))
         case let .initContract(payload):
-            return try .initContract(amount: payload.amount.value, modRef: ModuleReference.fromGRPC(payload.moduleRef), initName: InitName.fromGRPC(payload.initName), param: Parameter.fromGRPC(payload.parameter))
+            return try .initContract(amount: try CCD.fromGRPC(payload.amount), modRef: ModuleReference.fromGRPC(payload.moduleRef), initName: InitName.fromGRPC(payload.initName), param: Parameter.fromGRPC(payload.parameter))
         case let .updateContract(payload):
-            return try .updateContract(amount: payload.amount.value, address: ContractAddress.fromGRPC(payload.address), receiveName: ReceiveName.fromGRPC(payload.receiveName), message: Parameter.fromGRPC(payload.parameter))
+            return try .updateContract(amount: try CCD.fromGRPC(payload.amount), address: ContractAddress.fromGRPC(payload.address), receiveName: ReceiveName.fromGRPC(payload.receiveName), message: Parameter.fromGRPC(payload.parameter))
         case let .registerData(data):
             return try .registerData(RegisteredData.fromGRPC(data))
         case let .rawPayload(data):

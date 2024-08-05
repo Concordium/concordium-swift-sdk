@@ -1,5 +1,6 @@
 import BigInt
 import Foundation
+import NIOCore
 
 public enum AmountParseError: Error {
     case invalidInput
@@ -77,10 +78,36 @@ public struct Amount: Equatable {
     }
 }
 
+/// Represents errors happening while working with CCD amounts
+public struct CCDError: Error {
+    public let message: String
+}
+
 /// Unsigned amount of CCD.
 /// 
 /// This is encoded/decoded as a ``String`` when the ``Codable`` protocol is used to make it compatible with other SDK's.
-public struct CCD: CustomStringConvertible, Codable {
+public struct CCD: CustomStringConvertible, Codable, Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
+    typealias GRPC = Concordium_V2_Amount
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(microCCD)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> CCD? {
+        guard let amount = data.parseUInt(MicroCCDAmount.self) else { return nil }
+        return Self(microCCD: amount)
+    }
+
+    func toGRPC() -> GRPC {
+        var g = GRPC()
+        g.value = microCCD
+        return g
+    }
+
+    static func fromGRPC(_ gRPC: GRPC) throws -> CCD {
+        Self(microCCD: gRPC.value)
+    }
+
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         // This is decoded as ``String`` to align with serialization in other SDK's
@@ -91,31 +118,23 @@ public struct CCD: CustomStringConvertible, Codable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
-        guard let microCCD = microCCD else { throw EncodingError.invalidValue(amount.value, EncodingError.Context(codingPath: [], debugDescription: "CCD amount expected to fit inside UInt64")) }
         // This is encoded as ``String`` to align with serialization in other SDK's
         try container.encode("\(microCCD)")
     }
 
-    public static let decimalCount: UInt16 = 6
-
-    public var amount: Amount
+    private static let DECIMAL_COUNT: UInt16 = 6
+    public var microCCD: MicroCCDAmount
 
     /// Initialize from amount of micro CCD.
     public init(microCCD: MicroCCDAmount) {
-        amount = .init(BigUInt(microCCD), decimalCount: Self.decimalCount)
+        self.microCCD = microCCD
     }
 
     /// Initialize by parsing a decimal number represented as a string.
     public init(_ string: String, decimalSeparator: String? = nil) throws {
-        amount = try .init(string, decimalCount: Self.decimalCount, decimalSeparator: decimalSeparator)
-    }
-
-    /// The amount in MicroCCD if it fits within that type, otherwise `nil`.
-    public var microCCD: MicroCCDAmount? {
-        guard amount.value.bitWidth <= 64 else {
-            return nil
-        }
-        return MicroCCDAmount(amount.value)
+        let amount = try Amount.init(string, decimalCount: Self.DECIMAL_COUNT, decimalSeparator: decimalSeparator)
+        guard amount.value.bitWidth <= 64 else {throw CCDError(message: "Parsed amount does not fit into UInt64") }
+        self.microCCD = MicroCCDAmount(amount.value)
     }
 
     public var description: String {
@@ -129,6 +148,7 @@ public struct CCD: CustomStringConvertible, Codable {
     ///   - decimalSeparator: Symbol printed to separate the integer from the fractional parts of the amount number. Defaults to the value specified by the locale.
     /// - Returns: A string representing the amount in decimal notation.
     public func format(minDecimalDigits: Int? = nil, decimalSeparator: String? = nil) -> String {
+        let amount = Amount.init(BigUInt(microCCD), decimalCount: Self.DECIMAL_COUNT)
         var a = amount
         if let minDecimalDigits {
             a = amount.withoutTrailingZeros(minDecimalCount: minDecimalDigits)

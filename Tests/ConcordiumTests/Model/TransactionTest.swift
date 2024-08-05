@@ -94,7 +94,7 @@ final class TransactionTest: XCTestCase {
 
     func testInitContractSerialization() throws {
         let modRef = try ModuleReference(fromHex: "c14efbca1dcf314c73cc294cbbf1bd63e3906b20d35442943eb92f52e383fc38")
-        let t = try AccountTransactionPayload.initContract(amount: 1234, modRef: modRef, initName: InitName("init_test"), param: Parameter(Data([123, 23, 12, 45, 56])))
+        let t = try AccountTransactionPayload.initContract(amount: CCD(microCCD: 1234), modRef: modRef, initName: InitName("init_test"), param: Parameter(Data([123, 23, 12, 45, 56])))
 
         // Generated from serializing payload in rust sdk
         let expected = Data([1, 0, 0, 0, 0, 0, 0, 4, 210, 193, 78, 251, 202, 29, 207, 49, 76, 115, 204, 41, 76, 187, 241, 189, 99, 227, 144, 107, 32, 211, 84, 66, 148, 62, 185, 47, 82, 227, 131, 252, 56, 0, 9, 105, 110, 105, 116, 95, 116, 101, 115, 116, 0, 5, 123, 23, 12, 45, 56])
@@ -104,7 +104,7 @@ final class TransactionTest: XCTestCase {
 
     func testUpdateContractSerialization() throws {
         let contractAddress = ContractAddress(index: 123, subindex: 0)
-        let t = try AccountTransactionPayload.updateContract(amount: 4321, address: contractAddress, receiveName: ReceiveName("test.function"), message: Parameter(Data([123, 23, 12, 45, 56])))
+        let t = try AccountTransactionPayload.updateContract(amount: CCD(microCCD: 4321), address: contractAddress, receiveName: ReceiveName("test.function"), message: Parameter(Data([123, 23, 12, 45, 56])))
 
         // Generated from serializing payload in rust sdk
         let expected = Data([2, 0, 0, 0, 0, 0, 0, 16, 225, 0, 0, 0, 0, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 116, 101, 115, 116, 46, 102, 117, 110, 99, 116, 105, 111, 110, 0, 5, 123, 23, 12, 45, 56])
@@ -114,14 +114,14 @@ final class TransactionTest: XCTestCase {
 
     func testTransferSerialization() throws {
         let a = try AccountAddress(base58Check: "35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh")
-        var t = AccountTransactionPayload.transfer(amount: 100, receiver: a, memo: nil)
+        var t = AccountTransactionPayload.transfer(amount: CCD(microCCD: 100), receiver: a, memo: nil)
 
         // Generated from serializing payload in rust sdk
         var expected = Data([3, 16, 234, 195, 243, 10, 162, 72, 149, 8, 200, 110, 176, 147, 40, 255, 138, 84, 117, 249, 254, 92, 148, 88, 204, 60, 112, 149, 111, 207, 203, 34, 191, 0, 0, 0, 0, 0, 0, 0, 100])
         XCTAssertEqual(t.serialize(), expected)
         XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
 
-        t = AccountTransactionPayload.transfer(amount: 100, receiver: a, memo: Memo(Data([0, 23, 55])))
+        t = AccountTransactionPayload.transfer(amount: CCD(microCCD: 100), receiver: a, memo: Memo(Data([0, 23, 55])))
         // Generated from serializing payload in rust sdk
         expected = Data([22, 16, 234, 195, 243, 10, 162, 72, 149, 8, 200, 110, 176, 147, 40, 255, 138, 84, 117, 249, 254, 92, 148, 88, 204, 60, 112, 149, 111, 207, 203, 34, 191, 0, 3, 0, 23, 55, 0, 0, 0, 0, 0, 0, 0, 100])
         XCTAssertEqual(t.serialize(), expected)
@@ -222,7 +222,7 @@ final class TransactionTest: XCTestCase {
         let proofElection = Data([82, 121, 251, 107, 209, 88, 161, 195, 131, 16, 188, 8, 13, 5, 79, 234, 127, 109, 72, 174, 205, 208, 165, 199, 138, 42, 59, 40, 122, 145, 221, 14, 218, 49, 39, 170, 5, 6, 239, 142, 193, 106, 33, 233, 44, 230, 218, 187, 63, 42, 72, 190, 147, 18, 240, 29, 29, 45, 105, 182, 146, 170, 146, 5])
         let proofAggregation = Data([132, 244, 27, 33, 127, 164, 95, 185, 214, 199, 185, 237, 77, 222, 159, 109, 227, 127, 52, 32, 197, 90, 185, 46, 25, 239, 228, 177, 220, 107, 236, 186, 9, 91, 230, 208, 101, 197, 217, 133, 68, 88, 65, 31, 116, 97, 191, 177, 108, 162, 188, 56, 165, 120, 133, 230, 138, 98, 129, 199, 205, 149, 163, 194])
 
-        let capital: MicroCCDAmount = 1_234_567
+        let capital = CCD(microCCD: 1_234_567)
         let restakeEarnings = true
         let openForDelegation = OpenStatus.closedForAll
         let metadataUrl = "https://url.com/test"
@@ -278,7 +278,7 @@ final class TransactionTest: XCTestCase {
     }
 
     func testConfigureDelegationSerialization() throws {
-        var data = ConfigureDelegationPayload(capital: 12_000_000, delegationTarget: DelegationTarget.passive)
+        var data = ConfigureDelegationPayload(capital: CCD(microCCD: 12_000_000), delegationTarget: DelegationTarget.passive)
         var t = AccountTransactionPayload.configureDelegation(data)
 
         var expected = Data([26, 0, 5, 0, 0, 0, 0, 0, 183, 27, 0, 0])
@@ -296,7 +296,7 @@ final class TransactionTest: XCTestCase {
         XCTAssertEqual(actual, expected)
         XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
 
-        data = ConfigureDelegationPayload(capital: 432, restakeEarnings: true, delegationTarget: DelegationTarget.baker(12))
+        data = ConfigureDelegationPayload(capital: CCD(microCCD: 432), restakeEarnings: true, delegationTarget: DelegationTarget.baker(12))
         t = AccountTransactionPayload.configureDelegation(data)
 
         expected = Data([26, 0, 7, 0, 0, 0, 0, 0, 0, 1, 176, 1, 1, 0, 0, 0, 0, 0, 0, 0, 12])
