@@ -20,6 +20,11 @@ public protocol NodeClient {
     func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash
 }
 
+/// Error happening while constructing a ``NodeClient``
+public struct NodeClientError: Error {
+    public let message: String
+}
+
 public class GRPCNodeClient: NodeClient {
     let grpc: Concordium_V2_QueriesClientProtocol
 
@@ -27,7 +32,19 @@ public class GRPCNodeClient: NodeClient {
         self.grpc = grpc
     }
 
-    // TODO: initialize from URL components
+    /// Initialize a GRPC client from a URL.
+    /// - Throws: ``NodeClientError`` if parsing scheme, host, or port from the supplied ``URL`` fails
+    @available(macOS 13.0, *)
+    public convenience init(url: URL) throws {
+        guard let secure = url.scheme?.starts(with: "https") else { throw NodeClientError(message: "Missing url scheme") }
+        guard let host = url.host() else { throw NodeClientError(message: "Failed to parse host from URL") }
+        guard let port = url.port else { throw NodeClientError(message: "Failed to parse port from URL") }
+
+        let group = PlatformSupport.makeEventLoopGroup(loopCount: 1)
+        let builder = secure ? ClientConnection.usingPlatformAppropriateTLS(for: group) : ClientConnection.insecure(group: group)
+        let connection = builder.connect(host: host, port: port)
+        self.init(channel: connection)
+    }
 
     /// Initialize a GRPC client from the supplied GRPC channel
     public convenience init(channel: GRPCChannel) {
