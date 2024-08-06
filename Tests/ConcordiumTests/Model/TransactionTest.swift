@@ -130,7 +130,7 @@ final class TransactionTest: XCTestCase {
 
     func testTransferWithScheduleSerialization() throws {
         let a = try AccountAddress(base58Check: "35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh")
-        let schedule: [ScheduledTransfer] = [ScheduledTransfer(timestamp: 123_456, amount: 23), ScheduledTransfer(timestamp: 234_456, amount: 1234)]
+        let schedule: [ScheduledTransfer] = [ScheduledTransfer(timestamp: 123_456, amount: CCD(microCCD: 23)), ScheduledTransfer(timestamp: 234_456, amount: CCD(microCCD: 1234))]
         var t = AccountTransactionPayload.transferWithSchedule(receiver: a, schedule: schedule)
 
         // Generated from serializing payload in rust sdk
