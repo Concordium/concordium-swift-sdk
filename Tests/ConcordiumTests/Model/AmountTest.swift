@@ -266,6 +266,6 @@ final class AmountTest: XCTestCase {
     }
 
     func testMicroCCDAmountForCCDOutsideRange() throws {
-        XCTAssertNil(try CCD("123456789012347890").microCCD)
+        XCTAssertThrowsError(try CCD("123456789012347890").microCCD)
     }
 }

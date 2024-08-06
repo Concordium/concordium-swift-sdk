@@ -7,7 +7,7 @@ let network = Network.testnet
 let identityProviderID = IdentityProviderID(3)
 let identityIndex = IdentityIndex(7)
 let credentialCounter = CredentialCounter(21)
-let amount = MicroCCDAmount(1337)
+let amount = CCD(microCCD: 1337)
 let receiver = try! AccountAddress(base58Check: "33Po4Z5v4DaAHo9Gz9Afc9LRzbZmYikus4Q7gqMaXHtdS17khz")
 let expiry = TransactionTime(9_999_999_999)
 
@@ -34,7 +34,7 @@ func transfer(client: NodeClient) async throws {
 /// Construct and sign transfer transaction.
 func makeTransfer(
     _ account: Account,
-    _ amount: MicroCCDAmount,
+    _ amount: CCD,
     _ receiver: AccountAddress,
     _ seq: SequenceNumber,
     _ expiry: TransactionTime

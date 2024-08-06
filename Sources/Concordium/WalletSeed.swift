@@ -192,7 +192,7 @@ public class SeedBasedAccountDerivation {
             )
         }
         let keyHex = try seed.publicKeyHex(accountCredentialIndexes: seedIndexes)
-        let credentialPublicKeys = CredentialPublicKeys(
+        let credentialPublicKeys = try CredentialPublicKeys(
             keys: [KeyIndex(0): VerifyKey(ed25519KeyHex: keyHex)],
             threshold: threshold
         )

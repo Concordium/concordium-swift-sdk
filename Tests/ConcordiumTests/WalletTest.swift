@@ -22,7 +22,7 @@ final class WalletTest: XCTestCase {
         )
 
         // Construct transaction.
-        let transaction = AccountTransaction.transfer(sender: account1.address, receiver: account2.address, amount: 1_000_000)
+        let transaction = AccountTransaction.transfer(sender: account1.address, receiver: account2.address, amount: CCD(microCCD: 1_000_000))
         let preparedTransaction = transaction.prepare(sequenceNumber: 0, expiry: 9_999_999_999, signatureCount: 1)
 
         // Serialize transaction and compute hash.
