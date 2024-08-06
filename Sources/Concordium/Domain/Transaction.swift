@@ -319,7 +319,7 @@ extension UpdateCredentialsPayload: Deserialize {
     }
 }
 
-public struct SecToPubTransferData {
+public struct SecToPubTransferData: Equatable {
     /**
      * The serialized remaining amount after deducting the amount to transfer
      * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::EncryptedAmount`]
@@ -380,7 +380,7 @@ public struct SecToPubTransferData {
     }
 }
 
-extension SecToPubTransferData: Deserialize, Serialize, Equatable {
+extension SecToPubTransferData: Deserialize, Serialize {
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         var res = 0
         res += buffer.writeData(remainingAmount)
@@ -394,6 +394,33 @@ extension SecToPubTransferData: Deserialize, Serialize, Equatable {
         guard let result = try? deserializeSecToPubTransferData(bytes: data.remaining) else { return nil }
         data.advance(by: result.bytesRead)
         return .init(fromCryptoType: result.value)
+    }
+}
+
+extension SecToPubTransferData: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case remainingAmount
+        case transferAmount
+        case index
+        case proof
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: Self.CodingKeys.self)
+        let remainingAmountHex = try container.decode(String.self, forKey: .remainingAmount)
+        remainingAmount = try Data(hex: remainingAmountHex)
+        transferAmount = try container.decode(CCD.self, forKey: .transferAmount)
+        index = try container.decode(UInt64.self, forKey: .index)
+        let proofHex = try container.decode(String.self, forKey: .proof)
+        proof = try Data(hex: proofHex)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: Self.CodingKeys.self)
+        try container.encode(remainingAmount.hex, forKey: .remainingAmount)
+        try container.encode(transferAmount, forKey: .transferAmount)
+        try container.encode(index, forKey: .index)
+        try container.encode(proof.hex, forKey: .proof)
     }
 }
 
