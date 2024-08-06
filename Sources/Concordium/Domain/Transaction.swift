@@ -122,7 +122,7 @@ public struct AccountTransaction {
 
     /// Creates a transaction for transferring CCD from shielded to public balance. Returns `nil` if the data could for the transaction could not be successfully created
     public static func transferToPublic(sender: AccountAddress, global: GlobalContext, senderSecretKey: Data, inputAmount: InputEncryptedAmount, toTransfer: CCD) -> Self? {
-        guard let data = try? secToPubTransferData(ctx: global, senderSecretKey: senderSecretKey, inputAmount: inputAmount, toTransfer: toTransfer.microCCD) else { return nil }
+        guard let data = try? SecToPubTransferData(ctx: global, senderSecretKey: senderSecretKey, inputAmount: inputAmount, toTransfer: toTransfer) else { return nil }
         let payload = AccountTransactionPayload.transferToPublic(data)
         return self.init(sender: sender, payload: payload, energy: TransactionCost.TRANSFER_TO_PUBLIC)
     }
@@ -319,12 +319,81 @@ extension UpdateCredentialsPayload: Deserialize {
     }
 }
 
-public typealias SecToPubTransferData = ConcordiumWalletCrypto.SecToPubTransferData
-extension SecToPubTransferData: Deserialize {
-    public static func deserialize(_ data: inout Cursor) -> ConcordiumWalletCrypto.SecToPubTransferData? {
+public struct SecToPubTransferData {
+    /**
+     * The serialized remaining amount after deducting the amount to transfer
+     * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::EncryptedAmount`]
+     */
+    public var remainingAmount: Bytes
+    /**
+     * The amount to transfer
+     */
+    public var transferAmount: CCD
+    /**
+     * The transfer index of the transfer
+     */
+    public var index: UInt64
+    /**
+     * The serialized proof that the transfer is correct.
+     * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::SecToPubAmountTransferProof`]
+     */
+    public var proof: Bytes
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The serialized remaining amount after deducting the amount to transfer
+         * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::EncryptedAmount`]
+         */
+        remainingAmount: Bytes,
+        /**
+            * The amount to transfer
+            */
+        transferAmount: CCD,
+        /**
+            * The transfer index of the transfer
+            */
+        index: UInt64,
+        /**
+            * The serialized proof that the transfer is correct.
+            * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::SecToPubAmountTransferProof`]
+            */
+        proof: Bytes
+    ) {
+        self.remainingAmount = remainingAmount
+        self.transferAmount = transferAmount
+        self.index = index
+        self.proof = proof
+    }
+
+    init(fromCryptoType cryptoType: ConcordiumWalletCrypto.SecToPubTransferData) {
+        remainingAmount = cryptoType.remainingAmount
+        transferAmount = CCD(microCCD: MicroCCDAmount(cryptoType.transferAmount)!)
+        index = cryptoType.index
+        proof = cryptoType.proof
+    }
+
+    init(ctx: GlobalContext, senderSecretKey: Bytes, inputAmount: InputEncryptedAmount, toTransfer: CCD) throws {
+        let cryptoType = try secToPubTransferData(ctx: ctx, senderSecretKey: senderSecretKey, inputAmount: inputAmount, toTransfer: toTransfer.microCCD)
+        self.init(fromCryptoType: cryptoType)
+    }
+}
+
+extension SecToPubTransferData: Deserialize, Serialize, Equatable {
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        var res = 0
+        res += buffer.writeData(remainingAmount)
+        res += buffer.writeSerializable(transferAmount)
+        res += buffer.writeInteger(index)
+        res += buffer.writeData(proof)
+        return res
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> SecToPubTransferData? {
         guard let result = try? deserializeSecToPubTransferData(bytes: data.remaining) else { return nil }
         data.advance(by: result.bytesRead)
-        return result.value
+        return .init(fromCryptoType: result.value)
     }
 }
 
@@ -588,10 +657,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             res += buffer.writeSerializable(keys)
         case let .transferToPublic(data):
             res += buffer.writeSerializable(TransactionType.transferToPublic)
-            res += buffer.writeData(Data(data.serializedRemainingAmount))
-            res += buffer.writeInteger(data.transferAmount)
-            res += buffer.writeInteger(data.index)
-            res += buffer.writeData(Data(data.serializedProof))
+            res += buffer.writeSerializable(data)
         case let .transferWithSchedule(receiver, schedule, memo):
             if let memo {
                 res += buffer.writeSerializable(TransactionType.transferWithScheduleAndMemo)
