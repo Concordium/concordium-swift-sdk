@@ -407,12 +407,10 @@ extension SecToPubTransferData: Codable {
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: Self.CodingKeys.self)
-        let remainingAmountHex = try container.decode(String.self, forKey: .remainingAmount)
-        remainingAmount = try Data(hex: remainingAmountHex)
+        remainingAmount = try Data(hex: container.decode(String.self, forKey: .remainingAmount))
         transferAmount = try container.decode(CCD.self, forKey: .transferAmount)
         index = try container.decode(UInt64.self, forKey: .index)
-        let proofHex = try container.decode(String.self, forKey: .proof)
-        proof = try Data(hex: proofHex)
+        proof = try Data(hex: container.decode(String.self, forKey: .proof))
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -448,7 +446,41 @@ extension BakerKeysPayload: Serialize, Deserialize {
     }
 }
 
-public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
+extension BakerKeysPayload: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case signatureVerifyKey
+        case electionVerifyKey
+        case aggregationVerifyKey
+        case proofSig
+        case proofElection
+        case proofAggregation
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: Self.CodingKeys.self)
+        try container.encode(signatureVerifyKey.hex, forKey: .signatureVerifyKey)
+        try container.encode(electionVerifyKey.hex, forKey: .electionVerifyKey)
+        try container.encode(aggregationVerifyKey.hex, forKey: .aggregationVerifyKey)
+        try container.encode(proofSig.hex, forKey: .proofSig)
+        try container.encode(proofElection.hex, forKey: .proofElection)
+        try container.encode(proofAggregation.hex, forKey: .proofAggregation)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: Self.CodingKeys.self)
+
+        let signatureVerifyKey = try Data(hex: container.decode(String.self, forKey: .signatureVerifyKey))
+        let electionVerifyKey = try Data(hex: container.decode(String.self, forKey: .electionVerifyKey))
+        let aggregationVerifyKey = try Data(hex: container.decode(String.self, forKey: .aggregationVerifyKey))
+        let proofSig = try Data(hex: container.decode(String.self, forKey: .proofSig))
+        let proofElection = try Data(hex: container.decode(String.self, forKey: .proofElection))
+        let proofAggregation = try Data(hex: container.decode(String.self, forKey: .proofAggregation))
+
+        self.init(signatureVerifyKey: signatureVerifyKey, electionVerifyKey: electionVerifyKey, aggregationVerifyKey: aggregationVerifyKey, proofSig: proofSig, proofElection: proofElection, proofAggregation: proofAggregation)
+    }
+}
+
+public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize, Codable {
     /// The equity capital of the baker
     public let capital: CCD?
     /// Whether the baker's earnings are restaked
@@ -570,7 +602,7 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
     }
 }
 
-public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize {
+public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize, Codable {
     /// The equity capital of the baker
     public let capital: CCD?
     /// Whether the baker's earnings are restaked
