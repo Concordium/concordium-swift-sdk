@@ -23,7 +23,7 @@ let package = Package(
         .package(url: "https://github.com/bisgardo/Hextension.git", from: "1.0.1"),
         overridableCryptoDependency(
             url: "https://github.com/Concordium/concordium-wallet-crypto-swift.git",
-            from: "3.0.0"
+            from: "3.1.0"
         ),
     ],
     targets: [
