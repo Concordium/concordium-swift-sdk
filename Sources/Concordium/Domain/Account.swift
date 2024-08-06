@@ -58,6 +58,18 @@ public struct CredentialRegistrationID: Serialize, Deserialize, FromGRPC, ToGRPC
     }
 }
 
+extension CredentialRegistrationID: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try Data(hex: container.decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value.hex)
+    }
+}
+
 /// A succinct identifier of an identity provider on the chain.
 /// In credential deployments and other interactions with the chain, this is used to identify which identity provider is meant.
 public typealias IdentityProviderID = UInt32
@@ -174,6 +186,18 @@ public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeData(data)
+    }
+}
+
+extension AccountAddress: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        try self.init(base58Check: container.decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(base58Check)
     }
 }
 

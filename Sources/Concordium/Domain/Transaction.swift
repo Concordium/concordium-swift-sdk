@@ -666,7 +666,7 @@ public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize, Cod
 }
 
 /// The payload for an account transaction. Only contains payloads valid from protocol version 7
-public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
+public enum AccountTransactionPayload: Equatable {
     case deployModule(_ module: WasmModule)
     case initContract(amount: CCD, modRef: ModuleReference, initName: InitName, param: Parameter)
     case updateContract(amount: CCD, address: ContractAddress, receiveName: ReceiveName, message: Parameter)
@@ -678,7 +678,9 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
     case registerData(_ data: RegisteredData)
     case configureBaker(_ data: ConfigureBakerPayload)
     case configureDelegation(_ data: ConfigureDelegationPayload)
+}
 
+extension AccountTransactionPayload: Serialize, Deserialize {
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
         var res = 0
 
@@ -810,7 +812,9 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             return nil // Not supported, invalid since protocol version 7
         }
     }
+}
 
+extension AccountTransactionPayload: FromGRPC, ToGRPC {
     static func fromGRPC(_ gRPC: Concordium_V2_AccountTransactionPayload) throws -> AccountTransactionPayload {
         guard let payload = gRPC.payload else {
             throw GRPCConversionError(message: "Expected a payload value on GRPC type")
@@ -840,6 +844,8 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
         return t
     }
 }
+
+extension AccountTransactionPayload: Codable {} // TODO: this needs manual implementation + unit tests...
 
 /// Header of an account transaction that contains basic data to check whether
 /// the sender and the transaction are valid. The header is shared by all transaction types.
