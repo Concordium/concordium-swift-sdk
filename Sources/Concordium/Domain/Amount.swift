@@ -110,9 +110,15 @@ public struct CCD: CustomStringConvertible, Codable, Serialize, Deserialize, ToG
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
-        // This is decoded as ``String`` to align with serialization in other SDK's
-        let value = try container.decode(String.self)
-        guard let value = MicroCCDAmount(value) else { throw DecodingError.dataCorruptedError(in: container, debugDescription: "Expected UInt64 string") }
+        // This is decoded as either ``String`` to align with serialization in other SDK's or ``UInt64``
+        let value: MicroCCDAmount
+        do {
+            value = try container.decode(MicroCCDAmount.self)
+        } catch {
+            let v = try MicroCCDAmount(container.decode(String.self) ?! DecodingError.dataCorruptedError(in: container, debugDescription: "Failed to deserialize CCD amount. Expected either 'String' or 'UInt'"))
+            guard let v = v else { throw DecodingError.dataCorruptedError(in: container, debugDescription: "Expected UInt64 string") }
+            value = v
+        }
         self.init(microCCD: value)
     }
 
