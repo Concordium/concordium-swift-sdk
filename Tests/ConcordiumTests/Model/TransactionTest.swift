@@ -58,9 +58,6 @@ let credJson = """
 }
 """
 
-let encoder = JSONEncoder()
-let decoder = JSONDecoder()
-
 final class TransactionTest: XCTestCase {
     func testDeployModuleSerialization() throws {
         let t = AccountTransactionPayload.deployModule(WasmModule(version: WasmVersion.v1, source: Data([1, 2, 3, 50])))
