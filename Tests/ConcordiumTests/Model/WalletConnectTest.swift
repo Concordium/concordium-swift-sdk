@@ -26,4 +26,17 @@ final class WalletConnectTest: XCTestCase {
         // ID test
         XCTAssertEqual(try! decoder.decode(WalletConnectPayload.self, from: try! encoder.encode(expected)), expected)
     }
+
+    func testUpdateContractCodable() throws {
+        let contractAddress = ContractAddress(index: 123, subindex: 2)
+
+        let json = """
+        {"amount":"1234","address":{"index":123,"subindex":2},"receiveName":"test.abc","message":"7b170c2d38","maxContractExecutionEnergy":30000}
+        """.data(using: .utf8)!
+        let decoded = try decoder.decode(WalletConnectPayload.self, from: json)
+        let expected = try WalletConnectPayload.updateContract(amount: CCD(microCCD: 1234), address: contractAddress, receiveName: ReceiveName(unchecked: "test.abc"), message: Parameter(Data([123, 23, 12, 45, 56])), maxEnergy: 30000)
+        XCTAssertEqual(decoded, expected)
+        // ID test
+        XCTAssertEqual(try! decoder.decode(WalletConnectPayload.self, from: try! encoder.encode(expected)), expected)
+    }
 }

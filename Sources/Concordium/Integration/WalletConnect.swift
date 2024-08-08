@@ -22,12 +22,22 @@ struct InitContractJsonBridge: Codable {
     let maxContractExecutionEnergy: Energy
 }
 
+struct UpdateContractJsonBridge: Codable {
+    let amount: CCD
+    let address: ContractAddress
+    let receiveName: ReceiveName
+    let message: Parameter
+    let maxContractExecutionEnergy: Energy
+}
+
 extension WalletConnectPayload: Codable { // TODO: this needs manual implementation + unit tests...
     public init(from decoder: any Decoder) throws {
         if let data = try? WasmModule(from: decoder) {
             self = .deployModule(data)
         } else if let payload = try? InitContractJsonBridge.init(from: decoder) {
             self = .initContract(amount: payload.amount, modRef: payload.moduleRef, initName: payload.initName, param: payload.param, maxEnergy: payload.maxContractExecutionEnergy)
+        } else if let payload = try? UpdateContractJsonBridge.init(from: decoder) {
+            self = .updateContract(amount: payload.amount, address: payload.address, receiveName: payload.receiveName, message: payload.message, maxEnergy: payload.maxContractExecutionEnergy)
         } else {
             throw DecodingError.typeMismatch(WalletConnectPayload.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Could not decode account transaction payload from value"))
         }
@@ -39,6 +49,9 @@ extension WalletConnectPayload: Codable { // TODO: this needs manual implementat
             try data.encode(to: encoder)
         case let .initContract(amount, modRef, initName, param, maxEnergy):
             let bridge = InitContractJsonBridge(amount: amount, initName: initName, moduleRef: modRef, param: param, maxContractExecutionEnergy: maxEnergy)
+            try bridge.encode(to: encoder)
+        case let .updateContract(amount, address, receiveName, message, maxEnergy):
+            let bridge = UpdateContractJsonBridge(amount: amount, address: address, receiveName: receiveName, message: message, maxContractExecutionEnergy: maxEnergy)
             try bridge.encode(to: encoder)
         default: // TODO: remove this when exhausted
             throw EncodingError.invalidValue(String.self, EncodingError.Context.init(codingPath: encoder.codingPath, debugDescription: "Cannot encode type yet..."))
