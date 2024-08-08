@@ -62,29 +62,6 @@ let encoder = JSONEncoder()
 let decoder = JSONDecoder()
 
 final class TransactionTest: XCTestCase {
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
-    }
-
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        measure {
-            // Put the code you want to measure the time of here.
-        }
-    }
-
     func testDeployModuleSerialization() throws {
         let t = AccountTransactionPayload.deployModule(WasmModule(version: WasmVersion.v1, source: Data([1, 2, 3, 50])))
 
@@ -92,18 +69,6 @@ final class TransactionTest: XCTestCase {
         let expected = Data([0, 0, 0, 0, 1, 0, 0, 0, 4, 1, 2, 3, 50])
         XCTAssertEqual(t.serialize(), expected)
         XCTAssertEqual(AccountTransactionPayload.deserialize(expected), t)
-    }
-
-    func testDeployModuleCodable() throws {
-        let json = """
-        {"source":"01020332","version":1}
-        """.data(using: .utf8)!
-
-        let decoded = try decoder.decode(AccountTransactionPayload.self, from: json)
-        let expected = AccountTransactionPayload.deployModule(WasmModule(version: WasmVersion.v1, source: Data([1, 2, 3, 50])))
-        XCTAssertEqual(decoded, expected)
-        // ID test
-        XCTAssertEqual(try! decoder.decode(AccountTransactionPayload.self, from: try! encoder.encode(expected)), expected)
     }
 
     func testInitContractSerialization() throws {

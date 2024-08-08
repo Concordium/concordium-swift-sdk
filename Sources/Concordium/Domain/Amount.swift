@@ -110,7 +110,7 @@ public struct CCD: CustomStringConvertible, Codable, Serialize, Deserialize, ToG
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
-        // This is decoded as either ``String`` to align with serialization in other SDK's or ``UInt64``
+        // This is decoded as either ``UInt64`` or alternatively ``String`` to align with serialization in other SDK's
         let value: MicroCCDAmount
         do {
             value = try container.decode(MicroCCDAmount.self)

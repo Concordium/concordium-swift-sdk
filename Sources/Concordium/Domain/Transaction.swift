@@ -845,29 +845,6 @@ extension AccountTransactionPayload: FromGRPC, ToGRPC {
     }
 }
 
-struct DeployModuleJsonBridge: Codable {
-    let data: WasmModule
-}
-
-extension AccountTransactionPayload: Codable { // TODO: this needs manual implementation + unit tests...
-    public init(from decoder: any Decoder) throws {
-        if let data = try? WasmModule(from: decoder) {
-            self = .deployModule(data)
-        } else {
-            throw DecodingError.typeMismatch(AccountTransactionPayload.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Could not decode account transaction payload from value"))
-        }
-    }
-
-    public func encode(to encoder: any Encoder) throws {
-        switch self {
-        case let .deployModule(data):
-            try data.encode(to: encoder)
-        default: // TODO: remove this when exhausted
-            throw DecodingError.typeMismatch(AccountTransactionPayload.self, DecodingError.Context(codingPath: encoder.codingPath, debugDescription: "Could not decode account transaction payload from value"))
-        }
-    }
-}
-
 /// Header of an account transaction that contains basic data to check whether
 /// the sender and the transaction are valid. The header is shared by all transaction types.
 public struct AccountTransactionHeader: ToGRPC {
