@@ -1,5 +1,24 @@
 import Foundation
 
+struct DeployModuleJsonBridge {
+    /// If undefined, it is assumed that the ``source`` has version and length embedded
+    let version: WasmVersion?
+    let source: Data
+}
+
+extension DeployModuleJsonBridge: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case version
+        case source
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: Self.CodingKeys.self)
+        version = try container.decodeIfPresent(WasmVersion.self, forKey: .version)
+        source = try Data(hex: container.decode(String.self, forKey: .source))
+    }
+}
+
 struct InitContractJsonBridge: Codable {
     let amount: CCD
     let initName: InitName
@@ -18,7 +37,7 @@ struct UpdateContractJsonBridge: Codable {
 
 struct TransferJsonBridge: Codable {
     let amount: CCD
-    let receiver: AccountAddress
+    let toAddress: AccountAddress
     let memo: Memo?
 }
 
@@ -28,7 +47,7 @@ struct UpdateCredentialKeysJsonBridge: Codable {
 }
 
 struct TransferWithScheduleJsonBridge: Codable {
-    let receiver: AccountAddress
+    let toAddress: AccountAddress
     let schedule: [ScheduledTransfer]
     let memo: Memo?
 }
@@ -53,20 +72,15 @@ struct RegisterDataJsonBridge: Codable {
     }
 }
 
-/// Describes payloads commonly received in a wallet through walletconnect.
-/// Only contains variants corresponding to transaction payloads valid from protocol version 7
+/// Describes payloads received in a wallet through walletconnect.
+/// Only contains relevant variants corresponding to transaction payloads valid from protocol version 7
 public enum WalletConnectTransactionPayload: Equatable {
-    case deployModule(_ module: WasmModule)
+    case deployModule(version: WasmVersion?, source: Data)
     case initContract(amount: CCD, modRef: ModuleReference, initName: InitName, param: Parameter, maxEnergy: Energy)
     case updateContract(amount: CCD, address: ContractAddress, receiveName: ReceiveName, message: Parameter, maxEnergy: Energy)
     case transfer(amount: CCD, receiver: AccountAddress, memo: Memo? = nil)
-    case updateCredentialKeys(credId: CredentialRegistrationID, keys: CredentialPublicKeys)
-    case transferToPublic(_ data: SecToPubTransferData)
     case transferWithSchedule(receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Memo? = nil)
-    case updateCredentials(newCredInfos: [CredentialIndex: CredentialDeploymentInfo], removeCredIds: [CredentialRegistrationID], newThreshold: UInt8, numCurrentCredentials: UInt64)
     case registerData(_ data: RegisteredData)
-    case configureBaker(_ data: ConfigureBakerPayload)
-    case configureDelegation(_ data: ConfigureDelegationPayload)
 
     // TODO:
     // public func validFor(transactionType: AccountTransactionType) -> Bool
@@ -105,7 +119,7 @@ extension WalletConnectSchema: Decodable {
     }
 }
 
-/// Describes the different transaction types available
+/// Describes the different transaction types available as strings
 enum TransactionTypeString: String, Codable {
     case deployModule
     case initContract
@@ -219,8 +233,8 @@ extension WalletConnectSendTransactionParam: Decodable {
 
         switch type {
         case .deployModule:
-            let data = try container.decode(WasmModule.self, forKey: Self.CodingKeys.payload)
-            payload = .deployModule(data)
+            let data = try container.decode(DeployModuleJsonBridge.self, forKey: Self.CodingKeys.payload)
+            payload = .deployModule(version: data.version, source: data.source)
         case .initContract:
             let data = try container.decode(InitContractJsonBridge.self, forKey: Self.CodingKeys.payload)
             payload = .initContract(amount: data.amount, modRef: data.moduleRef, initName: data.initName, param: data.param, maxEnergy: data.maxContractExecutionEnergy)
@@ -229,29 +243,13 @@ extension WalletConnectSendTransactionParam: Decodable {
             payload = .updateContract(amount: data.amount, address: data.address, receiveName: data.receiveName, message: data.message, maxEnergy: data.maxContractExecutionEnergy)
         case .transfer, .transferWithMemo:
             let data = try container.decode(TransferJsonBridge.self, forKey: Self.CodingKeys.payload)
-            payload = .transfer(amount: data.amount, receiver: data.receiver, memo: data.memo)
-        case .updateCredentialKeys:
-            let data = try container.decode(UpdateCredentialKeysJsonBridge.self, forKey: Self.CodingKeys.payload)
-            payload = .updateCredentialKeys(credId: data.credId, keys: data.keys)
-        case .transferToPublic:
-            let data = try container.decode(SecToPubTransferData.self, forKey: Self.CodingKeys.payload)
-            payload = .transferToPublic(data)
+            payload = .transfer(amount: data.amount, receiver: data.toAddress, memo: data.memo)
         case .transferWithSchedule, .transferWithScheduleAndMemo:
             let data = try container.decode(TransferWithScheduleJsonBridge.self, forKey: Self.CodingKeys.payload)
-            payload = .transferWithSchedule(receiver: data.receiver, schedule: data.schedule, memo: data.memo)
-        case .updateCredentials:
-            let data = try container.decode(UpdateCredentialsJsonBridge.self, forKey: Self.CodingKeys.payload)
-            let newCredInfos = data.newCredentials.reduce(into: [:]) { map, item in map[item.index] = item.cdi }
-            payload = .updateCredentials(newCredInfos: newCredInfos, removeCredIds: data.removeCredentialIds, newThreshold: data.threshold, numCurrentCredentials: data.currentNumberOfCredentials)
+            payload = .transferWithSchedule(receiver: data.toAddress, schedule: data.schedule, memo: data.memo)
         case .registerData:
             let data = try container.decode(RegisterDataJsonBridge.self, forKey: Self.CodingKeys.payload)
             payload = .registerData(data.data)
-        case .configureBaker:
-            let data = try container.decode(ConfigureBakerPayload.self, forKey: Self.CodingKeys.payload)
-            payload = .configureBaker(data)
-        case .configureDelegation:
-            let data = try container.decode(ConfigureDelegationPayload.self, forKey: Self.CodingKeys.payload)
-            payload = .configureDelegation(data)
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: container.codingPath, debugDescription: "Decoding transaction payloads of type \(type) is not supported"))
         }
