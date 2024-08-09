@@ -141,7 +141,7 @@ public enum AccountIdentifier: ToGRPC {
 }
 
 /// Address of an account as raw bytes.
-public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC {
+public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC, CustomStringConvertible {
     public static let SIZE: UInt8 = 32
     func toGRPC() -> Concordium_V2_AccountAddress {
         var g = GRPC()
@@ -186,6 +186,10 @@ public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeData(data)
+    }
+
+    public var description: String {
+        base58Check
     }
 }
 

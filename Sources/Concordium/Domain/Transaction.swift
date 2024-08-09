@@ -282,23 +282,23 @@ public enum TransactionType: UInt8, Serialize, Deserialize {
     case updateBakerRestakeEarnings = 7
     /// Only effective prior to protocol version 4
     case updateBakerKeys = 8
-    case updateCredentialKeys = 13
+    case updateCredentialKeys = 9
     /// Only effective prior to protocol version 7
-    case encryptedAmountTransfer = 16
+    case encryptedAmountTransfer = 10
     /// Only effective prior to protocol version 7
-    case transferToEncrypted = 17
-    case transferToPublic = 18
-    case transferWithSchedule = 19
-    case updateCredentials = 20
-    case registerData = 21
-    case transferWithMemo = 22
+    case transferToEncrypted = 11
+    case transferToPublic = 12
+    case transferWithSchedule = 13
+    case updateCredentials = 14
+    case registerData = 15
+    case transferWithMemo = 16
     /// Only effective prior to protocol version 7
-    case encryptedAmountTransferWithMemo = 23
-    case transferWithScheduleAndMemo = 24
+    case encryptedAmountTransferWithMemo = 17
+    case transferWithScheduleAndMemo = 18
     /// Effective from protocol version 4
-    case configureBaker = 25
+    case configureBaker = 19
     /// Effective from protocol version 4
-    case configureDelegation = 26
+    case configureDelegation = 20
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(rawValue)

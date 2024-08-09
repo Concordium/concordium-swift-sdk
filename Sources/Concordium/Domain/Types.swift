@@ -762,3 +762,9 @@ public extension BakerKeyPairs {
         generateBakerKeys()
     }
 }
+
+public enum ModuleSchemaVersion: UInt8, Codable {
+    case V0
+    case V1
+    case V2
+}
