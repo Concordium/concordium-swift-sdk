@@ -187,11 +187,13 @@ enum TransactionTypeString: String, Codable {
     }
 }
 
+/// Describes parameter supplied to a walletconnect "sign_and_send_transaction" request
+/// as produced by the NPM package `@concordium/wallet-connectors`
 public struct WalletConnectSendTransactionParam: Equatable {
-    let type: TransactionType
-    let sender: AccountAddress
-    let payload: WalletConnectTransactionPayload
-    let schema: WalletConnectSchema?
+    public let type: TransactionType
+    public let sender: AccountAddress
+    public let payload: WalletConnectTransactionPayload
+    public let schema: WalletConnectSchema?
 
     init(type: TransactionType, sender: AccountAddress, payload: WalletConnectTransactionPayload, schema: WalletConnectSchema? = nil) {
         self.type = type
@@ -201,7 +203,6 @@ public struct WalletConnectSendTransactionParam: Equatable {
     }
 }
 
-/// This matches the JSON format produced for WalletConnect by the NPM package `@concordium/wallet-connectors`
 extension WalletConnectSendTransactionParam: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type
@@ -257,4 +258,29 @@ extension WalletConnectSendTransactionParam: Decodable {
     }
 }
 
-public struct WalletConnectSignMessageParam {}
+/// Describes parameter supplied to a walletconnect "sign_message" request
+/// as produced by the NPM package `@concordium/wallet-connectors`
+public enum WalletConnectSignMessageParam {
+    case string(message: String)
+    case binary(message: Data, schema: Data)
+}
+
+extension WalletConnectSignMessageParam: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case message
+        case schema
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: Self.CodingKeys.self)
+        let message = try container.decode(String.self, forKey: .message)
+        let schema = try container.decodeIfPresent(String.self, forKey: .schema).map { try Data(hex: $0) }
+
+        if let schema = schema {
+            let binaryMessage = try Data(hex: message) ?! DecodingError.dataCorruptedError(forKey: Self.CodingKeys.message, in: container, debugDescription: "Expected message to be a hex string")
+            self = .binary(message: binaryMessage, schema: schema)
+        } else {
+            self = .string(message: message)
+        }
+    }
+}
