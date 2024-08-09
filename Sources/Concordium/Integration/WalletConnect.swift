@@ -87,6 +87,7 @@ public enum WalletConnectTransactionPayload: Equatable {
     // public func createTransaction(sender: AccountAddress) -> AccountTransaction
 }
 
+/// Represents a schema to be used for decoding the received parameter for either update/init contract transaction requests.
 public enum WalletConnectSchema: Equatable {
     case parameter(value: String)
     case module(value: String, version: ModuleSchemaVersion?)
@@ -115,88 +116,6 @@ extension WalletConnectSchema: Decodable {
         case .module:
             let version = try container.decodeIfPresent(ModuleSchemaVersion.self, forKey: Self.CodingKeys.version)
             self = .module(value: value, version: version)
-        }
-    }
-}
-
-/// Describes the different transaction types available as strings
-enum TransactionTypeString: String, Codable {
-    case deployModule
-    case initContract
-    case updateContract
-    case transfer
-    /// Only effective prior to protocol version 4
-    case addBaker
-    /// Only effective prior to protocol version 4
-    case removeBaker
-    /// Only effective prior to protocol version 4
-    case updateBakerStake
-    /// Only effective prior to protocol version 4
-    case updateBakerRestakeEarnings
-    /// Only effective prior to protocol version 4
-    case updateBakerKeys
-    case updateCredentialKeys
-    /// Only effective prior to protocol version 7
-    case encryptedAmountTransfer
-    /// Only effective prior to protocol version 7
-    case transferToEncrypted
-    case transferToPublic
-    case transferWithSchedule
-    case updateCredentials
-    case registerData
-    case transferWithMemo
-    /// Only effective prior to protocol version 7
-    case encryptedAmountTransferWithMemo
-    case transferWithScheduleAndMemo
-    /// Effective from protocol version 4
-    case configureBaker
-    /// Effective from protocol version 4
-    case configureDelegation
-
-    var transactionType: TransactionType {
-        switch self {
-        case .deployModule:
-            return .deployModule
-        case .initContract:
-            return .initContract
-        case .updateContract:
-            return .updateContract
-        case .transfer:
-            return .transfer
-        case .addBaker:
-            return .addBaker
-        case .removeBaker:
-            return .removeBaker
-        case .updateBakerStake:
-            return .updateBakerStake
-        case .updateBakerRestakeEarnings:
-            return .updateBakerRestakeEarnings
-        case .updateBakerKeys:
-            return .updateBakerKeys
-        case .updateCredentialKeys:
-            return .updateCredentialKeys
-        case .encryptedAmountTransfer:
-            return .encryptedAmountTransfer
-        case .transferToEncrypted:
-            return .transferToEncrypted
-        case .transferToPublic:
-            return .transferToPublic
-        case .transferWithSchedule:
-            return .transferWithSchedule
-        case .updateCredentials:
-            return .updateCredentials
-        case .registerData:
-            return .registerData
-        case .transferWithMemo:
-            return .transferWithMemo
-        case .encryptedAmountTransferWithMemo:
-            return .encryptedAmountTransferWithMemo
-        case .transferWithScheduleAndMemo:
-            return .transferWithScheduleAndMemo
-        case .configureBaker:
-            return .configureBaker
-        case .configureDelegation:
-            return .configureDelegation
         }
     }
 }

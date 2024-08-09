@@ -266,8 +266,137 @@ public struct SignedAccountTransaction: ToGRPC {
     }
 }
 
+/// Describes the different transaction types available as strings
+enum TransactionTypeString: String, Codable {
+    case deployModule
+    case initContract
+    case updateContract
+    case transfer
+    /// Only effective prior to protocol version 4
+    case addBaker
+    /// Only effective prior to protocol version 4
+    case removeBaker
+    /// Only effective prior to protocol version 4
+    case updateBakerStake
+    /// Only effective prior to protocol version 4
+    case updateBakerRestakeEarnings
+    /// Only effective prior to protocol version 4
+    case updateBakerKeys
+    case updateCredentialKeys
+    /// Only effective prior to protocol version 7
+    case encryptedAmountTransfer
+    /// Only effective prior to protocol version 7
+    case transferToEncrypted
+    case transferToPublic
+    case transferWithSchedule
+    case updateCredentials
+    case registerData
+    case transferWithMemo
+    /// Only effective prior to protocol version 7
+    case encryptedAmountTransferWithMemo
+    case transferWithScheduleAndMemo
+    /// Effective from protocol version 4
+    case configureBaker
+    /// Effective from protocol version 4
+    case configureDelegation
+
+    init(type: TransactionType) {
+        switch type {
+        case .deployModule:
+            self = .deployModule
+        case .initContract:
+            self = .initContract
+        case .updateContract:
+            self = .updateContract
+        case .transfer:
+            self = .transfer
+        case .addBaker:
+            self = .addBaker
+        case .removeBaker:
+            self = .removeBaker
+        case .updateBakerStake:
+            self = .updateBakerStake
+        case .updateBakerRestakeEarnings:
+            self = .updateBakerRestakeEarnings
+        case .updateBakerKeys:
+            self = .updateBakerKeys
+        case .updateCredentialKeys:
+            self = .updateCredentialKeys
+        case .encryptedAmountTransfer:
+            self = .encryptedAmountTransfer
+        case .transferToEncrypted:
+            self = .transferToEncrypted
+        case .transferToPublic:
+            self = .transferToPublic
+        case .transferWithSchedule:
+            self = .transferWithSchedule
+        case .updateCredentials:
+            self = .updateCredentials
+        case .registerData:
+            self = .registerData
+        case .transferWithMemo:
+            self = .transferWithMemo
+        case .encryptedAmountTransferWithMemo:
+            self = .encryptedAmountTransferWithMemo
+        case .transferWithScheduleAndMemo:
+            self = .transferWithScheduleAndMemo
+        case .configureBaker:
+            self = .configureBaker
+        case .configureDelegation:
+            self = .configureDelegation
+        }
+    }
+
+    var transactionType: TransactionType {
+        switch self {
+        case .deployModule:
+            return .deployModule
+        case .initContract:
+            return .initContract
+        case .updateContract:
+            return .updateContract
+        case .transfer:
+            return .transfer
+        case .addBaker:
+            return .addBaker
+        case .removeBaker:
+            return .removeBaker
+        case .updateBakerStake:
+            return .updateBakerStake
+        case .updateBakerRestakeEarnings:
+            return .updateBakerRestakeEarnings
+        case .updateBakerKeys:
+            return .updateBakerKeys
+        case .updateCredentialKeys:
+            return .updateCredentialKeys
+        case .encryptedAmountTransfer:
+            return .encryptedAmountTransfer
+        case .transferToEncrypted:
+            return .transferToEncrypted
+        case .transferToPublic:
+            return .transferToPublic
+        case .transferWithSchedule:
+            return .transferWithSchedule
+        case .updateCredentials:
+            return .updateCredentials
+        case .registerData:
+            return .registerData
+        case .transferWithMemo:
+            return .transferWithMemo
+        case .encryptedAmountTransferWithMemo:
+            return .encryptedAmountTransferWithMemo
+        case .transferWithScheduleAndMemo:
+            return .transferWithScheduleAndMemo
+        case .configureBaker:
+            return .configureBaker
+        case .configureDelegation:
+            return .configureDelegation
+        }
+    }
+}
+
 /// Describes the different transaction types available
-public enum TransactionType: UInt8, Serialize, Deserialize {
+public enum TransactionType: UInt8, Serialize, Deserialize, Codable {
     case deployModule = 0
     case initContract = 1
     case updateContract = 2
@@ -307,6 +436,14 @@ public enum TransactionType: UInt8, Serialize, Deserialize {
     public static func deserialize(_ data: inout Cursor) -> TransactionType? {
         guard let tag = data.parseUInt(UInt8.self), let type = TransactionType(rawValue: tag) else { return nil }
         return type
+    }
+
+    public init(from decoder: any Decoder) throws {
+        self = try TransactionTypeString(from: decoder).transactionType
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        try TransactionTypeString(type: self).encode(to: encoder)
     }
 }
 
