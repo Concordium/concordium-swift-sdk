@@ -478,7 +478,7 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
             keysWithProofs = keys
         }
         if bitmap & (1 << 4) != 0 {
-            guard let url = data.readString(lengthPrefix: UInt16.self) else { return nil }
+            guard let url = data.readString(prefixLength: UInt16.self) else { return nil }
             metadataUrl = url
         }
         if bitmap & (1 << 5) != 0 {
@@ -528,7 +528,7 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
             res += buffer.writeSerializable(keysWithProofs)
         }
         if let metadataUrl = metadataUrl {
-            res += buffer.writeString(metadataUrl, lengthPrefix: UInt16.self)
+            res += buffer.writeString(metadataUrl, prefixLength: UInt16.self)
         }
         if let transactionFeeCommission = transactionFeeCommission {
             res += buffer.writeSerializable(transactionFeeCommission)
@@ -663,16 +663,16 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
                 res += buffer.writeSerializable(TransactionType.transferWithScheduleAndMemo)
                 res += buffer.writeData(receiver.data)
                 res += buffer.writeSerializable(memo)
-                res += buffer.writeSerializable(list: schedule, lengthPrefix: UInt8.self)
+                res += buffer.writeSerializable(list: schedule, prefixLength: UInt8.self)
             } else {
                 res += buffer.writeSerializable(TransactionType.transferWithSchedule)
                 res += buffer.writeData(receiver.data)
-                res += buffer.writeSerializable(list: schedule, lengthPrefix: UInt8.self)
+                res += buffer.writeSerializable(list: schedule, prefixLength: UInt8.self)
             }
         case let .updateCredentials(newCredInfos, removeCredIds, newThreshold):
             res += buffer.writeSerializable(TransactionType.updateCredentials)
-            res += buffer.writeSerializable(map: newCredInfos, lengthPrefix: UInt8.self)
-            res += buffer.writeSerializable(list: removeCredIds, lengthPrefix: UInt8.self)
+            res += buffer.writeSerializable(map: newCredInfos, prefixLength: UInt8.self)
+            res += buffer.writeSerializable(list: removeCredIds, prefixLength: UInt8.self)
             res += buffer.writeInteger(newThreshold)
         case let .registerData(data):
             res += buffer.writeSerializable(TransactionType.registerData)
@@ -720,7 +720,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             return .transferToPublic(transferData)
         case .transferWithSchedule:
             guard let receiver = AccountAddress.deserialize(&data),
-                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, lengthPrefix: UInt8.self) else { return nil }
+                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, prefixLength: UInt8.self) else { return nil }
             return .transferWithSchedule(receiver: receiver, schedule: schedule)
         case .updateCredentials:
             guard let data = UpdateCredentialsPayload.deserialize(&data),
@@ -737,7 +737,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
         case .transferWithScheduleAndMemo:
             guard let receiver = AccountAddress.deserialize(&data),
                   let memo = Memo.deserialize(&data),
-                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, lengthPrefix: UInt8.self) else { return nil }
+                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, prefixLength: UInt8.self) else { return nil }
             return .transferWithSchedule(receiver: receiver, schedule: schedule, memo: memo)
         case .configureBaker:
             guard let payload = ConfigureBakerPayload.deserialize(&data) else { return nil }
