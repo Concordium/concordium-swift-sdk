@@ -231,7 +231,14 @@ public typealias Signatures = [CredentialIndex: CredentialSignatures]
 /// A map of signatures for a credential
 public typealias CredentialSignatures = [KeyIndex: Data]
 
-/// A signed transaction to be sent to a Concordium node
+/// A signed transaction to be sent to a Concordium node.
+///
+/// Typically, this is not created directly, but rather by passing a ``AccountTransaction`` to a ``Signer``:
+/// ```swift
+/// let signer: any Signer = AccountKeysCurve25519(...)
+/// let transaction: AccountTransaction = ...
+/// let signed: SignedAccountTransaction = signer.sign(transaction) // This can now be sent with any ``NodeClient``
+/// ```
 public struct SignedAccountTransaction: ToGRPC {
     /// The transaction to send
     public var transaction: PreparedAccountTransaction

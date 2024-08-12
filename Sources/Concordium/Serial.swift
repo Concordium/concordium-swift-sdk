@@ -104,6 +104,12 @@ public struct Cursor {
     public var empty: Bool { data.count == 0 }
 }
 
+/// Used to represent an error happening when deserializing from byte format.
+public struct DeserializeError: Error {
+    /// The type attempted to deserialize
+    let type: any Deserialize.Type
+}
+
 public protocol Deserialize {
     /// Deserializes part of the data in the cursor into the implementing type.
     /// - Returns: The corresponding type, or `nil` if the type could not be parsed due running out of bytes to read.

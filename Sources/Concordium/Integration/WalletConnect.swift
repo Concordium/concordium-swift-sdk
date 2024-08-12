@@ -1,7 +1,7 @@
 import Foundation
 
 struct DeployModuleJsonBridge {
-    /// If undefined, it is assumed that the ``source`` has version and length embedded
+    /// If `nil`, it is assumed that `source` has version and length embedded
     let version: WasmVersion?
     let source: Data
 }
@@ -81,10 +81,6 @@ public enum WalletConnectTransactionPayload: Equatable {
     case transfer(amount: CCD, receiver: AccountAddress, memo: Memo? = nil)
     case transferWithSchedule(receiver: AccountAddress, schedule: [ScheduledTransfer], memo: Memo? = nil)
     case registerData(_ data: RegisteredData)
-
-    // TODO:
-    // public func validFor(transactionType: AccountTransactionType) -> Bool
-    // public func createTransaction(sender: AccountAddress) -> AccountTransaction
 }
 
 /// Represents a schema to be used for decoding the received parameter for either update/init contract transaction requests.
@@ -121,7 +117,9 @@ extension WalletConnectSchema: Decodable {
 }
 
 /// Describes parameter supplied to a walletconnect "sign_and_send_transaction" request
-/// as produced by the NPM package `@concordium/wallet-connectors`
+/// as produced by the NPM package `@concordium/wallet-connectors`.
+///
+/// This is not meant to be initialized, but rather decoded from JSON.
 public struct WalletConnectSendTransactionParam: Equatable {
     public let type: TransactionType
     public let sender: AccountAddress
@@ -133,6 +131,36 @@ public struct WalletConnectSendTransactionParam: Equatable {
         self.sender = sender
         self.payload = payload
         self.schema = schema
+    }
+
+    /// Convert the ``WalletConnectSendTransactionParam`` into a signable transaction.
+    ///
+    /// ```swift
+    /// let param = try JSONDecorder().decode(WalletConnectSendTransactionParam.self)
+    /// let transaction = param.createTransaction()
+    /// ```
+    ///
+    /// - Throws: ``DeserializeError`` in case a malformed ``WasmModule`` is deserialized due to missing version/length information.
+    ///   This only happens if the version was not present in the decoded JSON
+    public func createTransaction() throws -> AccountTransaction {
+        switch payload {
+        case .deployModule(version: nil, let source):
+            // If `version` is not included, assume source is already a ``WasmModule`` serialized according to ``Serialize``
+            guard let wasmModule = WasmModule.deserialize(source) else { throw DeserializeError(type: WasmModule.self) }
+            return .deployModule(sender: sender, module: wasmModule)
+        case let .deployModule(version?, source):
+            return .deployModule(sender: sender, module: WasmModule(version: version, source: source))
+        case let .initContract(amount, modRef, initName, param, maxEnergy):
+            return .initContract(sender: sender, amount: amount, modRef: modRef, initName: initName, param: param, maxEnergy: maxEnergy)
+        case let .updateContract(amount, address, receiveName, message, maxEnergy):
+            return .updateContract(sender: sender, amount: amount, contractAddress: address, receiveName: receiveName, param: message, maxEnergy: maxEnergy)
+        case let .registerData(data):
+            return .registerData(sender: sender, data: data)
+        case let .transfer(amount, receiver, memo):
+            return .transfer(sender: sender, receiver: receiver, amount: amount, memo: memo)
+        case let .transferWithSchedule(receiver, schedule, memo):
+            return .transferWithSchedule(sender: sender, receiver: receiver, schedule: schedule, memo: memo)
+        }
     }
 }
 
