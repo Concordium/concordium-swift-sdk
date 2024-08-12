@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `AccountTransactionPayload` variants for all transactions valid from protocol version 7 and up and corresponding constructors for `AccountTransaction`.
+- `WalletConnectSendTransactionParam` and `WalletConnectSignMessageParam` for decoding parameters received with walletconnect requests.
+
 ## [0.1.1] - 2024-04-29
 
 ### Added
