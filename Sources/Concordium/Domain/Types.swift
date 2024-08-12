@@ -203,12 +203,12 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var source: Data
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeSerializable(version) + buffer.writeData(source, lengthPrefix: UInt32.self)
+        buffer.writeSerializable(version) + buffer.writeData(source, prefixLength: UInt32.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let version = WasmVersion.deserialize(&data),
-              let source = data.read(withLengthPrefix: UInt32.self) else { return nil }
+              let source = data.read(prefixLength: UInt32.self) else { return nil }
 
         return Self(version: version, source: Data(source))
     }
@@ -270,11 +270,11 @@ public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     }
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeData(value, lengthPrefix: UInt16.self)
+        buffer.writeData(value, prefixLength: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Memo? {
-        data.read(withLengthPrefix: UInt16.self).map { Self(Data($0)) }
+        data.read(prefixLength: UInt16.self).map { Self(Data($0)) }
     }
 
     static func fromGRPC(_ gRPC: Concordium_V2_Memo) throws -> Memo {
@@ -398,7 +398,7 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
     }
 
     public static func deserialize(_ data: inout Cursor) -> Parameter? {
-        guard let value = data.read(withLengthPrefix: UInt16.self) else { return nil }
+        guard let value = data.read(prefixLength: UInt16.self) else { return nil }
         return try? self.init(value)
     }
 
@@ -448,7 +448,7 @@ public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRP
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let value = data.read(withLengthPrefix: UInt16.self) else { return nil }
+        guard let value = data.read(prefixLength: UInt16.self) else { return nil }
         return try? self.init(value)
     }
 
@@ -508,11 +508,11 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, lengthPrefix: UInt16.self)
+        buffer.writeString(value, prefixLength: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(lengthPrefix: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
 
@@ -570,11 +570,11 @@ public struct ContractName: Serialize, Deserialize, Equatable {
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, lengthPrefix: UInt16.self)
+        buffer.writeString(value, prefixLength: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(lengthPrefix: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
 }
@@ -615,11 +615,11 @@ public struct EntrypointName: Serialize, Deserialize, Equatable {
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, lengthPrefix: UInt16.self)
+        buffer.writeString(value, prefixLength: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(lengthPrefix: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
 }
@@ -661,11 +661,11 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, lengthPrefix: UInt16.self)
+        buffer.writeString(value, prefixLength: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(lengthPrefix: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
 
