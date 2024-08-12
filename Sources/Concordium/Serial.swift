@@ -50,7 +50,7 @@ public struct Cursor {
     }
 
     /// Read a number of bytes from the inner data, where the number of bytes to read is declared in the data with an ``UnsignedInteger`` prefix
-    public mutating func read<UInt: UnsignedInteger>(withLengthPrefix _: UInt.Type) -> Data? {
+    public mutating func read<UInt: UnsignedInteger>(prefixLength _: UInt.Type) -> Data? {
         guard let len = parseUInt(UInt.self) else { return nil }
         return read(num: len)
     }
@@ -61,8 +61,8 @@ public struct Cursor {
     }
 
     /// Read a string prefixed with the associated length.
-    public mutating func readString<UInt: UnsignedInteger>(lengthPrefix _: UInt.Type) -> String? {
-        guard let bytes = read(withLengthPrefix: UInt.self) else { return nil }
+    public mutating func readString<UInt: UnsignedInteger>(prefixLength _: UInt.Type) -> String? {
+        guard let bytes = read(prefixLength: UInt.self) else { return nil }
         return String(decoding: bytes, as: UTF8.self)
     }
 
@@ -72,7 +72,7 @@ public struct Cursor {
     }
 
     /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
-    public mutating func deserialize<T: Deserialize, UInt: UnsignedInteger>(listOf _: T.Type, lengthPrefix _: UInt.Type) -> [T]? {
+    public mutating func deserialize<T: Deserialize, UInt: UnsignedInteger>(listOf _: T.Type, prefixLength _: UInt.Type) -> [T]? {
         guard let length = parseUInt(UInt.self) else { return nil }
 
         var list: [T] = []
@@ -84,7 +84,7 @@ public struct Cursor {
     }
 
     /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
-    public mutating func deserialize<K: Deserialize, V: Deserialize, UInt: UnsignedInteger>(mapOf _: V.Type, keys _: K.Type, lengthPrefix _: UInt.Type) -> [K: V]? {
+    public mutating func deserialize<K: Deserialize, V: Deserialize, UInt: UnsignedInteger>(mapOf _: V.Type, keys _: K.Type, prefixLength _: UInt.Type) -> [K: V]? {
         guard let length = parseUInt(UInt.self) else { return nil }
 
         var map: [K: V] = [:]
@@ -102,6 +102,12 @@ public struct Cursor {
 
     /// Whether there is no more data to read
     public var empty: Bool { data.count == 0 }
+}
+
+/// Used to represent an error happening when deserializing from byte format.
+public struct DeserializeError: Error {
+    /// The type attempted to deserialize
+    let type: any Deserialize.Type
 }
 
 public protocol Deserialize {
@@ -187,7 +193,7 @@ extension ByteBuffer {
     }
 
     /// Writes a list of ``Serializable`` type into the buffer, returning the number of bytes written.
-    @discardableResult mutating func writeSerializable<T: Serialize, P: FixedWidthInteger>(list: [T], lengthPrefix _: P.Type) -> Int {
+    @discardableResult mutating func writeSerializable<T: Serialize, P: FixedWidthInteger>(list: [T], prefixLength _: P.Type) -> Int {
         var res = 0
         res += writeInteger(P(list.count))
         res += writeSerializable(list: list)
@@ -195,7 +201,7 @@ extension ByteBuffer {
     }
 
     /// Writes a map of ``Serializable`` type into the buffer, returning the number of bytes written.
-    @discardableResult mutating func writeSerializable<K: Serialize, V: Serialize, P: FixedWidthInteger>(map: [K: V], lengthPrefix _: P.Type) -> Int {
+    @discardableResult mutating func writeSerializable<K: Serialize, V: Serialize, P: FixedWidthInteger>(map: [K: V], prefixLength _: P.Type) -> Int {
         var res = 0
         res += writeInteger(P(map.count))
         res += writeSerializable(map: map)
@@ -203,7 +209,7 @@ extension ByteBuffer {
     }
 
     /// Writes data into buffer with the length prefixed as the supplied ``FixedWidthInteger`` type
-    @discardableResult mutating func writeData<T: FixedWidthInteger>(_ data: Data, lengthPrefix _: T.Type) -> Int {
+    @discardableResult mutating func writeData<T: FixedWidthInteger>(_ data: Data, prefixLength _: T.Type) -> Int {
         var res = 0
         res += writeInteger(T(data.count))
         res += writeData(data)
@@ -211,7 +217,7 @@ extension ByteBuffer {
     }
 
     /// Writes data into buffer with the length prefixed as the supplied ``FixedWidthInteger`` type
-    @discardableResult mutating func writeString<T: FixedWidthInteger>(_ value: String, lengthPrefix _: T.Type) -> Int {
+    @discardableResult mutating func writeString<T: FixedWidthInteger>(_ value: String, prefixLength _: T.Type) -> Int {
         var res = 0
         res += writeInteger(T(value.lengthOfBytes(using: .utf8)))
         res += writeString(value)

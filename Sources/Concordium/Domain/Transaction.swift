@@ -121,8 +121,8 @@ public struct AccountTransaction {
     }
 
     /// Creates a transaction for transferring CCD from shielded to public balance. Returns `nil` if the data could for the transaction could not be successfully created
-    public static func transferToPublic(sender: AccountAddress, global: GlobalContext, senderSecretKey: String, inputAmount: InputEncryptedAmount, toTransfer: CCD) -> Self? {
-        guard let data = try? secToPubTransferData(ctx: global, senderSecretKey: senderSecretKey, inputAmount: inputAmount, toTransfer: toTransfer.microCCD) else { return nil }
+    public static func transferToPublic(sender: AccountAddress, global: GlobalContext, senderSecretKey: Data, inputAmount: InputEncryptedAmount, toTransfer: CCD) -> Self? {
+        guard let data = try? SecToPubTransferData(ctx: global, senderSecretKey: senderSecretKey, inputAmount: inputAmount, toTransfer: toTransfer) else { return nil }
         let payload = AccountTransactionPayload.transferToPublic(data)
         return self.init(sender: sender, payload: payload, energy: TransactionCost.TRANSFER_TO_PUBLIC)
     }
@@ -231,7 +231,14 @@ public typealias Signatures = [CredentialIndex: CredentialSignatures]
 /// A map of signatures for a credential
 public typealias CredentialSignatures = [KeyIndex: Data]
 
-/// A signed transaction to be sent to a Concordium node
+/// A signed transaction to be sent to a Concordium node.
+///
+/// Typically, this is not created directly, but rather by passing a ``AccountTransaction`` to a ``Signer``:
+/// ```swift
+/// let signer: any Signer = AccountKeysCurve25519(...)
+/// let transaction: AccountTransaction = ...
+/// let signed: SignedAccountTransaction = signer.sign(transaction) // This can now be sent with any ``NodeClient``
+/// ```
 public struct SignedAccountTransaction: ToGRPC {
     /// The transaction to send
     public var transaction: PreparedAccountTransaction
@@ -266,8 +273,137 @@ public struct SignedAccountTransaction: ToGRPC {
     }
 }
 
+/// Describes the different transaction types available as strings
+enum TransactionTypeString: String, Codable {
+    case deployModule
+    case initContract
+    case updateContract
+    case transfer
+    /// Only effective prior to protocol version 4
+    case addBaker
+    /// Only effective prior to protocol version 4
+    case removeBaker
+    /// Only effective prior to protocol version 4
+    case updateBakerStake
+    /// Only effective prior to protocol version 4
+    case updateBakerRestakeEarnings
+    /// Only effective prior to protocol version 4
+    case updateBakerKeys
+    case updateCredentialKeys
+    /// Only effective prior to protocol version 7
+    case encryptedAmountTransfer
+    /// Only effective prior to protocol version 7
+    case transferToEncrypted
+    case transferToPublic
+    case transferWithSchedule
+    case updateCredentials
+    case registerData
+    case transferWithMemo
+    /// Only effective prior to protocol version 7
+    case encryptedAmountTransferWithMemo
+    case transferWithScheduleAndMemo
+    /// Effective from protocol version 4
+    case configureBaker
+    /// Effective from protocol version 4
+    case configureDelegation
+
+    init(type: TransactionType) {
+        switch type {
+        case .deployModule:
+            self = .deployModule
+        case .initContract:
+            self = .initContract
+        case .updateContract:
+            self = .updateContract
+        case .transfer:
+            self = .transfer
+        case .addBaker:
+            self = .addBaker
+        case .removeBaker:
+            self = .removeBaker
+        case .updateBakerStake:
+            self = .updateBakerStake
+        case .updateBakerRestakeEarnings:
+            self = .updateBakerRestakeEarnings
+        case .updateBakerKeys:
+            self = .updateBakerKeys
+        case .updateCredentialKeys:
+            self = .updateCredentialKeys
+        case .encryptedAmountTransfer:
+            self = .encryptedAmountTransfer
+        case .transferToEncrypted:
+            self = .transferToEncrypted
+        case .transferToPublic:
+            self = .transferToPublic
+        case .transferWithSchedule:
+            self = .transferWithSchedule
+        case .updateCredentials:
+            self = .updateCredentials
+        case .registerData:
+            self = .registerData
+        case .transferWithMemo:
+            self = .transferWithMemo
+        case .encryptedAmountTransferWithMemo:
+            self = .encryptedAmountTransferWithMemo
+        case .transferWithScheduleAndMemo:
+            self = .transferWithScheduleAndMemo
+        case .configureBaker:
+            self = .configureBaker
+        case .configureDelegation:
+            self = .configureDelegation
+        }
+    }
+
+    var transactionType: TransactionType {
+        switch self {
+        case .deployModule:
+            return .deployModule
+        case .initContract:
+            return .initContract
+        case .updateContract:
+            return .updateContract
+        case .transfer:
+            return .transfer
+        case .addBaker:
+            return .addBaker
+        case .removeBaker:
+            return .removeBaker
+        case .updateBakerStake:
+            return .updateBakerStake
+        case .updateBakerRestakeEarnings:
+            return .updateBakerRestakeEarnings
+        case .updateBakerKeys:
+            return .updateBakerKeys
+        case .updateCredentialKeys:
+            return .updateCredentialKeys
+        case .encryptedAmountTransfer:
+            return .encryptedAmountTransfer
+        case .transferToEncrypted:
+            return .transferToEncrypted
+        case .transferToPublic:
+            return .transferToPublic
+        case .transferWithSchedule:
+            return .transferWithSchedule
+        case .updateCredentials:
+            return .updateCredentials
+        case .registerData:
+            return .registerData
+        case .transferWithMemo:
+            return .transferWithMemo
+        case .encryptedAmountTransferWithMemo:
+            return .encryptedAmountTransferWithMemo
+        case .transferWithScheduleAndMemo:
+            return .transferWithScheduleAndMemo
+        case .configureBaker:
+            return .configureBaker
+        case .configureDelegation:
+            return .configureDelegation
+        }
+    }
+}
+
 /// Describes the different transaction types available
-public enum TransactionType: UInt8, Serialize, Deserialize {
+public enum TransactionType: UInt8, Serialize, Deserialize, Codable {
     case deployModule = 0
     case initContract = 1
     case updateContract = 2
@@ -282,23 +418,23 @@ public enum TransactionType: UInt8, Serialize, Deserialize {
     case updateBakerRestakeEarnings = 7
     /// Only effective prior to protocol version 4
     case updateBakerKeys = 8
-    case updateCredentialKeys = 13
+    case updateCredentialKeys = 9
     /// Only effective prior to protocol version 7
-    case encryptedAmountTransfer = 16
+    case encryptedAmountTransfer = 10
     /// Only effective prior to protocol version 7
-    case transferToEncrypted = 17
-    case transferToPublic = 18
-    case transferWithSchedule = 19
-    case updateCredentials = 20
-    case registerData = 21
-    case transferWithMemo = 22
+    case transferToEncrypted = 11
+    case transferToPublic = 12
+    case transferWithSchedule = 13
+    case updateCredentials = 14
+    case registerData = 15
+    case transferWithMemo = 16
     /// Only effective prior to protocol version 7
-    case encryptedAmountTransferWithMemo = 23
-    case transferWithScheduleAndMemo = 24
+    case encryptedAmountTransferWithMemo = 17
+    case transferWithScheduleAndMemo = 18
     /// Effective from protocol version 4
-    case configureBaker = 25
+    case configureBaker = 19
     /// Effective from protocol version 4
-    case configureDelegation = 26
+    case configureDelegation = 20
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(rawValue)
@@ -307,6 +443,14 @@ public enum TransactionType: UInt8, Serialize, Deserialize {
     public static func deserialize(_ data: inout Cursor) -> TransactionType? {
         guard let tag = data.parseUInt(UInt8.self), let type = TransactionType(rawValue: tag) else { return nil }
         return type
+    }
+
+    public init(from decoder: any Decoder) throws {
+        self = try TransactionTypeString(from: decoder).transactionType
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        try TransactionTypeString(type: self).encode(to: encoder)
     }
 }
 
@@ -319,12 +463,106 @@ extension UpdateCredentialsPayload: Deserialize {
     }
 }
 
-public typealias SecToPubTransferData = ConcordiumWalletCrypto.SecToPubTransferData
-extension SecToPubTransferData: Deserialize {
-    public static func deserialize(_ data: inout Cursor) -> ConcordiumWalletCrypto.SecToPubTransferData? {
+public struct SecToPubTransferData: Equatable {
+    /**
+     * The serialized remaining amount after deducting the amount to transfer
+     * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::EncryptedAmount`]
+     */
+    public var remainingAmount: Bytes
+    /**
+     * The amount to transfer
+     */
+    public var transferAmount: CCD
+    /**
+     * The transfer index of the transfer
+     */
+    public var index: UInt64
+    /**
+     * The serialized proof that the transfer is correct.
+     * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::SecToPubAmountTransferProof`]
+     */
+    public var proof: Bytes
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The serialized remaining amount after deducting the amount to transfer
+         * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::EncryptedAmount`]
+         */
+        remainingAmount: Bytes,
+        /**
+            * The amount to transfer
+            */
+        transferAmount: CCD,
+        /**
+            * The transfer index of the transfer
+            */
+        index: UInt64,
+        /**
+            * The serialized proof that the transfer is correct.
+            * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::SecToPubAmountTransferProof`]
+            */
+        proof: Bytes
+    ) {
+        self.remainingAmount = remainingAmount
+        self.transferAmount = transferAmount
+        self.index = index
+        self.proof = proof
+    }
+
+    init(fromCryptoType cryptoType: ConcordiumWalletCrypto.SecToPubTransferData) {
+        remainingAmount = cryptoType.remainingAmount
+        transferAmount = CCD(microCCD: MicroCCDAmount(cryptoType.transferAmount)!)
+        index = cryptoType.index
+        proof = cryptoType.proof
+    }
+
+    init(ctx: GlobalContext, senderSecretKey: Bytes, inputAmount: InputEncryptedAmount, toTransfer: CCD) throws {
+        let cryptoType = try secToPubTransferData(ctx: ctx, senderSecretKey: senderSecretKey, inputAmount: inputAmount, toTransfer: toTransfer.microCCD)
+        self.init(fromCryptoType: cryptoType)
+    }
+}
+
+extension SecToPubTransferData: Deserialize, Serialize {
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        var res = 0
+        res += buffer.writeData(remainingAmount)
+        res += buffer.writeSerializable(transferAmount)
+        res += buffer.writeInteger(index)
+        res += buffer.writeData(proof)
+        return res
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> SecToPubTransferData? {
         guard let result = try? deserializeSecToPubTransferData(bytes: data.remaining) else { return nil }
         data.advance(by: result.bytesRead)
-        return result.value
+        return .init(fromCryptoType: result.value)
+    }
+}
+
+extension SecToPubTransferData: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case remainingAmount
+        case transferAmount
+        case index
+        case proof
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: Self.CodingKeys.self)
+        remainingAmount = try Data(hex: container.decode(String.self, forKey: .remainingAmount))
+        transferAmount = try container.decode(CCD.self, forKey: .transferAmount)
+        index = try container.decode(UInt64.self, forKey: .index)
+        proof = try Data(hex: container.decode(String.self, forKey: .proof))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: Self.CodingKeys.self)
+        try container.encode(remainingAmount.hex, forKey: .remainingAmount)
+        try container.encode(transferAmount, forKey: .transferAmount)
+        try container.encode(index, forKey: .index)
+        try container.encode(proof.hex, forKey: .proof)
     }
 }
 
@@ -352,7 +590,41 @@ extension BakerKeysPayload: Serialize, Deserialize {
     }
 }
 
-public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
+extension BakerKeysPayload: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case signatureVerifyKey
+        case electionVerifyKey
+        case aggregationVerifyKey
+        case proofSig
+        case proofElection
+        case proofAggregation
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: Self.CodingKeys.self)
+        try container.encode(signatureVerifyKey.hex, forKey: .signatureVerifyKey)
+        try container.encode(electionVerifyKey.hex, forKey: .electionVerifyKey)
+        try container.encode(aggregationVerifyKey.hex, forKey: .aggregationVerifyKey)
+        try container.encode(proofSig.hex, forKey: .proofSig)
+        try container.encode(proofElection.hex, forKey: .proofElection)
+        try container.encode(proofAggregation.hex, forKey: .proofAggregation)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: Self.CodingKeys.self)
+
+        let signatureVerifyKey = try Data(hex: container.decode(String.self, forKey: .signatureVerifyKey))
+        let electionVerifyKey = try Data(hex: container.decode(String.self, forKey: .electionVerifyKey))
+        let aggregationVerifyKey = try Data(hex: container.decode(String.self, forKey: .aggregationVerifyKey))
+        let proofSig = try Data(hex: container.decode(String.self, forKey: .proofSig))
+        let proofElection = try Data(hex: container.decode(String.self, forKey: .proofElection))
+        let proofAggregation = try Data(hex: container.decode(String.self, forKey: .proofAggregation))
+
+        self.init(signatureVerifyKey: signatureVerifyKey, electionVerifyKey: electionVerifyKey, aggregationVerifyKey: aggregationVerifyKey, proofSig: proofSig, proofElection: proofElection, proofAggregation: proofAggregation)
+    }
+}
+
+public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize, Codable {
     /// The equity capital of the baker
     public let capital: CCD?
     /// Whether the baker's earnings are restaked
@@ -409,7 +681,7 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
             keysWithProofs = keys
         }
         if bitmap & (1 << 4) != 0 {
-            guard let url = data.readString(lengthPrefix: UInt16.self) else { return nil }
+            guard let url = data.readString(prefixLength: UInt16.self) else { return nil }
             metadataUrl = url
         }
         if bitmap & (1 << 5) != 0 {
@@ -459,7 +731,7 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
             res += buffer.writeSerializable(keysWithProofs)
         }
         if let metadataUrl = metadataUrl {
-            res += buffer.writeString(metadataUrl, lengthPrefix: UInt16.self)
+            res += buffer.writeString(metadataUrl, prefixLength: UInt16.self)
         }
         if let transactionFeeCommission = transactionFeeCommission {
             res += buffer.writeSerializable(transactionFeeCommission)
@@ -474,7 +746,7 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize {
     }
 }
 
-public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize {
+public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize, Codable {
     /// The equity capital of the baker
     public let capital: CCD?
     /// Whether the baker's earnings are restaked
@@ -538,7 +810,7 @@ public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize {
 }
 
 /// The payload for an account transaction. Only contains payloads valid from protocol version 7
-public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
+public enum AccountTransactionPayload: Equatable {
     case deployModule(_ module: WasmModule)
     case initContract(amount: CCD, modRef: ModuleReference, initName: InitName, param: Parameter)
     case updateContract(amount: CCD, address: ContractAddress, receiveName: ReceiveName, message: Parameter)
@@ -550,7 +822,9 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
     case registerData(_ data: RegisteredData)
     case configureBaker(_ data: ConfigureBakerPayload)
     case configureDelegation(_ data: ConfigureDelegationPayload)
+}
 
+extension AccountTransactionPayload: Serialize, Deserialize {
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
         var res = 0
 
@@ -588,25 +862,22 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             res += buffer.writeSerializable(keys)
         case let .transferToPublic(data):
             res += buffer.writeSerializable(TransactionType.transferToPublic)
-            res += buffer.writeData(Data(data.serializedRemainingAmount))
-            res += buffer.writeInteger(data.transferAmount)
-            res += buffer.writeInteger(data.index)
-            res += buffer.writeData(Data(data.serializedProof))
+            res += buffer.writeSerializable(data)
         case let .transferWithSchedule(receiver, schedule, memo):
             if let memo {
                 res += buffer.writeSerializable(TransactionType.transferWithScheduleAndMemo)
                 res += buffer.writeData(receiver.data)
                 res += buffer.writeSerializable(memo)
-                res += buffer.writeSerializable(list: schedule, lengthPrefix: UInt8.self)
+                res += buffer.writeSerializable(list: schedule, prefixLength: UInt8.self)
             } else {
                 res += buffer.writeSerializable(TransactionType.transferWithSchedule)
                 res += buffer.writeData(receiver.data)
-                res += buffer.writeSerializable(list: schedule, lengthPrefix: UInt8.self)
+                res += buffer.writeSerializable(list: schedule, prefixLength: UInt8.self)
             }
         case let .updateCredentials(newCredInfos, removeCredIds, newThreshold):
             res += buffer.writeSerializable(TransactionType.updateCredentials)
-            res += buffer.writeSerializable(map: newCredInfos, lengthPrefix: UInt8.self)
-            res += buffer.writeSerializable(list: removeCredIds, lengthPrefix: UInt8.self)
+            res += buffer.writeSerializable(map: newCredInfos, prefixLength: UInt8.self)
+            res += buffer.writeSerializable(list: removeCredIds, prefixLength: UInt8.self)
             res += buffer.writeInteger(newThreshold)
         case let .registerData(data):
             res += buffer.writeSerializable(TransactionType.registerData)
@@ -654,7 +925,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             return .transferToPublic(transferData)
         case .transferWithSchedule:
             guard let receiver = AccountAddress.deserialize(&data),
-                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, lengthPrefix: UInt8.self) else { return nil }
+                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, prefixLength: UInt8.self) else { return nil }
             return .transferWithSchedule(receiver: receiver, schedule: schedule)
         case .updateCredentials:
             guard let data = UpdateCredentialsPayload.deserialize(&data),
@@ -671,7 +942,7 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
         case .transferWithScheduleAndMemo:
             guard let receiver = AccountAddress.deserialize(&data),
                   let memo = Memo.deserialize(&data),
-                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, lengthPrefix: UInt8.self) else { return nil }
+                  let schedule = data.deserialize(listOf: ScheduledTransfer.self, prefixLength: UInt8.self) else { return nil }
             return .transferWithSchedule(receiver: receiver, schedule: schedule, memo: memo)
         case .configureBaker:
             guard let payload = ConfigureBakerPayload.deserialize(&data) else { return nil }
@@ -685,7 +956,9 @@ public enum AccountTransactionPayload: Serialize, Deserialize, FromGRPC, ToGRPC,
             return nil // Not supported, invalid since protocol version 7
         }
     }
+}
 
+extension AccountTransactionPayload: FromGRPC, ToGRPC {
     static func fromGRPC(_ gRPC: Concordium_V2_AccountTransactionPayload) throws -> AccountTransactionPayload {
         guard let payload = gRPC.payload else {
             throw GRPCConversionError(message: "Expected a payload value on GRPC type")

@@ -90,6 +90,11 @@ To load local version of `ConcordiumWalletCrypto` in XCode, run the following in
 /bin/launchctl setenv CONCORDIUM_WALLET_CRYPTO_PATH "../concordium-wallet-crypto-swift" # Or preferably an absolute path
 ``` 
 
+and correspondingly to unset:
+```shell
+/bin/launchctl unsetenv CONCORDIUM_WALLET_CRYPTO_PATH
+``` 
+
 ### Build and test SDK
 
 With the Rust bindings in place, the SDK is built and tests executed using `swift test`.
