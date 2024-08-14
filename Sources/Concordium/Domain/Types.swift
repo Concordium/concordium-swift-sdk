@@ -80,7 +80,7 @@ public extension HashBytes {
 }
 
 /// Represents a Concordium transaction hash
-public struct TransactionHash: HashBytes, ToGRPC, FromGRPC, Equatable {
+public struct TransactionHash: HashBytes, ToGRPC, FromGRPC, Equatable, Hashable {
     public let value: Data
     public init(unchecked value: Data) {
         self.value = value
@@ -112,7 +112,7 @@ extension TransactionHash: Codable {
 }
 
 /// Represents a Concordium block hash
-public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable {
+public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable, Hashable {
     public let value: Data
     public init(unchecked value: Data) {
         self.value = value
@@ -144,7 +144,7 @@ extension BlockHash: Codable {
 }
 
 /// Represents the hash of the state of a block
-public struct StateHash: HashBytes, ToGRPC, FromGRPC, Equatable {
+public struct StateHash: HashBytes, ToGRPC, FromGRPC, Equatable, Hashable {
     typealias GRPC = Concordium_V2_StateHash
     public let value: Data
     public init(unchecked value: Data) {
@@ -165,7 +165,7 @@ public struct StateHash: HashBytes, ToGRPC, FromGRPC, Equatable {
 }
 
 /// Represents a Concordium smart contract module reference
-public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
+public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGRPC, Equatable, Hashable {
     public let value: Data
     public init(unchecked value: Data) {
         self.value = value
@@ -502,7 +502,7 @@ public struct ContractNameError: Error {
     let message: String
 }
 
-/// A wrapper around a contract init name
+/// A wrapper around a contract init name, i.e. with the expected format `init_<contract-name>`
 public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     typealias GRPC = Concordium_V2_InitName
     public let value: String
@@ -657,7 +657,8 @@ extension EntrypointName: Codable {
     }
 }
 
-/// A wrapper around a receive name, consisting of a ``ContractName`` and an ``EntrypointName``
+/// A wrapper around a receive name, consisting of a ``ContractName`` and an ``EntrypointName`` in
+/// the format `<contract-name>.<entrypoint-name>`
 public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     typealias GRPC = Concordium_V2_ReceiveName
     public let value: String
@@ -825,4 +826,19 @@ public enum ModuleSchemaVersion: UInt8, Codable {
     case V0
     case V1
     case V2
+}
+
+/// Wrapper around serialized contract event
+public struct ContractEvent {
+    public let data: Data
+
+    public init(_ data: Data) {
+        self.data = data
+    }
+}
+
+/// Represents either an account or contract address
+public enum Address {
+    case account(_ address: AccountAddress)
+    case contract(_ address: ContractAddress)
 }

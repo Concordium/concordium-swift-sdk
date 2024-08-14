@@ -854,3 +854,24 @@ public struct AccountInfo: FromGRPC {
         )
     }
 }
+
+/// Represents a type of credential made.
+public enum CredentialType: UInt8 {
+    /// Initial credential is a credential that is submitted by the identity
+    /// provider on behalf of the user. There is only one initial credential
+    /// per identity.
+    case initial
+    /// A normal credential is one where the identity behind it is only known to
+    /// the owner of the account, unless the anonymity revocation process was
+    /// followed.
+    case normal
+}
+
+public struct AccountCreationDetails {
+    /// Whether this is an initial or normal account.
+    public let credentialType: CredentialType
+    /// Address of the newly created account.
+    public let address: AccountAddress
+    /// Credential registration ID of the first credential.
+    public let regId: CredentialRegistrationID
+}

@@ -121,3 +121,32 @@ public struct BlockInfo: FromGRPC {
         )
     }
 }
+
+/// Represents a summary of a single transaction included in a block.
+public struct BlockItemSummary {
+    /// THe index of the transaction in the block where it is included.
+    public let index: UInt64
+    /// The amount of NRG the transaction cost.
+    public let energy: Energy
+    /// The hash of the transaction
+    public let hash: TransactionHash
+    /// The transaction details including the specific outcome.
+    public let details: Details
+
+    public enum Details {
+        /// Represents an account transaction
+        case accountTransaction(_ details: AccountTransactionDetails)
+        /// Represents an account creation
+        case accountCreation(_ details: AccountCreationDetails)
+        /// Represents a chain update instruction
+        case update(_ details: UpdateDetails)
+    }
+}
+
+extension BlockItemSummary: FromGRPC {
+    typealias GRPC = Concordium_V2_BlockItemSummary
+
+    static func fromGRPC(_ g: GRPC) throws -> BlockItemSummary {
+        // TODO:
+    }
+}

@@ -3,6 +3,42 @@ import GRPC
 import NIOCore
 import NIOPosix
 
+public struct SubmittedTransaction {
+    /// The hash of the submitted transaction
+    public let hash: TransactionHash
+    private let client: any NodeClient
+
+    // TODO: implement...
+    // public func waitUntilFinalized() throws -> (block: BlockHash, summary: BlockItemSummary) { }
+}
+
+public enum TransactionStatus {
+    case received
+    case committed(outcomes: [BlockHash: BlockItemSummary])
+    case finalized(outcome: (blockHash: BlockHash, summary: BlockItemSummary))
+}
+
+extension TransactionStatus: FromGRPC {
+    typealias GRPC = Concordium_V2_BlockItemStatus 
+
+    static func fromGRPC(_ g: GRPC) throws -> TransactionStatus {
+        guard let status = g.status else { throw GRPCError.missingRequiredValue("Expected 'status' to be available for 'BlockItemStatus'")}
+        switch status {
+        case .received(_):
+            return .received
+        case .committed(let data):
+            let outcomes = try data.outcomes.reduce(into: [:]) { acc, block in 
+                acc[try BlockHash.fromGRPC(block.blockHash)] = try BlockItemSummary.fromGRPC(block.outcome)
+            }
+            return .committed(outcomes: outcomes)
+        case .finalized(let data):
+            let blockHash = try BlockHash.fromGRPC(data.outcome.blockHash)
+            let summary = try BlockItemSummary.fromGRPC(data.outcome.outcome)
+            return .finalized(outcome: (blockHash: blockHash, summary: summary))
+        }
+    }
+}
+
 /// Protocol for Concordium node clients targetting the GRPC v2 API
 public protocol NodeClient {
     /// Get the global context for the chain
@@ -21,6 +57,8 @@ public protocol NodeClient {
     func send(transaction: SignedAccountTransaction) async throws -> TransactionHash
     /// Submit an account credential deployment to the node
     func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash
+    /// Query the status of a transaction
+    func status(transaction: TransactionHash) async throws -> TransactionStatus 
 }
 
 /// Error happening while constructing a ``NodeClient``
@@ -112,6 +150,11 @@ public class GRPCNodeClient: NodeClient {
         var req = Concordium_V2_SendBlockItemRequest()
         req.credentialDeployment = deployment.toGRPC()
         let res = try await grpc.sendBlockItem(req).response.get()
+        return try .fromGRPC(res)
+    }
+
+    public func status(transaction: TransactionHash) async throws -> TransactionStatus {
+        let res = try await grpc.getBlockItemStatus(transaction.toGRPC()).response.get()
         return try .fromGRPC(res)
     }
 }
