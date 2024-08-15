@@ -8,8 +8,17 @@ public struct SubmittedTransaction {
     public let hash: TransactionHash
     private let client: any NodeClient
 
+    init(hash: TransactionHash, client: any NodeClient) {
+        self.hash = hash
+        self.client = client
+    }
+
     // TODO: implement...
     // public func waitUntilFinalized() throws -> (block: BlockHash, summary: BlockItemSummary) { }
+    /// Alias for ``NodeClient.status`` for the ``Self.hash``
+    public func status() async throws -> TransactionStatus {
+        try await client.status(transaction: hash)
+    }
 }
 
 public enum TransactionStatus {
@@ -54,11 +63,24 @@ public protocol NodeClient {
     /// Get the account info for a block
     func info(block: BlockIdentifier) async throws -> BlockInfo
     /// Submit a transaction to the node
-    func send(transaction: SignedAccountTransaction) async throws -> TransactionHash
+    func send(transaction: SignedAccountTransaction) async throws -> SubmittedTransaction
     /// Submit an account credential deployment to the node
-    func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash
+    func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> SubmittedTransaction
     /// Query the status of a transaction
     func status(transaction: TransactionHash) async throws -> TransactionStatus
+    // NOTE: The following methods should be implemented to allow wallets to transition to use GRPC client instead of wallet proxy.
+    // TODO: func consensusInfo() async throws -> ConsensusInfo
+    // TODO: func source(moduleRef: ModuleReference, block: BlockIdentifier) async throws -> WasmModule
+    // TODO: func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo
+    // TODO: func waitUntilFinalized(transaction: TransactionHash) async throws -> (block: BlockHash, summary: BlockItemSummary)
+    // TODO: func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeInstanceResult
+    // TODO: func bakers(block: BlockIdentifier) async throws -> AsyncStream<AccountIndex>
+    // TODO: func poolInfo(bakerId: AccountIndex, block: BlockIdentifier) async throws -> BakerPoolStatus
+    // TODO: func passiveDelegationInfo(block: BlockIdentifier) async throws -> PassiveDelegationStatus
+    // TODO: func tokenomicsInfo(block: BlockIdentifier) async throws -> RewardsOverview
+    // TODO: func tokenomicsInfo(block: BlockIdentifier) async throws -> RewardsOverview
+    // TODO: func electionInfo(block: BlockIdentifier) async throws -> BirkParameters
+    // TODO: func chainParameters(block: BlockIdentifier) async throws -> ChainParameters
 }
 
 /// Error happening while constructing a ``NodeClient``
@@ -93,13 +115,13 @@ public class GRPCNodeClient: NodeClient {
         self.init(Concordium_V2_QueriesNIOClient(channel: channel))
     }
 
-    public func cryptographicParameters(block: BlockIdentifier) async throws -> CryptographicParameters {
+    public func cryptographicParameters(block: BlockIdentifier = BlockIdentifier.lastFinal) async throws -> CryptographicParameters {
         let req = block.toGRPC()
         let res = try await grpc.getCryptographicParameters(req).response.get()
         return .fromGRPC(res)
     }
 
-    public func identityProviders(block: BlockIdentifier) async throws -> [IdentityProviderInfo] {
+    public func identityProviders(block: BlockIdentifier = BlockIdentifier.lastFinal) async throws -> [IdentityProviderInfo] {
         let req = block.toGRPC()
         var res: [IdentityProviderInfo] = []
         let call = grpc.getIdentityProviders(req) {
@@ -109,7 +131,7 @@ public class GRPCNodeClient: NodeClient {
         return res
     }
 
-    public func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevokerInfo] {
+    public func anonymityRevokers(block: BlockIdentifier = BlockIdentifier.lastFinal) async throws -> [AnonymityRevokerInfo] {
         let req = block.toGRPC()
         var res: [AnonymityRevokerInfo] = []
         let call = grpc.getAnonymityRevokers(req) {
@@ -126,7 +148,7 @@ public class GRPCNodeClient: NodeClient {
         return .fromGRPC(res)
     }
 
-    public func info(account: AccountIdentifier, block: BlockIdentifier) async throws -> AccountInfo {
+    public func info(account: AccountIdentifier, block: BlockIdentifier = BlockIdentifier.lastFinal) async throws -> AccountInfo {
         var req = Concordium_V2_AccountInfoRequest()
         req.accountIdentifier = account.toGRPC()
         req.blockHash = block.toGRPC()
@@ -134,23 +156,23 @@ public class GRPCNodeClient: NodeClient {
         return try .fromGRPC(res)
     }
 
-    public func info(block: BlockIdentifier) async throws -> BlockInfo {
+    public func info(block: BlockIdentifier = BlockIdentifier.lastFinal) async throws -> BlockInfo {
         let res = try await grpc.getBlockInfo(block.toGRPC()).response.get()
         return try .fromGRPC(res)
     }
 
-    public func send(transaction: SignedAccountTransaction) async throws -> TransactionHash {
+    public func send(transaction: SignedAccountTransaction) async throws -> SubmittedTransaction {
         var req = Concordium_V2_SendBlockItemRequest()
         req.accountTransaction = transaction.toGRPC()
         let res = try await grpc.sendBlockItem(req).response.get()
-        return try .fromGRPC(res)
+        return try SubmittedTransaction(hash: .fromGRPC(res), client: self)
     }
 
-    public func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash {
+    public func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> SubmittedTransaction {
         var req = Concordium_V2_SendBlockItemRequest()
         req.credentialDeployment = deployment.toGRPC()
         let res = try await grpc.sendBlockItem(req).response.get()
-        return try .fromGRPC(res)
+        return try SubmittedTransaction(hash: .fromGRPC(res), client: self)
     }
 
     public func status(transaction: TransactionHash) async throws -> TransactionStatus {
