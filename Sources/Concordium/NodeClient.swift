@@ -19,19 +19,19 @@ public enum TransactionStatus {
 }
 
 extension TransactionStatus: FromGRPC {
-    typealias GRPC = Concordium_V2_BlockItemStatus 
+    typealias GRPC = Concordium_V2_BlockItemStatus
 
     static func fromGRPC(_ g: GRPC) throws -> TransactionStatus {
-        guard let status = g.status else { throw GRPCError.missingRequiredValue("Expected 'status' to be available for 'BlockItemStatus'")}
+        guard let status = g.status else { throw GRPCError.missingRequiredValue("Expected 'status' to be available for 'BlockItemStatus'") }
         switch status {
-        case .received(_):
+        case .received:
             return .received
-        case .committed(let data):
-            let outcomes = try data.outcomes.reduce(into: [:]) { acc, block in 
-                acc[try BlockHash.fromGRPC(block.blockHash)] = try BlockItemSummary.fromGRPC(block.outcome)
+        case let .committed(data):
+            let outcomes = try data.outcomes.reduce(into: [:]) { acc, block in
+                try acc[BlockHash.fromGRPC(block.blockHash)] = try BlockItemSummary.fromGRPC(block.outcome)
             }
             return .committed(outcomes: outcomes)
-        case .finalized(let data):
+        case let .finalized(data):
             let blockHash = try BlockHash.fromGRPC(data.outcome.blockHash)
             let summary = try BlockItemSummary.fromGRPC(data.outcome.outcome)
             return .finalized(outcome: (blockHash: blockHash, summary: summary))
@@ -58,7 +58,7 @@ public protocol NodeClient {
     /// Submit an account credential deployment to the node
     func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> TransactionHash
     /// Query the status of a transaction
-    func status(transaction: TransactionHash) async throws -> TransactionStatus 
+    func status(transaction: TransactionHash) async throws -> TransactionStatus
 }
 
 /// Error happening while constructing a ``NodeClient``

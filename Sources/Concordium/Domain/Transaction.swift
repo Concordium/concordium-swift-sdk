@@ -454,6 +454,15 @@ public enum TransactionType: UInt8, Serialize, Deserialize, Codable {
     }
 }
 
+extension TransactionType: FromGRPC {
+    typealias GRPC = Concordium_V2_TransactionType
+
+    static func fromGRPC(_ g: GRPC) throws -> TransactionType {
+        guard let v = Self(rawValue: UInt8(g.rawValue)) else { throw GRPCError.valueOutOfBounds }
+        return v
+    }
+}
+
 extension UpdateCredentialsPayload: Deserialize {
     public static func deserialize(_ data: inout Cursor) -> ConcordiumWalletCrypto.UpdateCredentialsPayload? {
 //        let result = try! deserializeUpdateCredentialsPayload(bytes: data.remaining)
@@ -961,7 +970,7 @@ extension AccountTransactionPayload: Serialize, Deserialize {
 extension AccountTransactionPayload: FromGRPC, ToGRPC {
     static func fromGRPC(_ gRPC: Concordium_V2_AccountTransactionPayload) throws -> AccountTransactionPayload {
         guard let payload = gRPC.payload else {
-            throw GRPCConversionError(message: "Expected a payload value on GRPC type")
+            throw GRPCError.missingRequiredValue("Expected a payload value on GRPC type")
         }
         switch payload {
         case let .deployModule(src):
@@ -977,8 +986,7 @@ extension AccountTransactionPayload: FromGRPC, ToGRPC {
         case let .registerData(data):
             return try .registerData(RegisteredData.fromGRPC(data))
         case let .rawPayload(data):
-            guard let payload = Self.deserialize(data) else { throw GRPCConversionError(message: "Failed to deserialize raw payload") }
-            return payload
+            return try .deserialize(data) ?! GRPCError.unsupportedValue("Failed to deserialize raw payload")
         }
     }
 

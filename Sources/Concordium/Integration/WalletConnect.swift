@@ -146,7 +146,7 @@ public struct WalletConnectSendTransactionParam: Equatable {
         switch payload {
         case .deployModule(version: nil, let source):
             // If `version` is not included, assume source is already a ``WasmModule`` serialized according to ``Serialize``
-            guard let wasmModule = WasmModule.deserialize(source) else { throw DeserializeError(type: WasmModule.self) }
+            let wasmModule = try WasmModule.deserialize(source) ?! DeserializeError(WasmModule.self, data: source)
             return .deployModule(sender: sender, module: wasmModule)
         case let .deployModule(version?, source):
             return .deployModule(sender: sender, module: WasmModule(version: version, source: source))

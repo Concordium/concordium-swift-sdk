@@ -2,15 +2,10 @@ import ConcordiumWalletCrypto
 import Foundation
 import NIO
 
-/// Errors happening while trying to convert from generated GRPC type
-struct GRPCConversionError: Error {
-    let message: String
-}
-
 protocol FromGRPC<GRPC> {
     associatedtype GRPC
     /// Initializes the type from the associated GRPC type
-    /// - Throws: `GRPCConversionError` if conversion could not be made
+    /// - Throws: `GRPCError` if conversion could not be made
     static func fromGRPC(_ gRPC: GRPC) throws -> Self
 }
 
@@ -218,6 +213,14 @@ public enum WasmVersion: UInt8, Serialize, Deserialize, Codable {
     }
 }
 
+extension WasmVersion: FromGRPC {
+    typealias GRPC = Concordium_V2_ContractVersion
+
+    static func fromGRPC(_ g: GRPC) throws -> WasmVersion {
+        try .init(rawValue: UInt8(g.rawValue)) ?! GRPCError.valueOutOfBounds
+    }
+}
+
 /// Represents a WASM module as deployed to a Concordium node
 public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var version: WasmVersion
@@ -258,7 +261,7 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
         case let .v1(moduleSourceV1):
             return Self(version: WasmVersion.v1, source: moduleSourceV1.value)
         case .none:
-            throw GRPCConversionError(message: "WASM module must specify version")
+            throw GRPCError.missingRequiredValue("WASM module must specify version")
         }
     }
 }
@@ -356,6 +359,14 @@ public struct ScheduledTransfer: Serialize, Deserialize, Equatable, Codable {
     }
 }
 
+extension ScheduledTransfer: FromGRPC {
+    typealias GRPC = Concordium_V2_NewRelease
+
+    static func fromGRPC(_ g: GRPC) throws -> ScheduledTransfer {
+        try Self(timestamp: g.timestamp.value, amount: .fromGRPC(g.amount))
+    }
+}
+
 /// Represents a contract address on chain
 public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, Codable {
     public var index: UInt64
@@ -383,7 +394,7 @@ public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGR
         return g
     }
 
-    static func fromGRPC(_ gRPC: Concordium_V2_ContractAddress) throws -> Self {
+    static func fromGRPC(_ gRPC: Concordium_V2_ContractAddress) -> Self {
         Self(index: gRPC.index, subindex: gRPC.subindex)
     }
 }
@@ -812,7 +823,7 @@ public enum ProtocolVersion: FromGRPC {
         case .protocolVersion7:
             return .protocolVersion7
         case .UNRECOGNIZED:
-            throw GRPCConversionError(message: "Unrecognized protocol version")
+            throw GRPCError.valueOutOfBounds
         }
     }
 }
@@ -837,8 +848,28 @@ public struct ContractEvent {
     }
 }
 
+extension ContractEvent: FromGRPC {
+    typealias GRPC = Concordium_V2_ContractEvent
+
+    static func fromGRPC(_ g: GRPC) throws -> ContractEvent {
+        Self(g.value)
+    }
+}
+
 /// Represents either an account or contract address
 public enum Address {
     case account(_ address: AccountAddress)
     case contract(_ address: ContractAddress)
+}
+
+extension Address: FromGRPC {
+    typealias GRPC = Concordium_V2_Address
+
+    static func fromGRPC(_ g: GRPC) throws -> Address {
+        let address = try g.type ?! GRPCError.missingRequiredValue("type")
+        return switch address {
+        case let .account(v): .account(AccountAddress.fromGRPC(v))
+        case let .contract(v): .contract(ContractAddress.fromGRPC(v))
+        }
+    }
 }
