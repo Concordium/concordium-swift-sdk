@@ -1,6 +1,7 @@
 import Base58Check
 import ConcordiumWalletCrypto
 import Foundation
+import NIO
 
 /// Index of an account in the account table.
 /// These are assigned sequentially in the order of creation of accounts.
@@ -11,16 +12,51 @@ public typealias AccountIndex = UInt64
 public typealias BakerID = AccountIndex
 
 /// Index of the credential that is to be used.
-public typealias CredentialIndex = UInt32
+public typealias CredentialIndex = UInt8
 
 /// Index of an account key that is to be used.
 public typealias KeyIndex = UInt8
+
+public enum CredentialRegistrationIDError: Error {
+    case unexpectedSize(actual: Int)
+    case invalid(String)
+}
 
 /// A registration ID of a credential.
 /// This ID is generated from the user's PRF key and a sequential counter.
 /// ``CredentialRegistrationID``'s generated from the same PRF key,
 /// but different counter values cannot easily be linked together.
-public typealias CredentialRegistrationID = Data // 48 bytes
+/// - Throws: ``CredentialRegistrationIDError``
+public struct CredentialRegistrationID: Serialize, Deserialize, FromGRPC, ToGRPC, Equatable {
+    public static let SIZE: UInt8 = 48
+    typealias GRPC = Concordium_V2_CredentialRegistrationId
+    public let value: Data // 48 bytes
+
+    public init(_ value: Data) throws {
+        guard value.count == Self.SIZE else { throw CredentialRegistrationIDError.unexpectedSize(actual: value.count) }
+        guard value.first! >> 7 == 1 else { throw CredentialRegistrationIDError.invalid("Expected first bit in data to be 1") }
+        self.value = value
+    }
+
+    static func fromGRPC(_ gRPC: Concordium_V2_CredentialRegistrationId) throws -> CredentialRegistrationID {
+        try Self(gRPC.value)
+    }
+
+    func toGRPC() -> Concordium_V2_CredentialRegistrationId {
+        var g = GRPC()
+        g.value = value
+        return g
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeData(value)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> CredentialRegistrationID? {
+        guard let value = data.read(num: SIZE) else { return nil }
+        return try? Self(value)
+    }
+}
 
 /// A succinct identifier of an identity provider on the chain.
 /// In credential deployments and other interactions with the chain, this is used to identify which identity provider is meant.
@@ -75,16 +111,12 @@ public enum AccountIdentifier: ToGRPC {
     func toGRPC() -> Concordium_V2_AccountIdentifierInput {
         switch self {
         case let .address(addr):
-            var a = Concordium_V2_AccountAddress()
-            a.value = addr.data
             var i = Concordium_V2_AccountIdentifierInput()
-            i.address = a
+            i.address = addr.toGRPC()
             return i
         case let .credentialRegistrationID(id):
-            var c = Concordium_V2_CredentialRegistrationId()
-            c.value = id
             var i = Concordium_V2_AccountIdentifierInput()
-            i.credID = c
+            i.credID = id.toGRPC()
             return i
         case let .index(idx):
             var a = Concordium_V2_AccountIndex()
@@ -97,7 +129,16 @@ public enum AccountIdentifier: ToGRPC {
 }
 
 /// Address of an account as raw bytes.
-public struct AccountAddress: Hashable, Deserialize, FromGRPC {
+public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC {
+    public static let SIZE: UInt8 = 32
+    func toGRPC() -> Concordium_V2_AccountAddress {
+        var g = GRPC()
+        g.value = data
+        return g
+    }
+
+    typealias GRPC = Concordium_V2_AccountAddress
+
     private static let base58CheckVersion: UInt8 = 1
 
     public var data: Data // 32 bytes
@@ -124,11 +165,15 @@ public struct AccountAddress: Hashable, Deserialize, FromGRPC {
     }
 
     public static func deserialize(_ data: inout Cursor) -> AccountAddress? {
-        data.read(num: 32).map { AccountAddress(Data($0)) }
+        data.read(num: SIZE).map { AccountAddress(Data($0)) }
     }
 
-    static func fromGRPC(_ grpc: Concordium_V2_AccountAddress) -> Self {
+    static func fromGRPC(_ grpc: GRPC) -> Self {
         .init(grpc.value)
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeData(data)
     }
 }
 
@@ -190,7 +235,7 @@ public struct ReleaseSchedule: FromGRPC {
 /// needed for a valid signature on a transaction.
 public typealias CredentialPublicKeys = ConcordiumWalletCrypto.CredentialPublicKeys
 
-extension CredentialPublicKeys: FromGRPC {
+extension CredentialPublicKeys: FromGRPC, Serialize, Deserialize {
     static func fromGRPC(_ grpc: Concordium_V2_CredentialPublicKeys) throws -> Self {
         try .init(
             keys: grpc.keys.reduce(into: [:]) { res, e in
@@ -200,12 +245,83 @@ extension CredentialPublicKeys: FromGRPC {
             threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GRPCError.valueOutOfBounds
         )
     }
+
+    public func serializeInto(buffer: inout ByteBuffer) -> Int {
+        var res = 0
+        res += buffer.writeSerializable(map: keys, prefixLength: UInt8.self)
+        res += buffer.writeInteger(threshold)
+        return res
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> CredentialPublicKeys? {
+        guard let keys = data.deserialize(mapOf: VerifyKey.self, keys: UInt8.self, prefixLength: UInt8.self),
+              let threshold = data.parseUInt(UInt8.self) else { return nil }
+        return CredentialPublicKeys(keys: keys, threshold: threshold)
+    }
+}
+
+extension CredentialPublicKeys: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case keys
+        case threshold
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(threshold, forKey: .threshold)
+
+        var keysJson: [String: VerifyKey] = [:]
+        for (k, v) in keys {
+            keysJson["\(k)"] = v
+        }
+        try container.encode(keysJson, forKey: .keys)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let parsedKeys = try container.decode([String: VerifyKey].self, forKey: .keys)
+        var keys: [UInt8: VerifyKey] = [:]
+        for (k, v) in parsedKeys {
+            let key = UInt8(k)
+            keys[key!] = v
+        }
+
+        let threshold = try container.decode(UInt8.self, forKey: .threshold)
+
+        self.init(keys: keys, threshold: threshold)
+    }
 }
 
 public typealias VerifyKey = ConcordiumWalletCrypto.VerifyKey
 
-extension VerifyKey: FromGRPC {
-    public init(ed25519KeyHex: String) {
+public enum VerifyKeyError: Error, Equatable {
+    case unexpectedLength(actual: UInt8)
+    case invalidHex
+}
+
+extension VerifyKey: FromGRPC, Serialize, Deserialize {
+    public static let SIZE: UInt8 = 32
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(0, as: UInt8.self) + buffer.writeData(try! Data(hex: keyHex)) // We unwrap, as initializing safely will mean this always succeeds
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> ConcordiumWalletCrypto.VerifyKey? {
+        guard let tag = data.parseUInt(UInt8.self) else { return nil }
+        switch tag {
+        case 0: // schemeId = Ed25519
+            guard let key = data.read(num: Self.SIZE).map({ try? Self(ed25519KeyHex: $0.hex) }) else { return nil }
+            return key
+        default:
+            return nil
+        }
+    }
+
+    /// Safely initialize a verify key from a 32 length byte sequence in hex format
+    /// - Throws: ``VerifyKeyError`` in case the passed hex string is not a valid ed25519 verify key
+    public init(ed25519KeyHex: String) throws {
+        let parsed = try Data(hex: ed25519KeyHex) ?! VerifyKeyError.invalidHex // Check that the data is hex
+        guard parsed.count == Self.SIZE else { throw VerifyKeyError.unexpectedLength(actual: UInt8(parsed.count)) }
         self.init(schemeId: "Ed25519", keyHex: ed25519KeyHex)
     }
 
@@ -214,8 +330,28 @@ extension VerifyKey: FromGRPC {
         case nil:
             throw GRPCError.missingRequiredValue("verify key")
         case let .ed25519Key(d):
-            return .init(ed25519KeyHex: d.hex)
+            return try .init(ed25519KeyHex: d.hex) ?! GRPCError.unsupportedValue("Invalid hex string")
         }
+    }
+}
+
+extension VerifyKey: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case schemeId
+        case verifyKey
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemeId, forKey: .schemeId)
+        try container.encode(keyHex, forKey: .verifyKey)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let schemeId = try container.decode(String.self, forKey: .schemeId)
+        let keyHex = try container.decode(String.self, forKey: .verifyKey)
+        self.init(schemeId: schemeId, keyHex: keyHex)
     }
 }
 
@@ -242,6 +378,31 @@ extension Policy: FromGRPC {
     }
 }
 
+extension Policy: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case createdAt
+        case validTo
+        case revealedAttributes
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(createdAtYearMonth, forKey: .createdAt)
+        try container.encode(validToYearMonth, forKey: .validTo)
+        try container.encode(revealedAttributes, forKey: .revealedAttributes)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let createdAtYearMonth = try container.decode(String.self, forKey: .createdAt)
+        let validToYearMonth = try container.decode(String.self, forKey: .validTo)
+        let revealedAttributes = try container.decode([String: String].self, forKey: .revealedAttributes)
+
+        self.init(createdAtYearMonth: createdAtYearMonth, validToYearMonth: validToYearMonth, revealedAttributes: revealedAttributes)
+    }
+}
+
 public struct CredentialDeploymentValuesInitial: FromGRPC {
     /// Credential keys.
     public var credentialPublicKeys: CredentialPublicKeys
@@ -255,7 +416,7 @@ public struct CredentialDeploymentValuesInitial: FromGRPC {
     static func fromGRPC(_ grpc: Concordium_V2_InitialCredentialValues) throws -> Self {
         try .init(
             credentialPublicKeys: .fromGRPC(grpc.keys),
-            credentialID: grpc.credID.value,
+            credentialID: CredentialRegistrationID.fromGRPC(grpc.credID),
             identityProviderID: grpc.ipID.value,
             policy: .fromGRPC(grpc.policy)
         )
@@ -264,9 +425,24 @@ public struct CredentialDeploymentValuesInitial: FromGRPC {
 
 public typealias ChainArData = ConcordiumWalletCrypto.ChainArData
 
-extension ChainArData: FromGRPC {
+extension ChainArData: FromGRPC, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case encIdCredPubShare
+    }
+
     static func fromGRPC(_ grpc: Concordium_V2_ChainArData) -> Self {
         .init(encIdCredPubShareHex: grpc.encIDCredPubShare.hex)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(encIdCredPubShareHex, forKey: .encIdCredPubShare)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let encIdCredPubShareHex = try container.decode(String.self, forKey: .encIdCredPubShare)
+        self.init(encIdCredPubShareHex: encIdCredPubShareHex)
     }
 }
 
@@ -283,7 +459,7 @@ public struct CredentialDeploymentValuesNormal: FromGRPC {
         try .init(
             initial: CredentialDeploymentValuesInitial(
                 credentialPublicKeys: .fromGRPC(grpc.keys),
-                credentialID: grpc.credID.value,
+                credentialID: CredentialRegistrationID.fromGRPC(grpc.credID),
                 identityProviderID: grpc.ipID.value,
                 policy: .fromGRPC(grpc.policy)
             ),
@@ -295,7 +471,7 @@ public struct CredentialDeploymentValuesNormal: FromGRPC {
     public func toCryptoType(proofs: Proofs) -> AccountCredential {
         .init(
             arData: anonymityRevokerData,
-            credIdHex: initial.credentialID.hex,
+            credIdHex: initial.credentialID.value.hex,
             credentialPublicKeys: initial.credentialPublicKeys,
             ipIdentity: initial.identityProviderID,
             policy: initial.policy,
@@ -399,16 +575,24 @@ public enum StakePendingChange: FromGRPC {
 }
 
 /// A fraction of an amount with a precision of 1/100000.
-public struct AmountFraction: FromGRPC {
+public struct AmountFraction: FromGRPC, Equatable, Serialize, Deserialize {
     public var partsPerHundredThousand: UInt32
 
     static func fromGRPC(_ grpc: Concordium_V2_AmountFraction) -> Self {
         .init(partsPerHundredThousand: grpc.partsPerHundredThousand)
     }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(partsPerHundredThousand)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> AmountFraction? {
+        data.parseUInt(UInt32.self).flatMap { Self(partsPerHundredThousand: $0) }
+    }
 }
 
 /// Information about how open the pool is to new delegators.
-public enum OpenStatus: Int, FromGRPC {
+public enum OpenStatus: UInt8, FromGRPC, Equatable, Serialize, Deserialize {
     /// New delegators may join the pool.
     case openForAll = 0
     /// New delegators may not join, but existing delegators are kept.
@@ -417,7 +601,15 @@ public enum OpenStatus: Int, FromGRPC {
     case closedForAll = 2
 
     static func fromGRPC(_ grpc: Concordium_V2_OpenStatus) throws -> Self {
-        try .init(rawValue: grpc.rawValue) ?! GRPCError.unsupportedValue("open status '\(grpc.rawValue)'")
+        try .init(rawValue: UInt8(grpc.rawValue)) ?! GRPCError.unsupportedValue("open status '\(grpc.rawValue)'")
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(rawValue)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> OpenStatus? {
+        data.parseUInt(UInt8.self).flatMap { Self(rawValue: $0) }
     }
 }
 
@@ -458,7 +650,7 @@ public struct BakerPoolInfo: FromGRPC {
 }
 
 /// Target of delegation.
-public enum DelegationTarget: FromGRPC {
+public enum DelegationTarget: FromGRPC, Equatable, Serialize, Deserialize {
     /// Delegate passively, i.e., to no specific baker.
     case passive
     /// Delegate to a specific baker.
@@ -473,6 +665,26 @@ public enum DelegationTarget: FromGRPC {
         case let .baker(b):
             return .baker(b.value)
         }
+    }
+
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        var res = 0
+        switch self {
+        case .passive:
+            res += buffer.writeInteger(0 as UInt8)
+        case let .baker(bakerId):
+            res += buffer.writeInteger(1 as UInt8)
+            buffer.writeInteger(bakerId)
+        }
+        return res
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> DelegationTarget? {
+        guard let tag = data.parseUInt(UInt8.self) else { return nil }
+        if tag == 0 { return .passive }
+
+        guard let bakerId = data.parseUInt(BakerID.self) else { return nil }
+        return .baker(bakerId)
     }
 }
 
@@ -550,16 +762,12 @@ public struct AccountInfo: FromGRPC {
     public var address: AccountAddress
 
     static func fromGRPC(_ grpc: Concordium_V2_AccountInfo) throws -> Self {
-        try .init(
+        let credentials = try grpc.creds.reduce(into: [:]) { r, v in r[UInt8(v.key)] = try Versioned(version: 0, value: AccountCredentialDeploymentValues.fromGRPC(v.value)) }
+        return try self.init(
             sequenceNumber: grpc.sequenceNumber.value,
             amount: grpc.amount.value,
             releaseSchedule: .fromGRPC(grpc.schedule),
-            credentials: grpc.creds.mapValues {
-                try Versioned(
-                    version: 0, // mirroring Rust SDK
-                    value: .fromGRPC($0)
-                )
-            },
+            credentials: credentials,
             threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GRPCError.valueOutOfBounds,
             encryptedAmount: .fromGRPC(grpc.encryptedBalance),
             encryptionKey: grpc.encryptionKey.value.hex,

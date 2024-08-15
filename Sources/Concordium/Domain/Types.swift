@@ -1,3 +1,4 @@
+import ConcordiumWalletCrypto
 import Foundation
 import NIO
 
@@ -27,20 +28,25 @@ public typealias Energy = UInt64
 public typealias TransactionTime = UInt64
 
 /// The number of bytes in a sha256 hash
-let HASH_BYTES_SIZE: Int = 32
+public let HASH_BYTES_SIZE: UInt8 = 32
 /// The max size of a `Parameter`
-let PARAMETER_SIZE_MAX: Int = 65535
+let PARAMETER_SIZE_MAX: UInt16 = 65535
 /// The max size of a `RegisteredData`
-let REGISTERED_DATA_SIZE_MAX: Int = 256
+let REGISTERED_DATA_SIZE_MAX: UInt16 = 256
 /// The max length of a contract receive name
-let FUNC_NAME_MAX: Int = 100
+let FUNC_NAME_MAX: UInt8 = 100
 
-/// Represents an error from not being able to deserialize into a type due to mismatch between the bytes expected/received
+/// Represents an error from not being able to a value of a given type due to mismatch between the bytes expected/received
 public struct ExactSizeError: Error {
-    /// The number of bytes attempted to deserialize
-    public let actual: Int
+    /// The number of bytes given
+    public let actual: UInt
     /// The expected number of bytes
-    public let expected = HASH_BYTES_SIZE
+    public let expected: UInt
+
+    public init(actual: UInt, expected: UInt = UInt(HASH_BYTES_SIZE)) {
+        self.actual = actual
+        self.expected = expected
+    }
 }
 
 /// Describes a type wrapping `Data`
@@ -56,7 +62,7 @@ public extension HashBytes {
     /// - Throws: `ExactSizeError` if the number of bytes does not match number of bytes expected.
     init(_ data: Data) throws {
         guard data.count == HASH_BYTES_SIZE else {
-            throw ExactSizeError(actual: data.count)
+            throw ExactSizeError(actual: UInt(data.count))
         }
 
         self.init(unchecked: data)
@@ -153,12 +159,12 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var source: Data
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeInteger(version.rawValue) + buffer.writeData(source, lengthPrefix: UInt32.self)
+        buffer.writeInteger(version.rawValue) + buffer.writeData(source, prefixLength: UInt32.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let version = data.parseUInt(UInt32.self).flatMap(WasmVersion.init),
-              let source = data.read(withLengthPrefix: UInt32.self) else { return nil }
+              let source = data.read(prefixLength: UInt32.self) else { return nil }
 
         return Self(version: version, source: Data(source))
     }
@@ -201,11 +207,11 @@ public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     }
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeData(value, lengthPrefix: UInt16.self)
+        buffer.writeData(value, prefixLength: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Memo? {
-        data.read(withLengthPrefix: UInt16.self).map { Self(Data($0)) }
+        data.read(prefixLength: UInt16.self).map { Self(Data($0)) }
     }
 
     static func fromGRPC(_ gRPC: Concordium_V2_Memo) throws -> Memo {
@@ -277,9 +283,9 @@ public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGR
 /// An error thrown when data supplied to a wrapper does not meet size requirements
 public struct DataSizeError: Error {
     /// The size of the supplied data
-    let actual: Int
+    let actual: UInt
     /// The maximum size allowed
-    let max: Int
+    let max: UInt
 }
 
 /// Wrapper around ``Data`` supplied to a contract init/receive function
@@ -295,7 +301,7 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
     /// - Throws: ``DataSizeError`` if passed value exceeds the allowed parameter size
     public init(_ value: Data) throws {
         guard value.count <= PARAMETER_SIZE_MAX else {
-            throw DataSizeError(actual: value.count, max: PARAMETER_SIZE_MAX)
+            throw DataSizeError(actual: UInt(value.count), max: UInt(PARAMETER_SIZE_MAX))
         }
         self.init(unchecked: value)
     }
@@ -305,7 +311,7 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
     }
 
     public static func deserialize(_ data: inout Cursor) -> Parameter? {
-        guard let value = data.read(withLengthPrefix: UInt16.self) else { return nil }
+        guard let value = data.read(prefixLength: UInt16.self) else { return nil }
         return try? self.init(value)
     }
 
@@ -333,7 +339,7 @@ public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRP
     /// - Throws: ``DataSizeError`` if passed value exceeds the allowed parameter size
     public init(_ value: Data) throws {
         guard value.count <= REGISTERED_DATA_SIZE_MAX else {
-            throw DataSizeError(actual: value.count, max: REGISTERED_DATA_SIZE_MAX)
+            throw DataSizeError(actual: UInt(value.count), max: UInt(REGISTERED_DATA_SIZE_MAX))
         }
         self.init(unchecked: value)
     }
@@ -343,7 +349,7 @@ public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRP
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let value = data.read(withLengthPrefix: UInt16.self) else { return nil }
+        guard let value = data.read(prefixLength: UInt16.self) else { return nil }
         return try? self.init(value)
     }
 
@@ -391,11 +397,11 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, lengthPrefix: UInt16.self)
+        buffer.writeString(value, prefixLength: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
 
@@ -441,11 +447,11 @@ public struct ContractName: Serialize, Deserialize, Equatable {
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, lengthPrefix: UInt16.self)
+        buffer.writeString(value, prefixLength: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
 }
@@ -474,11 +480,11 @@ public struct EntrypointName: Serialize, Deserialize, Equatable {
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, lengthPrefix: UInt16.self)
+        buffer.writeString(value, prefixLength: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
 }
@@ -508,11 +514,11 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, lengthPrefix: UInt16.self)
+        buffer.writeString(value, prefixLength: UInt16.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(withLengthPrefix: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
         return try? Self(parsed)
     }
 
@@ -524,5 +530,76 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
 
     static func fromGRPC(_ gRPC: GRPC) throws -> Self {
         try Self(gRPC.value)
+    }
+}
+
+public typealias InputEncryptedAmount = ConcordiumWalletCrypto.InputEncryptedAmount
+public typealias EncryptedAmountAggIndex = UInt64
+public typealias SecToPubAmountTransferProof = Data
+
+public typealias CredentialDeploymentInfo = ConcordiumWalletCrypto.CredentialDeploymentInfo
+
+extension CredentialDeploymentInfo: Serialize {
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        let bytes = try! serializeCredentialDeploymentInfo(credInfo: self) // In practice, this will type will never be generated manually, so unwrap is relatively safe...
+        return buffer.writeData(Data(bytes))
+    }
+}
+
+extension CredentialDeploymentInfo: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case arData
+        case credId
+        case credentialPublicKeys
+        case ipIdentity
+        case policy
+        case proofs
+        case revocationThreshold
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(credId.hex, forKey: .credId)
+        try container.encode(credentialPublicKeys, forKey: .credentialPublicKeys)
+        try container.encode(ipIdentity, forKey: .ipIdentity)
+        try container.encode(policy, forKey: .policy)
+        try container.encode(proofs.hex, forKey: .proofs)
+        try container.encode(revocationThreshold, forKey: .revocationThreshold)
+
+        var arDataJson: [String: ChainArData] = [:]
+        for (k, v) in arData {
+            arDataJson["\(k)"] = v
+        }
+        try container.encode(arDataJson, forKey: .arData)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let credId = try Data(hex: container.decode(String.self, forKey: .credId))
+        let ipIdentity = try container.decode(UInt32.self, forKey: .ipIdentity)
+        let policy = try container.decode(Policy.self, forKey: .policy)
+        let proofs = try Data(hex: container.decode(String.self, forKey: .proofs))
+        let revocationThreshold = try container.decode(UInt8.self, forKey: .revocationThreshold)
+
+        let parsedArData = try container.decode([String: ChainArData].self, forKey: .arData)
+        var arData: [UInt32: ChainArData] = [:]
+        for (k, v) in parsedArData {
+            let key = UInt32(k)
+            arData[key!] = v
+        }
+
+        let credentialPublicKeys = try container.decode(CredentialPublicKeys.self, forKey: .credentialPublicKeys)
+
+        self.init(arData: arData, credId: credId, credentialPublicKeys: credentialPublicKeys, ipIdentity: ipIdentity, policy: policy, proofs: proofs, revocationThreshold: revocationThreshold)
+    }
+}
+
+public typealias BakerKeyPairs = ConcordiumWalletCrypto.BakerKeyPairs
+
+public extension BakerKeyPairs {
+    /// Generate a set of baker keys
+    static func generate() -> Self {
+        generateBakerKeys()
     }
 }
