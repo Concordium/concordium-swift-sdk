@@ -29,29 +29,29 @@ extension UpdatePayload: FromGRPC {
 
     static func fromGRPC(_ g: GRPC) throws -> UpdatePayload {
         guard let payload = g.payload else { throw GRPCError.missingRequiredValue("Missing 'payload' of 'UpdatePayload'") }
-        return switch payload {
-        case .protocolUpdate: .protocolUpdate
-        case .electionDifficultyUpdate: .electionDifficulty
-        case .euroPerEnergyUpdate: .euroPerEnergy
-        case .microCcdPerEuroUpdate: .microCCDPerEuro
-        case .foundationAccountUpdate: .foundationAccount
-        case .mintDistributionUpdate: .mintDistribution
-        case .transactionFeeDistributionUpdate: .transactionFeeDistribution
-        case .gasRewardsUpdate: .gasRewards
-        case .bakerStakeThresholdUpdate: .bakerStakeThreshold
-        case .rootUpdate: .root
-        case .level1Update: .level1
-        case .addAnonymityRevokerUpdate: .addAnonymityRevoker
-        case .addIdentityProviderUpdate: .addIdentityProvider
-        case .cooldownParametersCpv1Update: .cooldownParametersCPV1
-        case .poolParametersCpv1Update: .poolParametersCPV1
-        case .timeoutParametersUpdate: .timeoutParametersCPV2
-        case .mintDistributionCpv1Update: .mintDistributionCPV1
-        case .gasRewardsCpv2Update: .gasRewardsCPV2
-        case .minBlockTimeUpdate: .minBlockTimeCPV2
-        case .blockEnergyLimitUpdate: .blockEnergyLimitCPV2
-        case .finalizationCommitteeParametersUpdate: .finalizationCommitteeParametersCPV2
-        case .timeParametersCpv1Update: .timeParametersCPV1
+        switch payload {
+        case .protocolUpdate: return .protocolUpdate
+        case .electionDifficultyUpdate: return .electionDifficulty
+        case .euroPerEnergyUpdate: return .euroPerEnergy
+        case .microCcdPerEuroUpdate: return .microCCDPerEuro
+        case .foundationAccountUpdate: return .foundationAccount
+        case .mintDistributionUpdate: return .mintDistribution
+        case .transactionFeeDistributionUpdate: return .transactionFeeDistribution
+        case .gasRewardsUpdate: return .gasRewards
+        case .bakerStakeThresholdUpdate: return .bakerStakeThreshold
+        case .rootUpdate: return .root
+        case .level1Update: return .level1
+        case .addAnonymityRevokerUpdate: return .addAnonymityRevoker
+        case .addIdentityProviderUpdate: return .addIdentityProvider
+        case .cooldownParametersCpv1Update: return .cooldownParametersCPV1
+        case .poolParametersCpv1Update: return .poolParametersCPV1
+        case .timeoutParametersUpdate: return .timeoutParametersCPV2
+        case .mintDistributionCpv1Update: return .mintDistributionCPV1
+        case .gasRewardsCpv2Update: return .gasRewardsCPV2
+        case .minBlockTimeUpdate: return .minBlockTimeCPV2
+        case .blockEnergyLimitUpdate: return .blockEnergyLimitCPV2
+        case .finalizationCommitteeParametersUpdate: return .finalizationCommitteeParametersCPV2
+        case .timeParametersCpv1Update: return .timeParametersCPV1
         }
     }
 }

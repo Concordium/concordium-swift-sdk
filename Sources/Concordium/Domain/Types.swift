@@ -867,9 +867,9 @@ extension Address: FromGRPC {
 
     static func fromGRPC(_ g: GRPC) throws -> Address {
         let address = try g.type ?! GRPCError.missingRequiredValue("type")
-        return switch address {
-        case let .account(v): .account(AccountAddress.fromGRPC(v))
-        case let .contract(v): .contract(ContractAddress.fromGRPC(v))
+        switch address {
+        case let .account(v): return .account(.fromGRPC(v))
+        case let .contract(v): return .contract(.fromGRPC(v))
         }
     }
 }

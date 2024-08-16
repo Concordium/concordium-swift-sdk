@@ -151,15 +151,16 @@ extension BlockItemSummary: FromGRPC {
         let energy = g.energyCost.value
         let hash = try TransactionHash.fromGRPC(g.hash)
 
-        let details = switch g.details {
+        let details: Details
+        switch g.details {
         case nil:
             throw GRPCError.missingRequiredValue("Expected 'details' of 'BlockItemSummary' to be defined")
         case let .accountCreation(acd):
-            try Details.accountCreation(.fromGRPC(acd))
+            details = try Details.accountCreation(.fromGRPC(acd))
         case let .accountTransaction(atd):
-            try Details.accountTransaction(.fromGRPC(atd))
+            details = try Details.accountTransaction(.fromGRPC(atd))
         case let .update(ud):
-            try Details.update(.fromGRPC(ud))
+            details = try Details.update(.fromGRPC(ud))
         }
 
         return Self(index: index, energy: energy, hash: hash, details: details)
