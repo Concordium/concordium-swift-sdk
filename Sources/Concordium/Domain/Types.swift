@@ -99,6 +99,18 @@ public struct TransactionHash: HashBytes, ToGRPC, FromGRPC, Equatable {
     }
 }
 
+extension TransactionHash: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try Data(hex: container.decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value.hex)
+    }
+}
+
 /// Represents a Concordium block hash
 public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable {
     public let value: Data
@@ -116,6 +128,18 @@ public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable {
     /// - Throws: `ExactSizeError` if conversion could not be made
     static func fromGRPC(_ g: Concordium_V2_BlockHash) throws -> Self {
         try Self(g.value)
+    }
+}
+
+extension BlockHash: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try Data(hex: container.decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value.hex)
     }
 }
 
@@ -147,10 +171,30 @@ public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGR
     }
 }
 
+extension ModuleReference: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try Data(hex: container.decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value.hex)
+    }
+}
+
 /// Represents the different versions of WASM modules accepted
-public enum WasmVersion: UInt32 {
+public enum WasmVersion: UInt8, Serialize, Deserialize, Codable {
     case v0
     case v1
+
+    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
+        buffer.writeInteger(UInt32(rawValue))
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> Self? {
+        data.parseUInt(UInt32.self).flatMap { WasmVersion(rawValue: UInt8($0)) }
+    }
 }
 
 /// Represents a WASM module as deployed to a Concordium node
@@ -159,11 +203,11 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var source: Data
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeInteger(version.rawValue) + buffer.writeData(source, prefixLength: UInt32.self)
+        buffer.writeSerializable(version) + buffer.writeData(source, prefixLength: UInt32.self)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let version = data.parseUInt(UInt32.self).flatMap(WasmVersion.init),
+        guard let version = WasmVersion.deserialize(&data),
               let source = data.read(prefixLength: UInt32.self) else { return nil }
 
         return Self(version: version, source: Data(source))
@@ -198,6 +242,25 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     }
 }
 
+extension WasmModule: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case version
+        case source
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: Self.CodingKeys.self)
+        version = try container.decode(WasmVersion.self, forKey: .version)
+        source = try Data(hex: container.decode(String.self, forKey: .source))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: Self.CodingKeys.self)
+        try container.encode(version, forKey: .version)
+        try container.encode(source.hex, forKey: .source)
+    }
+}
+
 /// A wrapper around a transaction memo
 public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var value: Data
@@ -225,31 +288,55 @@ public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     }
 }
 
+extension Memo: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try Data(hex: container.decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value.hex)
+    }
+}
+
 /// Represents a single scheduled transfer in a transfer schedule, i.e. a list of `ScheduledTransfer`s
-public struct ScheduledTransfer: Serialize, Deserialize, Equatable {
+public struct ScheduledTransfer: Serialize, Deserialize, Equatable, Codable {
     /// The time the corresponding ``amount`` will be released
     public var timestamp: TransactionTime
     /// The amount to release
-    public var amount: MicroCCDAmount
+    public var amount: CCD
 
-    public init(timestamp: TransactionTime, amount: MicroCCDAmount) {
+    public init(timestamp: TransactionTime, amount: CCD) {
         self.timestamp = timestamp
         self.amount = amount
     }
 
     @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeInteger(timestamp) + buffer.writeInteger(amount)
+        buffer.writeInteger(timestamp) + buffer.writeSerializable(amount)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let timestamp = data.parseUInt(UInt64.self),
-              let amount = data.parseUInt(UInt64.self) else { return nil }
+              let amount = CCD.deserialize(&data) else { return nil }
         return Self(timestamp: timestamp, amount: amount)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        timestamp = try container.decode(UInt64.self)
+        amount = try container.decode(CCD.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(timestamp)
+        try container.encode(amount)
     }
 }
 
 /// Represents a contract address on chain
-public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
+public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, Codable {
     public var index: UInt64
     public var subindex: UInt64
 
@@ -326,6 +413,18 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
     }
 }
 
+extension Parameter: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try Data(hex: container.decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value.hex)
+    }
+}
+
 /// Wrapper around ``Data`` to register on chain
 public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
     typealias GRPC = Concordium_V2_RegisteredData
@@ -361,6 +460,18 @@ public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRP
 
     static func fromGRPC(_ gRPC: GRPC) throws -> Self {
         try Self(gRPC.value)
+    }
+}
+
+extension RegisteredData: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try Data(hex: container.decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value.hex)
     }
 }
 
@@ -416,6 +527,18 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     }
 }
 
+extension InitName: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try container.decode(String.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value)
+    }
+}
+
 /// A wrapper around a contract name, corresponding to the prefix of receive functions.
 public struct ContractName: Serialize, Deserialize, Equatable {
     public let value: String
@@ -456,6 +579,18 @@ public struct ContractName: Serialize, Deserialize, Equatable {
     }
 }
 
+extension ContractName: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try container.decode(String.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value)
+    }
+}
+
 /// A wrapper around a contract entrypoint name, corresponding to the receive function in the contract without the contract name prefix
 public struct EntrypointName: Serialize, Deserialize, Equatable {
     public let value: String
@@ -486,6 +621,18 @@ public struct EntrypointName: Serialize, Deserialize, Equatable {
     public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
         return try? Self(parsed)
+    }
+}
+
+extension EntrypointName: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try container.decode(String.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value)
     }
 }
 
@@ -530,6 +677,18 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
 
     static func fromGRPC(_ gRPC: GRPC) throws -> Self {
         try Self(gRPC.value)
+    }
+}
+
+extension ReceiveName: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try container.decode(String.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value)
     }
 }
 
@@ -602,4 +761,10 @@ public extension BakerKeyPairs {
     static func generate() -> Self {
         generateBakerKeys()
     }
+}
+
+public enum ModuleSchemaVersion: UInt8, Codable {
+    case V0
+    case V1
+    case V2
 }

@@ -58,6 +58,18 @@ public struct CredentialRegistrationID: Serialize, Deserialize, FromGRPC, ToGRPC
     }
 }
 
+extension CredentialRegistrationID: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try Data(hex: container.decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value.hex)
+    }
+}
+
 /// A succinct identifier of an identity provider on the chain.
 /// In credential deployments and other interactions with the chain, this is used to identify which identity provider is meant.
 public typealias IdentityProviderID = UInt32
@@ -129,7 +141,7 @@ public enum AccountIdentifier: ToGRPC {
 }
 
 /// Address of an account as raw bytes.
-public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC {
+public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC, CustomStringConvertible {
     public static let SIZE: UInt8 = 32
     func toGRPC() -> Concordium_V2_AccountAddress {
         var g = GRPC()
@@ -174,6 +186,22 @@ public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeData(data)
+    }
+
+    public var description: String {
+        base58Check
+    }
+}
+
+extension AccountAddress: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        try self.init(base58Check: container.decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(base58Check)
     }
 }
 
@@ -591,8 +619,20 @@ public struct AmountFraction: FromGRPC, Equatable, Serialize, Deserialize {
     }
 }
 
+extension AmountFraction: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        partsPerHundredThousand = try container.decode(UInt32.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(partsPerHundredThousand)
+    }
+}
+
 /// Information about how open the pool is to new delegators.
-public enum OpenStatus: UInt8, FromGRPC, Equatable, Serialize, Deserialize {
+public enum OpenStatus: UInt8, FromGRPC, Equatable, Serialize, Deserialize, Codable {
     /// New delegators may join the pool.
     case openForAll = 0
     /// New delegators may not join, but existing delegators are kept.
@@ -685,6 +725,43 @@ public enum DelegationTarget: FromGRPC, Equatable, Serialize, Deserialize {
 
         guard let bakerId = data.parseUInt(BakerID.self) else { return nil }
         return .baker(bakerId)
+    }
+}
+
+extension DelegationTarget: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case delegateType
+        case bakerId
+    }
+
+    private enum Tags: String {
+        case passive = "Passive"
+        case baker = "Baker"
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: Self.CodingKeys.self)
+
+        switch self {
+        case .passive:
+            try container.encode(Tags.passive.rawValue, forKey: Self.CodingKeys.delegateType)
+        case let .baker(bakerId):
+            try container.encode(Tags.baker.rawValue, forKey: Self.CodingKeys.delegateType)
+            try container.encode(bakerId, forKey: Self.CodingKeys.bakerId)
+        }
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: Self.CodingKeys.self)
+        guard let tag = try Tags(rawValue: container.decode(String.self, forKey: Self.CodingKeys.delegateType)) else { throw DecodingError.dataCorruptedError(forKey: Self.CodingKeys.delegateType, in: container, debugDescription: "Invalid value found for 'delegateType'") }
+
+        switch tag {
+        case .passive:
+            self = .passive
+        case .baker:
+            let bakerId = try container.decode(BakerID.self, forKey: Self.CodingKeys.bakerId)
+            self = .baker(bakerId)
+        }
     }
 }
 
