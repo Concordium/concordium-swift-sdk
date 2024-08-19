@@ -2,15 +2,10 @@ import ConcordiumWalletCrypto
 import Foundation
 import NIO
 
-/// Errors happening while trying to convert from generated GRPC type
-struct GRPCConversionError: Error {
-    let message: String
-}
-
 protocol FromGRPC<GRPC> {
     associatedtype GRPC
     /// Initializes the type from the associated GRPC type
-    /// - Throws: `GRPCConversionError` if conversion could not be made
+    /// - Throws: `GRPCError` if conversion could not be made
     static func fromGRPC(_ gRPC: GRPC) throws -> Self
 }
 
@@ -80,7 +75,7 @@ public extension HashBytes {
 }
 
 /// Represents a Concordium transaction hash
-public struct TransactionHash: HashBytes, ToGRPC, FromGRPC, Equatable {
+public struct TransactionHash: HashBytes, ToGRPC, FromGRPC, Equatable, Hashable {
     public let value: Data
     public init(unchecked value: Data) {
         self.value = value
@@ -112,7 +107,7 @@ extension TransactionHash: Codable {
 }
 
 /// Represents a Concordium block hash
-public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable {
+public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable, Hashable {
     public let value: Data
     public init(unchecked value: Data) {
         self.value = value
@@ -143,8 +138,29 @@ extension BlockHash: Codable {
     }
 }
 
+/// Represents the hash of the state of a block
+public struct StateHash: HashBytes, ToGRPC, FromGRPC, Equatable, Hashable {
+    typealias GRPC = Concordium_V2_StateHash
+    public let value: Data
+    public init(unchecked value: Data) {
+        self.value = value
+    }
+
+    func toGRPC() -> GRPC {
+        var t = GRPC()
+        t.value = value
+        return t
+    }
+
+    /// Initializes the type from the associated GRPC type
+    /// - Throws: `ExactSizeError` if conversion could not be made
+    static func fromGRPC(_ g: GRPC) throws -> Self {
+        try Self(g.value)
+    }
+}
+
 /// Represents a Concordium smart contract module reference
-public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
+public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGRPC, Equatable, Hashable {
     public let value: Data
     public init(unchecked value: Data) {
         self.value = value
@@ -197,6 +213,14 @@ public enum WasmVersion: UInt8, Serialize, Deserialize, Codable {
     }
 }
 
+extension WasmVersion: FromGRPC {
+    typealias GRPC = Concordium_V2_ContractVersion
+
+    static func fromGRPC(_ g: GRPC) throws -> WasmVersion {
+        try .init(rawValue: UInt8(g.rawValue)) ?! GRPCError.valueOutOfBounds
+    }
+}
+
 /// Represents a WASM module as deployed to a Concordium node
 public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var version: WasmVersion
@@ -237,7 +261,7 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
         case let .v1(moduleSourceV1):
             return Self(version: WasmVersion.v1, source: moduleSourceV1.value)
         case .none:
-            throw GRPCConversionError(message: "WASM module must specify version")
+            throw GRPCError.missingRequiredValue("WASM module must specify version")
         }
     }
 }
@@ -335,6 +359,14 @@ public struct ScheduledTransfer: Serialize, Deserialize, Equatable, Codable {
     }
 }
 
+extension ScheduledTransfer: FromGRPC {
+    typealias GRPC = Concordium_V2_NewRelease
+
+    static func fromGRPC(_ g: GRPC) throws -> ScheduledTransfer {
+        try Self(timestamp: g.timestamp.value, amount: .fromGRPC(g.amount))
+    }
+}
+
 /// Represents a contract address on chain
 public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, Codable {
     public var index: UInt64
@@ -362,7 +394,7 @@ public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGR
         return g
     }
 
-    static func fromGRPC(_ gRPC: Concordium_V2_ContractAddress) throws -> Self {
+    static func fromGRPC(_ gRPC: Concordium_V2_ContractAddress) -> Self {
         Self(index: gRPC.index, subindex: gRPC.subindex)
     }
 }
@@ -481,7 +513,7 @@ public struct ContractNameError: Error {
     let message: String
 }
 
-/// A wrapper around a contract init name
+/// A wrapper around a contract init name, i.e. with the expected format `init_<contract-name>`
 public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     typealias GRPC = Concordium_V2_InitName
     public let value: String
@@ -636,7 +668,8 @@ extension EntrypointName: Codable {
     }
 }
 
-/// A wrapper around a receive name, consisting of a ``ContractName`` and an ``EntrypointName``
+/// A wrapper around a receive name, consisting of a ``ContractName`` and an ``EntrypointName`` in
+/// the format `<contract-name>.<entrypoint-name>`
 public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     typealias GRPC = Concordium_V2_ReceiveName
     public let value: String
@@ -763,8 +796,80 @@ public extension BakerKeyPairs {
     }
 }
 
+/// Represents a protocol version of a Concordium blockchain
+public enum ProtocolVersion: FromGRPC {
+    case protocolVersion1 // = 0
+    case protocolVersion2 // = 1
+    case protocolVersion3 // = 2
+    case protocolVersion4 // = 3
+    case protocolVersion5 // = 4
+    case protocolVersion6 // = 5
+    case protocolVersion7 // = 6
+
+    static func fromGRPC(_ gRPC: Concordium_V2_ProtocolVersion) throws -> ProtocolVersion {
+        switch gRPC {
+        case .protocolVersion1:
+            return .protocolVersion1
+        case .protocolVersion2:
+            return .protocolVersion2
+        case .protocolVersion3:
+            return .protocolVersion3
+        case .protocolVersion4:
+            return .protocolVersion4
+        case .protocolVersion5:
+            return .protocolVersion5
+        case .protocolVersion6:
+            return .protocolVersion6
+        case .protocolVersion7:
+            return .protocolVersion7
+        case .UNRECOGNIZED:
+            throw GRPCError.valueOutOfBounds
+        }
+    }
+}
+
+public typealias Slot = UInt64
+public typealias Round = UInt64
+public typealias Epoch = UInt64
+public typealias GenesisIndex = UInt32
+
 public enum ModuleSchemaVersion: UInt8, Codable {
     case V0
     case V1
     case V2
+}
+
+/// Wrapper around serialized contract event
+public struct ContractEvent {
+    public let data: Data
+
+    public init(_ data: Data) {
+        self.data = data
+    }
+}
+
+extension ContractEvent: FromGRPC {
+    typealias GRPC = Concordium_V2_ContractEvent
+
+    static func fromGRPC(_ g: GRPC) throws -> ContractEvent {
+        Self(g.value)
+    }
+}
+
+/// Represents either an account or contract address
+public enum Address {
+    case account(_ address: AccountAddress)
+    case contract(_ address: ContractAddress)
+}
+
+extension Address: FromGRPC {
+    typealias GRPC = Concordium_V2_Address
+
+    static func fromGRPC(_ g: GRPC) throws -> Address {
+        let address = try g.type ?! GRPCError.missingRequiredValue("type")
+        switch address {
+        case let .account(v): return .account(.fromGRPC(v))
+        case let .contract(v): return .contract(.fromGRPC(v))
+        }
+    }
 }

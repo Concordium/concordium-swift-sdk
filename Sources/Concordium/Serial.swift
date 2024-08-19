@@ -108,6 +108,14 @@ public struct Cursor {
 public struct DeserializeError: Error {
     /// The type attempted to deserialize
     let type: any Deserialize.Type
+    let expected: UInt
+    let actual: UInt
+
+    init<T: Deserialize>(_: T.Type, data: Data) {
+        type = T.self
+        expected = UInt(MemoryLayout<T>.size)
+        actual = UInt(data.count)
+    }
 }
 
 public protocol Deserialize {
@@ -119,10 +127,9 @@ public protocol Deserialize {
 public extension Deserialize {
     /// Deserializes the data into the implementing type.
     /// - Returns: The corresponding type, or `nil` if the type could not be parsed due to mismatch between the expected/found number of bytes in the buffer.
-    static func deserialize(_ data: Data) -> Self? {
+    static func deserialize(_ data: Data) throws -> Self {
         var parser = Cursor(data: data)
-        let result = Self.deserialize(&parser)
-        guard parser.empty else { return nil }
+        guard let result = Self.deserialize(&parser), parser.empty else { throw DeserializeError(Self.self, data: data) }
         return result
     }
 }

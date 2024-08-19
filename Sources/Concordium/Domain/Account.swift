@@ -93,14 +93,14 @@ public typealias EncryptedAmount = Data
 public typealias AggregatedAmount = Data // in Rust/Java SDK this is (EncryptedAmount<ArCurve>, UInt32)
 
 /// An Ed25519-like public key.
-public typealias VRFPublicKey = String
+public typealias VRFPublicKey = Data
 
-public typealias Ed25519PublicKey = String
+public typealias Ed25519PublicKey = Data
 
-public typealias BLSPublicKey = String
+public typealias BLSPublicKey = Data
 
 /// Elgamal public key.
-public typealias ElgamalPublicKey = String
+public typealias ElgamalPublicKey = Data
 
 /// A public key that corresponds to ``BakerElectionSignKey``.
 public typealias BakerElectionVerifyKey = VRFPublicKey
@@ -576,9 +576,9 @@ public struct BakerInfo: FromGRPC {
     static func fromGRPC(_ grpc: Concordium_V2_BakerInfo) -> Self {
         .init(
             bakerID: grpc.bakerID.value,
-            bakerElectionVerifyKey: grpc.electionKey.value.hex,
-            bakerSignatureVerifyKey: grpc.signatureKey.value.hex,
-            bakerAggregationVerifyKey: grpc.aggregationKey.value.hex
+            bakerElectionVerifyKey: grpc.electionKey.value,
+            bakerSignatureVerifyKey: grpc.signatureKey.value,
+            bakerAggregationVerifyKey: grpc.aggregationKey.value
         )
     }
 }
@@ -847,10 +847,51 @@ public struct AccountInfo: FromGRPC {
             credentials: credentials,
             threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GRPCError.valueOutOfBounds,
             encryptedAmount: .fromGRPC(grpc.encryptedBalance),
-            encryptionKey: grpc.encryptionKey.value.hex,
+            encryptionKey: grpc.encryptionKey.value,
             index: grpc.index.value,
             stake: grpc.hasStake ? .fromGRPC(grpc.stake) : nil,
             address: AccountAddress(grpc.address.value)
         )
+    }
+}
+
+/// Represents a type of credential made.
+public enum CredentialType: UInt8 {
+    /// Initial credential is a credential that is submitted by the identity
+    /// provider on behalf of the user. There is only one initial credential
+    /// per identity.
+    case initial
+    /// A normal credential is one where the identity behind it is only known to
+    /// the owner of the account, unless the anonymity revocation process was
+    /// followed.
+    case normal
+}
+
+extension CredentialType: FromGRPC {
+    typealias GRPC = Concordium_V2_CredentialType
+
+    static func fromGRPC(_ g: GRPC) throws -> CredentialType {
+        guard let v = Self(rawValue: UInt8(g.rawValue)) else { throw GRPCError.valueOutOfBounds }
+        return v
+    }
+}
+
+public struct AccountCreationDetails {
+    /// Whether this is an initial or normal account.
+    public let credentialType: CredentialType
+    /// Address of the newly created account.
+    public let address: AccountAddress
+    /// Credential registration ID of the first credential.
+    public let regId: CredentialRegistrationID
+}
+
+extension AccountCreationDetails: FromGRPC {
+    typealias GRPC = Concordium_V2_AccountCreationDetails
+
+    static func fromGRPC(_ g: GRPC) throws -> AccountCreationDetails {
+        let credentialType = try CredentialType.fromGRPC(g.credentialType)
+        let address = AccountAddress.fromGRPC(g.address)
+        let regId = try CredentialRegistrationID.fromGRPC(g.regID)
+        return Self(credentialType: credentialType, address: address, regId: regId)
     }
 }

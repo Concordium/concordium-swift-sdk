@@ -481,10 +481,10 @@ struct Root: AsyncParsableCommand {
                     print("Serializing credential deployment.")
                     let serializedTx = try signedTx.serialize()
                     print("Sending credential deployment.")
-                    let hash = try await withGRPCClient(rootCmd.opts) { client in
+                    let tx = try await withGRPCClient(rootCmd.opts) { client in
                         try await client.send(deployment: serializedTx)
                     }
-                    print("Transaction with hash '\(hash.hex)' successfully submitted.")
+                    print("Transaction with hash '\(tx.hash.hex)' successfully submitted.")
                 }
             }
         }
@@ -601,7 +601,7 @@ func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amo
         expiry: expiry
     )
     print("Sending transaction.")
-    return try await client.send(transaction: tx)
+    return try await client.send(transaction: tx).hash
 }
 
 func findIdentityProvider(walletProxy: WalletProxy, id: IdentityProviderID) async throws -> IdentityProviderJSON? {
