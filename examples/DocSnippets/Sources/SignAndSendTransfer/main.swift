@@ -26,9 +26,9 @@ func transfer(client: NodeClient) async throws {
 
     // Construct, sign, and send transfer transaction.
     let nextSeq = try await client.nextAccountSequenceNumber(address: account.address)
-    let tx = try makeTransfer(account, amount, receiver, nextSeq.sequenceNumber, expiry)
-    let hash = try await client.send(transaction: tx)
-    print("Transaction with hash '\(hash.hex)' successfully submitted.")
+    let signed = try makeTransfer(account, amount, receiver, nextSeq.sequenceNumber, expiry)
+    let submitted = try await client.send(transaction: signed)
+    print("Transaction with hash '\(submitted.hash.hex)' successfully submitted.")
 }
 
 /// Construct and sign transfer transaction.

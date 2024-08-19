@@ -48,8 +48,8 @@ func createAccount(client: NodeClient) async throws {
     // Construct, sign, and send deployment transaction.
     let signedTx = try account.keys.sign(deployment: credential, expiry: expiry)
     let serializedTx = try signedTx.serialize()
-    let hash = try await client.send(deployment: serializedTx)
-    print("Transaction with hash '\(hash.hex)' successfully submitted.")
+    let submittedTx = try await client.send(deployment: serializedTx)
+    print("Transaction with hash '\(submittedTx.hash.hex)' successfully submitted.")
 }
 
 // Duplicated in 'RecoverIdentity/main.swift'.
