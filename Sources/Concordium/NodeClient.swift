@@ -76,9 +76,9 @@ public protocol NodeClient {
     /// Get the global context for the chain
     func cryptographicParameters(block: BlockIdentifier) async throws -> CryptographicParameters
     /// Get the list of identity providers registered for the chain
-    func identityProviders(block: BlockIdentifier) async throws -> AsyncThrowingStream<IdentityProviderInfo, Error>
+    func identityProviders(block: BlockIdentifier) -> AsyncThrowingStream<IdentityProviderInfo, Error>
     /// Get the list of identity disclosure autorities registered for the chain
-    func anonymityRevokers(block: BlockIdentifier) async throws -> AsyncThrowingStream<AnonymityRevokerInfo, Error>
+    func anonymityRevokers(block: BlockIdentifier) -> AsyncThrowingStream<AnonymityRevokerInfo, Error>
     /// Get the next account sequence number for the account
     func nextAccountSequenceNumber(address: AccountAddress) async throws -> NextAccountSequenceNumber
     /// Get the account info for an account
@@ -125,9 +125,7 @@ func convertStream<V, R>(for stream: GRPCAsyncResponseStream<V>, with transform:
             }
         }
 
-        continuation.onTermination = { @Sendable _ in
-            task.cancel()
-        }
+        continuation.onTermination = { _ in task.cancel() }
     }
 }
 
@@ -174,11 +172,11 @@ public class GRPCNodeClient: NodeClient {
         return .fromGRPC(res)
     }
 
-    public func identityProviders(block: BlockIdentifier = BlockIdentifier.lastFinal) async throws -> AsyncThrowingStream<IdentityProviderInfo, Error> {
+    public func identityProviders(block: BlockIdentifier = BlockIdentifier.lastFinal) -> AsyncThrowingStream<IdentityProviderInfo, Error> {
         convertStream(to: IdentityProviderInfo.self, for: grpc.getIdentityProviders(block.toGRPC()))
     }
 
-    public func anonymityRevokers(block: BlockIdentifier = BlockIdentifier.lastFinal) async throws -> AsyncThrowingStream<AnonymityRevokerInfo, Error> {
+    public func anonymityRevokers(block: BlockIdentifier = BlockIdentifier.lastFinal) -> AsyncThrowingStream<AnonymityRevokerInfo, Error> {
         convertStream(to: AnonymityRevokerInfo.self, for: grpc.getAnonymityRevokers(block.toGRPC()))
     }
 

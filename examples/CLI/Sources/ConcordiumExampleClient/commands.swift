@@ -579,10 +579,12 @@ struct Root: AsyncParsableCommand {
         var rootCmd: Root
 
         func run() async throws {
-            let res = try await withGRPCClient(rootCmd.opts) { client in
-                try await client.anonymityRevokers(block: .lastFinal)
+            try await withGRPCClient(rootCmd.opts) { client in
+                let stream = client.anonymityRevokers(block: .lastFinal)
+                for try await v in stream {
+                    print(v)
+                }
             }
-            print(res)
         }
     }
 }
