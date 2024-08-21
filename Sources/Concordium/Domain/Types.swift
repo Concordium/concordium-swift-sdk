@@ -858,30 +858,30 @@ public extension BakerKeyPairs {
 
 /// Represents a protocol version of a Concordium blockchain
 public enum ProtocolVersion: FromGRPC {
-    case protocolVersion1 // = 0
-    case protocolVersion2 // = 1
-    case protocolVersion3 // = 2
-    case protocolVersion4 // = 3
-    case protocolVersion5 // = 4
-    case protocolVersion6 // = 5
-    case protocolVersion7 // = 6
+    case p1 // = 0
+    case p2 // = 1
+    case p3 // = 2
+    case p4 // = 3
+    case p5 // = 4
+    case p6 // = 5
+    case p7 // = 6
 
     static func fromGRPC(_ gRPC: Concordium_V2_ProtocolVersion) throws -> ProtocolVersion {
         switch gRPC {
         case .protocolVersion1:
-            return .protocolVersion1
+            return .p1
         case .protocolVersion2:
-            return .protocolVersion2
+            return .p2
         case .protocolVersion3:
-            return .protocolVersion3
+            return .p3
         case .protocolVersion4:
-            return .protocolVersion4
+            return .p4
         case .protocolVersion5:
-            return .protocolVersion5
+            return .p5
         case .protocolVersion6:
-            return .protocolVersion6
+            return .p6
         case .protocolVersion7:
-            return .protocolVersion7
+            return .p7
         case .UNRECOGNIZED:
             throw GRPCError.valueOutOfBounds
         }
