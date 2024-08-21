@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WalletConnectSendTransactionParam` and `WalletConnectSignMessageParam` for decoding parameters received with walletconnect requests.
 - `NodeClient.status` to query transaction status.
 - `SubmittedTransaction` to provide ergonomics for transactions submitted to a node.
+- `NodeClient.finalizedBlocks` to query finalized blocks added from the time the query is made
+- `NodeClient.waitUntilFinalization` helper function to get the summary of a transaction and the block it is finalized into while waiting for it to be finalized.
 
 ### Changed
 
