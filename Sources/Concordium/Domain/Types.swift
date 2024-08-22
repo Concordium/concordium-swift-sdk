@@ -6,7 +6,7 @@ protocol FromGRPC<GRPC> {
     associatedtype GRPC
     /// Initializes the type from the associated GRPC type
     /// - Throws: `GRPCError` if conversion could not be made
-    static func fromGRPC(_ gRPC: GRPC) throws -> Self
+    static func fromGRPC(_ g: GRPC) throws -> Self
 }
 
 protocol ToGRPC<GRPC> {
