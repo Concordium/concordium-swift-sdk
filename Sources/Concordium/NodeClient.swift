@@ -166,6 +166,58 @@ public struct ConsensusInfo {
     public let concordiumBFTStatus: ConcordiumBFTDetails?
 }
 
+extension ConsensusInfo: FromGRPC {
+    typealias GRPC = Concordium_V2_ConsensusInfo
+
+    static func fromGRPC(_ g: GRPC) throws -> ConsensusInfo {
+        let bftChecks = [g.hasCurrentTimeoutDuration, g.hasCurrentRound, g.hasCurrentEpoch, g.hasTriggerBlockTime]
+        var concordiumBFTStatus: ConcordiumBFTDetails? = nil
+
+        if bftChecks.allSatisfy({ $0 == true }) {
+            concordiumBFTStatus = ConcordiumBFTDetails(
+                currentTimeoutDuration: g.currentTimeoutDuration.value,
+                currentRound: g.currentRound.value,
+                currentEpoch: g.currentEpoch.value,
+                triggerBlockTime: .fromGRPC(g.triggerBlockTime)
+            )
+        }
+
+        return try Self(
+            lastFinalizedBlockHeight: g.lastFinalizedBlockHeight.value,
+            blockArriveLatencyEMSD: g.blockArriveLatencyEmsd,
+            blockReceiveLatencyEMSD: g.blockReceiveLatencyEmsd,
+            lastFinalizedBlock: .fromGRPC(g.lastFinalizedBlock),
+            blockReceivePeriodEMSD: g.hasBlockReceivePeriodEmsd ? g.blockReceivePeriodEmsd : nil,
+            blockArrivePeriodEMSD: g.hasBlockArrivePeriodEmsd ? g.blockArrivePeriodEmsd : nil,
+            blocksReceivedCount: UInt64(g.blocksReceivedCount),
+            transactionsPerBlockEMSD: g.transactionsPerBlockEmsd,
+            finalizationPeriodEMA: g.hasFinalizationPeriodEma ? g.finalizationPeriodEma : nil,
+            bestBlockHeight: g.bestBlockHeight.value,
+            lastFinalizedTime: g.hasLastFinalizedTime ? .fromGRPC(g.lastFinalizedTime) : nil,
+            finalizationCount: UInt64(g.finalizationCount),
+            epochDuration: g.epochDuration.value,
+            blocksVerifiedCount: UInt64(g.blocksVerifiedCount),
+            slotDuration: g.hasSlotDuration ? g.slotDuration.value : nil,
+            genesisTime: .fromGRPC(g.genesisTime),
+            finalizationPeriodEMSD: g.hasFinalizationPeriodEmsd ? g.finalizationPeriodEmsd : nil,
+            transactionsPerBlockEMA: g.transactionsPerBlockEma,
+            blockArriveLatencyEMA: g.blockArriveLatencyEma,
+            blockReceiveLatencyEMA: g.blockReceiveLatencyEma,
+            blockArrivePeriodEMA: g.hasBlockArrivePeriodEma ? g.blockArrivePeriodEma : nil,
+            blockReceivePeriodEMA: g.hasBlockReceivePeriodEma ? g.blockReceivePeriodEma : nil,
+            blockLastArrivedTime: g.hasBlockLastArrivedTime ? .fromGRPC(g.blockLastArrivedTime) : nil,
+            bestBlock: .fromGRPC(g.bestBlock),
+            genesisBlock: .fromGRPC(g.genesisBlock),
+            blockLastReceivedTime: g.hasBlockLastReceivedTime ? .fromGRPC(g.blockLastReceivedTime) : nil,
+            protocolVersion: .fromGRPC(g.protocolVersion),
+            genesisIndex: g.genesisIndex.value,
+            currentEraGenesisBlock: .fromGRPC(g.currentEraGenesisBlock),
+            currentEraGenesisTime: .fromGRPC(g.currentEraGenesisTime),
+            concordiumBFTStatus: concordiumBFTStatus
+        )
+    }
+}
+
 /// Parameters pertaining to the Concordium BFT consensus.
 public struct ConcordiumBFTDetails {
     /// The current duration to wait before a round times out (in milliseconds).
@@ -375,6 +427,10 @@ public class GRPCNodeClient: NodeClient {
         }
 
         return result
+    }
+
+    public func consensusInfo() async throws -> ConsensusInfo {
+        try await .fromGRPC(grpc.getConsensusInfo(Concordium_V2_Empty()))
     }
 }
 

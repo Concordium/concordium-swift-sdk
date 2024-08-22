@@ -44,6 +44,14 @@ public struct ExactSizeError: Error {
     }
 }
 
+extension Date: FromGRPC {
+    typealias GRPC = Concordium_V2_Timestamp
+
+    static func fromGRPC(_ g: GRPC) -> Date {
+        Date(timeIntervalSince1970: TimeInterval(g.value / 1000))
+    }
+}
+
 /// Describes a type wrapping `Data`
 public protocol HashBytes {
     /// The inner data
