@@ -88,6 +88,7 @@ struct Root: AsyncParsableCommand {
         abstract: "A CLI for demonstrating and testing use of the gRPC client of the SDK.",
         subcommands: [
             CryptographicParameters.self,
+            ConsensusInfo.self,
             GenerateSeedPhrase.self,
             Account.self,
             Wallet.self,
@@ -113,6 +114,22 @@ struct Root: AsyncParsableCommand {
                 try await $0.cryptographicParameters(
                     block: block
                 )
+            }
+            print(res)
+        }
+    }
+
+    struct ConsensusInfo: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Display the consensus info of the chain."
+        )
+
+        @OptionGroup
+        var rootCmd: Root
+
+        func run() async throws {
+            let res = try await withGRPCClient(rootCmd.opts) {
+                try await $0.consensusInfo()
             }
             print(res)
         }
