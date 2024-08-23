@@ -936,7 +936,7 @@ public enum Address {
     case contract(_ address: ContractAddress)
 }
 
-extension Address: FromGRPC {
+extension Address: FromGRPC, ToGRPC {
     typealias GRPC = Concordium_V2_Address
 
     static func fromGRPC(_ g: GRPC) throws -> Address {
@@ -944,6 +944,16 @@ extension Address: FromGRPC {
         switch address {
         case let .account(v): return .account(.fromGRPC(v))
         case let .contract(v): return .contract(.fromGRPC(v))
+        }
+    }
+
+    func toGRPC() -> Concordium_V2_Address {
+        var g = Concordium_V2_Address()
+        switch self {
+        case .account(let address):
+            g.type = .account(address.toGRPC())
+        case .contract(let address):
+            g.type = .contract(address.toGRPC())
         }
     }
 }

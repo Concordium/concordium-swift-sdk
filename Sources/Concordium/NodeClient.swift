@@ -68,7 +68,8 @@ public protocol NodeClient {
     func source(moduleRef: ModuleReference, block: BlockIdentifier) async throws -> WasmModule
     /// Get the ``InstanceInfo`` of a contract instance corresponding to the given ``ContractAddress``
     func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo
-    // TODO: func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeInstanceResult
+    /// Invoke a contract instance corresponding to the given ``ContractInvokeRequest``
+    func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeContractResult
     // TODO: func bakers(block: BlockIdentifier) async throws -> AsyncStream<AccountIndex>
     // TODO: func poolInfo(bakerId: AccountIndex, block: BlockIdentifier) async throws -> BakerPoolStatus
     // TODO: func passiveDelegationInfo(block: BlockIdentifier) async throws -> PassiveDelegationStatus
@@ -260,6 +261,10 @@ public class GRPCNodeClient: NodeClient {
         req.address = contractAddress.toGRPC()
         req.blockHash = block.toGRPC()
         return try await .fromGRPC(grpc.getInstanceInfo(req))
+    }
+
+    public func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeContractResult {
+        try await .fromGRPC(grpc.invokeInstance(request.toGRPC(with: block)))        
     }
 }
 

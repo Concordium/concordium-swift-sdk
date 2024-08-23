@@ -387,6 +387,10 @@ extension VerifyKey: Codable {
     }
 }
 
+extension VerifyKey: CustomStringConvertible {
+    public var description: String { "\(keyHex)" }
+}
+
 func yearMonthString(year: UInt32, month: UInt32) -> String {
     String(format: "%04d%02d", year, month)
 }
@@ -621,6 +625,9 @@ public struct AmountFraction: FromGRPC, Equatable, Serialize, Deserialize {
     public static func deserialize(_ data: inout Cursor) -> AmountFraction? {
         data.parseUInt(UInt32.self).flatMap { Self(partsPerHundredThousand: $0) }
     }
+
+    /// Floating point representation of the ``AmountFraction``
+    public var value: Double { get { Double(partsPerHundredThousand) / 100_000 } }
 }
 
 public extension AmountFraction {
@@ -642,6 +649,10 @@ extension AmountFraction: Codable {
         var container = encoder.singleValueContainer()
         try container.encode(partsPerHundredThousand)
     }
+}
+
+extension AmountFraction: CustomStringConvertible {
+    public var description: String { "\(value)" }
 }
 
 /// Information about how open the pool is to new delegators.

@@ -244,6 +244,13 @@ public struct ElectionDifficulty: FromGRPC, Equatable, Serialize, Deserialize {
     public static func deserialize(_ data: inout Cursor) -> Self? {
         data.parseUInt(UInt32.self).flatMap { Self(partsPerHundredThousand: $0) }
     }
+
+    /// Floating point representation of the ``AmountFraction``
+    public var value: Double { get { Double(partsPerHundredThousand) / 100_000 } }
+}
+
+extension ElectionDifficulty: CustomStringConvertible {
+    public var description: String { "\(value)" }
 }
 
 /// Represents possible errors from creating ``ExchangeRate``s
@@ -274,6 +281,9 @@ public struct ExchangeRate {
         self.numerator = numerator
         self.denominator = denominator
     }
+
+    /// Represents the ``ExchangeRate`` as ``Double``. For values consisting of very big numbers, this might result in loss of precision.
+    public var value: Double { get { Double(numerator) / Double(denominator) }}
 }
 
 extension ExchangeRate: FromGRPC {
@@ -282,6 +292,10 @@ extension ExchangeRate: FromGRPC {
     static func fromGRPC(_ g: GRPC) throws -> ExchangeRate {
         try Self(numerator: g.value.numerator, denominator: g.value.denominator) ?! GRPCError.valueOutOfBounds
     }
+}
+
+extension ExchangeRate: CustomStringConvertible {
+    public var description: String { "\(value)" }
 }
 
 public struct Ratio {
@@ -295,6 +309,9 @@ public struct Ratio {
         self.numerator = numerator
         self.denominator = denominator
     }
+
+    /// Represents the ``Ratio`` as ``Double``. For values consisting of very big numbers, this might result in loss of precision.
+    public var value: Double { get { Double(numerator) / Double(denominator) }}
 }
 
 extension Ratio: FromGRPC {
@@ -303,6 +320,10 @@ extension Ratio: FromGRPC {
     static func fromGRPC(_ g: GRPC) throws -> Ratio {
         try Self(numerator: g.numerator, denominator: g.denominator) ?! GRPCError.valueOutOfBounds
     }
+}
+
+extension Ratio: CustomStringConvertible {
+    public var description: String { "\(value)" }
 }
 
 /// Rate of creation of new CCDs. For example, A value of `0.05` would mean an
@@ -322,6 +343,14 @@ extension MintRate: FromGRPC {
     static func fromGRPC(_ g: GRPC) -> MintRate {
         Self(mantissa: g.mantissa, exponent: UInt8(g.exponent))
     }
+
+
+    /// Represents the ``MintRate`` as ``Double``. For values consisting of very big numbers, this might result in loss of precision.
+    public var value: Double { get { Double(mantissa) * pow(10, Double(exponent)) }}
+}
+
+extension MintRate: CustomStringConvertible {
+    public var description: String { "\(value)" }
 }
 
 /// Mint distribution that applies to protocol versions 1-3.
@@ -1128,5 +1157,86 @@ extension InstanceInfo: FromGRPC {
         case let .v0(v0): return try .v0(.fromGRPC(v0))
         case let .v1(v1): return try .v1(.fromGRPC(v1))
         }
+    }
+}
+
+public enum InvokeContractResult {
+    case success(returnValue: Data?, events: [ContractTraceElement], usedEnergy: Energy)
+    case failure(returnValue: Data?, rejectReason: RejectReason, usedEnergy: Energy)
+
+    public var usedEnergy: Energy { get {
+        switch self {
+        case let .success(_, _, usedEnergy): return usedEnergy
+        case let .failure(_, _, usedEnergy): return usedEnergy
+        }
+    }}
+}
+
+extension InvokeContractResult: FromGRPC {
+    typealias GRPC = Concordium_V2_InvokeInstanceResponse
+
+    static func fromGRPC(_ g: GRPC) throws -> InvokeContractResult {
+        let result = try g.result ?! GRPCError.missingRequiredValue("Missing 'result' of value")
+
+        switch result {
+        case .success(let value):
+            let events = try value.effects.map(ContractTraceElement.fromGRPC)
+            return .success(returnValue: value.returnValue, events: events, usedEnergy: value.usedEnergy.value)
+        case .failure(let value):
+            return .failure(returnValue: value.returnValue, rejectReason: try .fromGRPC(value.reason), usedEnergy: value.usedEnergy.value)
+        }
+    }
+ }
+
+/// Data needed to invoke the contract.
+public struct ContractInvokeRequest {
+    /// Invoker of the contract. If this is not supplied then the contract will
+    /// be invoked, by an account with address 0, no credentials and
+    /// sufficient amount of CCD to cover the transfer amount. If given, the
+    /// relevant address must exist in the blockstate.
+    public var invoker:   Address?
+    /// Contract to invoke.
+    public var contract:  ContractAddress
+    /// Amount to invoke the contract with.
+    public var amount:    CCD
+    /// Which entrypoint to invoke.
+    public var method:    ReceiveName
+    /// And with what parameter.
+    public var parameter: Parameter
+    /// The energy to allow for execution. If not set the node decides on the
+    /// maximum amount.
+    public var energy:    Energy?
+
+    public init(contract: ContractAddress, method: ReceiveName) {
+        invoker = nil
+        self.contract = contract
+        amount = CCD(microCCD: 0)
+        self.method = method
+        parameter = Parameter(unchecked: Data())
+        energy = nil
+    }
+}
+
+extension Concordium_V2_Energy {
+    init(_ value: UInt64) {
+        self.value = value
+    }
+}
+
+extension ContractInvokeRequest {
+    func toGRPC(with block: BlockIdentifier) -> Concordium_V2_InvokeInstanceRequest {
+        var req = Concordium_V2_InvokeInstanceRequest()
+        req.blockHash = block.toGRPC()
+        if let invoker = invoker {
+            req.invoker = invoker.toGRPC()
+        }
+        req.instance = contract.toGRPC()
+        req.amount = amount.toGRPC()
+        req.entrypoint = method.toGRPC()
+        req.parameter = parameter.toGRPC()
+        if let energy = energy {
+            req.energy = Concordium_V2_Energy(energy)
+        }
+        return req
     }
 }
