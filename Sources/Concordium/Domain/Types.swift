@@ -558,7 +558,7 @@ public struct ContractNameError: Error {
 }
 
 /// A wrapper around a contract init name, i.e. with the expected format `init_<contract-name>`
-public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
+public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, Hashable {
     typealias GRPC = Concordium_V2_InitName
     public let value: String
 
@@ -622,7 +622,7 @@ extension InitName: Codable {
 }
 
 /// A wrapper around a contract name, corresponding to the prefix of receive functions.
-public struct ContractName: Serialize, Deserialize, Equatable {
+public struct ContractName: Serialize, Deserialize, Equatable, Hashable {
     public let value: String
 
     public init(unchecked value: String) {
@@ -680,7 +680,7 @@ extension ContractName: CustomStringConvertible {
 }
 
 /// A wrapper around a contract entrypoint name, corresponding to the receive function in the contract without the contract name prefix
-public struct EntrypointName: Serialize, Deserialize, Equatable {
+public struct EntrypointName: Serialize, Deserialize, Equatable, Hashable {
     public let value: String
 
     public init(unchecked value: String) {
@@ -732,7 +732,7 @@ extension EntrypointName: CustomStringConvertible {
 
 /// A wrapper around a receive name, consisting of a ``ContractName`` and an ``EntrypointName`` in
 /// the format `<contract-name>.<entrypoint-name>`
-public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
+public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, Hashable {
     typealias GRPC = Concordium_V2_ReceiveName
     public let value: String
 

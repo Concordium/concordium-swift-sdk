@@ -1063,3 +1063,70 @@ extension TokenomicsInfo: FromGRPC {
         }
     }
 }
+
+public struct InstanceInfoV0 {
+    public let model: Data
+    public let owner: AccountAddress
+    public let amount: CCD
+    public let methods: Set<ReceiveName>
+    public let name: InitName
+    public let sourceModule: ModuleReference
+}
+
+extension InstanceInfoV0: FromGRPC {
+    typealias GRPC = Concordium_V2_InstanceInfo.V0
+
+    static func fromGRPC(_ g: GRPC) throws -> InstanceInfoV0 {
+        let methods = try Set(g.methods.map(ReceiveName.fromGRPC))
+        return try Self(
+            model: g.model.value,
+            owner: .fromGRPC(g.owner),
+            amount: .fromGRPC(g.amount),
+            methods: methods,
+            name: .fromGRPC(g.name),
+            sourceModule: .fromGRPC(g.sourceModule)
+        )
+    }
+}
+
+public struct InstanceInfoV1 {
+    public let owner: AccountAddress
+    public let amount: CCD
+    public let methods: Set<ReceiveName>
+    public let name: InitName
+    public let sourceModule: ModuleReference
+}
+
+extension InstanceInfoV1: FromGRPC {
+    typealias GRPC = Concordium_V2_InstanceInfo.V1
+
+    static func fromGRPC(_ g: GRPC) throws -> InstanceInfoV1 {
+        let methods = try Set(g.methods.map(ReceiveName.fromGRPC))
+        return try Self(
+            owner: .fromGRPC(g.owner),
+            amount: .fromGRPC(g.amount),
+            methods: methods,
+            name: .fromGRPC(g.name),
+            sourceModule: .fromGRPC(g.sourceModule)
+        )
+    }
+}
+
+/// Holds information of a contract instance
+public enum InstanceInfo {
+    case v0(_ info: InstanceInfoV0)
+    case v1(_ info: InstanceInfoV1)
+}
+
+extension InstanceInfo: FromGRPC {
+    typealias GRPC = Concordium_V2_InstanceInfo
+
+    static func fromGRPC(_ g: GRPC) throws -> InstanceInfo {
+        let info = try g.version ?! GRPCError.missingRequiredValue("Missing 'version' value")
+
+        switch info {
+        case let .v0(v0): return try .v0(.fromGRPC(v0))
+        case let .v1(v1): return try .v1(.fromGRPC(v1))
+        }
+    }
+}

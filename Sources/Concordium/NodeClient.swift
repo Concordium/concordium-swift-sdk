@@ -3,7 +3,8 @@ import GRPC
 import NIOCore
 import NIOPosix
 
-/// Describes a transaction which has been submitted to a node.
+/// Describes a transaction which has been submitted to a node. The methods contained in this struct rely
+/// on the GRPC connection used to submit the transaction being active, as the same client is used internally.
 public struct SubmittedTransaction {
     /// The hash of the submitted transaction
     public let hash: TransactionHash
@@ -61,10 +62,12 @@ public protocol NodeClient {
     func chainParameters(block: BlockIdentifier) async throws -> ChainParameters
     /// Get the ``ElectionInfo`` containing information regarding active validators and election of these.
     func electionInfo(block: BlockIdentifier) async throws -> ElectionInfo
+    /// Get the ``TokenomicsInfo`` containing an overview of the rewards given to different chain members.
     func tokenomicsInfo(block: BlockIdentifier) async throws -> TokenomicsInfo
     /// Get the ``WasmModule`` corresponding to the given ``ModuleReference``
     func source(moduleRef: ModuleReference, block: BlockIdentifier) async throws -> WasmModule
-    // TODO: func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo
+    /// Get the ``InstanceInfo`` of a contract instance corresponding to the given ``ContractAddress``
+    func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo
     // TODO: func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeInstanceResult
     // TODO: func bakers(block: BlockIdentifier) async throws -> AsyncStream<AccountIndex>
     // TODO: func poolInfo(bakerId: AccountIndex, block: BlockIdentifier) async throws -> BakerPoolStatus
@@ -250,6 +253,13 @@ public class GRPCNodeClient: NodeClient {
         req.moduleRef = moduleRef.toGRPC()
         req.blockHash = block.toGRPC()
         return try await .fromGRPC(grpc.getModuleSource(req))
+    }
+
+    public func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo {
+        var req = Concordium_V2_InstanceInfoRequest()
+        req.address = contractAddress.toGRPC()
+        req.blockHash = block.toGRPC()
+        return try await .fromGRPC(grpc.getInstanceInfo(req))
     }
 }
 
