@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NodeClient.chainParameters` for querying the parameters of the chain.
 - `NodeClient.electionInfo` for querying the election info of the chain containing data regarding active bakers and election of these.
 - `NodeClient.tokenomicsInfo` for querying the tokenomics info of the chain.
+- `NodeClient.source` for querying the the module source corresponding to a module reference.
+- `NodeClient.invokeInstance` for running contract instance entrypoint invocations, returning an invocation result.
+- `NodeClient.bakers` for querying a list of bakers/validators from the node.
+- `NodeClient.poolInfo` for querying the pool info for a baker/validator identified by it's baker ID.
+- `NodeClient.passiveDelegationInfo` for querying the passive delegation pool info of the chain.
 
 ### Changed
 

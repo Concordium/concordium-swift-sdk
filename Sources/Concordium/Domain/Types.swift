@@ -955,5 +955,6 @@ extension Address: FromGRPC, ToGRPC {
         case let .contract(address):
             g.type = .contract(address.toGRPC())
         }
+        return g
     }
 }
