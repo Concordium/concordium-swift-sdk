@@ -950,9 +950,9 @@ extension Address: FromGRPC, ToGRPC {
     func toGRPC() -> Concordium_V2_Address {
         var g = Concordium_V2_Address()
         switch self {
-        case .account(let address):
+        case let .account(address):
             g.type = .account(address.toGRPC())
-        case .contract(let address):
+        case let .contract(address):
             g.type = .contract(address.toGRPC())
         }
     }

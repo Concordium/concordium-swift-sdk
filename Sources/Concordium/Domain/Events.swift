@@ -210,7 +210,7 @@ extension BakerEvent: FromGRPC {
 /// A reason for why a transaction was rejected. Rejected means included in a
 /// block, but the desired action was not achieved. The only effect of a
 /// rejected transaction is payment.
-public enum RejectReason {
+public enum RejectReason: Error {
     /// Error raised when validating the Wasm module.
     case moduleNotWF
     /// As the name says.

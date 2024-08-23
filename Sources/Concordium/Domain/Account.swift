@@ -627,7 +627,7 @@ public struct AmountFraction: FromGRPC, Equatable, Serialize, Deserialize {
     }
 
     /// Floating point representation of the ``AmountFraction``
-    public var value: Double { get { Double(partsPerHundredThousand) / 100_000 } }
+    public var value: Double { Double(partsPerHundredThousand) / 100_000 }
 }
 
 public extension AmountFraction {

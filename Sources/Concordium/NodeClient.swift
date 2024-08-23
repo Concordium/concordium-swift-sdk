@@ -71,9 +71,11 @@ public protocol NodeClient {
     /// Invoke a contract instance corresponding to the given ``ContractInvokeRequest``
     func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeContractResult
     /// Get a stream of the validators registered at the time defined by the given ``BlockIdentifier``
-    func validators(block: BlockIdentifier) -> AsyncThrowingStream<AccountIndex, Error>
-    // TODO: func poolInfo(bakerId: AccountIndex, block: BlockIdentifier) async throws -> BakerPoolStatus
-    // TODO: func passiveDelegationInfo(block: BlockIdentifier) async throws -> PassiveDelegationStatus
+    func bakers(block: BlockIdentifier) -> AsyncThrowingStream<BakerID, Error>
+    /// Get the ``BakerPoolStatus`` of the baker pool identified by the given ``BakerID``
+    func poolInfo(bakerId: BakerID, block: BlockIdentifier) async throws -> BakerPoolStatus
+    /// Get the ``PassiveDelegationStatus`` for the chain
+    func passiveDelegationInfo(block: BlockIdentifier) async throws -> PassiveDelegationStatus
 }
 
 /// Convert a GRPC response stream consisting of a GRPC type `V`, to an ``AsyncThrowingStream`` of ``R``
@@ -265,11 +267,20 @@ public class GRPCNodeClient: NodeClient {
     }
 
     public func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeContractResult {
-        try await .fromGRPC(grpc.invokeInstance(request.toGRPC(with: block)))        
+        try await .fromGRPC(grpc.invokeInstance(request.toGRPC(with: block)))
     }
 
-    public func validators(block: BlockIdentifier) async throws -> AsyncThrowingStream<AccountIndex, Error> {
-        return convertStream(for: grpc.getBakerList(block.toGRPC())) { v in v.value }
+    public func bakers(block: BlockIdentifier) -> AsyncThrowingStream<BakerID, Error> {
+        convertStream(for: grpc.getBakerList(block.toGRPC())) { v in v.value }
+    }
+
+    public func poolInfo(bakerId: BakerID, block: BlockIdentifier) async throws -> BakerPoolStatus {
+        let req = Concordium_V2_PoolInfoRequest(bakerId: bakerId, block: block)
+        return try await .fromGRPC(grpc.getPoolInfo(req))
+    }
+
+    public func passiveDelegationInfo(block: BlockIdentifier) async throws -> PassiveDelegationStatus {
+        try await .fromGRPC(grpc.getPassiveDelegationInfo(block.toGRPC()))
     }
 }
 
