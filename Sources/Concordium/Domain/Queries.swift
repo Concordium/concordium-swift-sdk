@@ -886,3 +886,82 @@ extension ChainParametersV2: FromGRPC {
         )
     }
 }
+
+/// Represents a Concordium transaction hash
+public struct LeadershipElectionNonce: HashBytes, ToGRPC, FromGRPC, Equatable, Hashable {
+    public let value: Data
+    public init(unchecked value: Data) {
+        self.value = value
+    }
+
+    func toGRPC() -> Concordium_V2_LeadershipElectionNonce {
+        var t = GRPC()
+        t.value = value
+        return t
+    }
+
+    /// Initializes the type from the associated GRPC type
+    /// - Throws: `ExactSizeError` if conversion could not be made
+    static func fromGRPC(_ g: Concordium_V2_LeadershipElectionNonce) throws -> Self {
+        try Self(g.value)
+    }
+}
+
+extension LeadershipElectionNonce: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try Data(hex: container.decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value.hex)
+    }
+}
+
+extension LeadershipElectionNonce: CustomStringConvertible {
+    public var description: String {
+        value.hex
+    }
+}
+
+
+/// The state of consensus parameters, and allowed participants (i.e., bakers).
+public struct ElectionInfo {
+    /// Current election difficulty. This is only present for protocol versions
+    /// 1-5.
+    public let electionDifficulty: ElectionDifficulty?
+    /// Leadership election nonce for the current epoch.
+    public let electionNonce:      LeadershipElectionNonce
+    /// The list of active bakers.
+    public let bakers:              [Baker]
+}
+
+extension ElectionInfo: FromGRPC {
+    typealias GRPC = Concordium_V2_ElectionInfo
+
+    static func fromGRPC(_ g: GRPC) throws -> ElectionInfo {
+        let electionDifficulty = g.hasElectionDifficulty ? ElectionDifficulty.fromGRPC(g.electionDifficulty) : nil
+        let bakers = try g.bakerElectionInfo.map(Baker.fromGRPC)
+        return Self(electionDifficulty: electionDifficulty, electionNonce: try .fromGRPC(g.electionNonce), bakers: bakers)
+    }
+}
+
+/// State of an individual baker.
+public struct Baker {
+    /// ID of the baker. Matches their account index.
+    public let bakerId:            BakerID
+    /// The lottery power of the baker. This is the baker's stake relative to
+    /// the total staked amount.
+    public let bakerLotteryPower: Double
+    /// Address of the account this baker is associated with.
+    public let bakerAccount:       AccountAddress
+}
+
+extension Baker: FromGRPC {
+    typealias GRPC = Concordium_V2_ElectionInfo.Baker
+
+    static func fromGRPC(_ g: GRPC) throws -> Baker {
+        Self(bakerId: g.baker.value, bakerLotteryPower: g.lotteryPower, bakerAccount: .fromGRPC(g.account))
+    }
+}

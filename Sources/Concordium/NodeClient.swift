@@ -57,7 +57,10 @@ public protocol NodeClient {
     func waitUntilFinalized(transaction: TransactionHash, timeoutSeconds: UInt?) async throws -> (blockHash: BlockHash, summary: BlockItemSummary)
     /// Get the ``ConsensusInfo`` from the node
     func consensusInfo() async throws -> ConsensusInfo
+    /// Get the ``ChainParameters`` from the node
     func chainParameters(block: BlockIdentifier) async throws -> ChainParameters
+    /// Get the ``ElectionInfo`` containing information regarding active validators and election of these.
+    func electionInfo(block: BlockIdentifier) async throws -> ElectionInfo
     // NOTE: The following methods should be implemented to allow wallets to transition to use GRPC client instead of wallet proxy.
     // TODO: func source(moduleRef: ModuleReference, block: BlockIdentifier) async throws -> WasmModule
     // TODO: func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo
@@ -66,7 +69,6 @@ public protocol NodeClient {
     // TODO: func poolInfo(bakerId: AccountIndex, block: BlockIdentifier) async throws -> BakerPoolStatus
     // TODO: func passiveDelegationInfo(block: BlockIdentifier) async throws -> PassiveDelegationStatus
     // TODO: func tokenomicsInfo(block: BlockIdentifier) async throws -> RewardsOverview
-    // TODO: func electionInfo(block: BlockIdentifier) async throws -> BirkParameters
 }
 
 /// Convert a GRPC response stream consisting of a GRPC type `V`, to an ``AsyncThrowingStream`` of ``R``
@@ -233,6 +235,10 @@ public class GRPCNodeClient: NodeClient {
 
     public func chainParameters(block: BlockIdentifier) async throws -> ChainParameters {
         try await .fromGRPC(grpc.getBlockChainParameters(block.toGRPC()))
+    }
+
+    public func electionInfo(block: BlockIdentifier) async throws -> ElectionInfo {
+        try await .fromGRPC(grpc.getElectionInfo(block.toGRPC()))
     }
 }
 
