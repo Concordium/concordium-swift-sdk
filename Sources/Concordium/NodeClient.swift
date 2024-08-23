@@ -62,8 +62,8 @@ public protocol NodeClient {
     /// Get the ``ElectionInfo`` containing information regarding active validators and election of these.
     func electionInfo(block: BlockIdentifier) async throws -> ElectionInfo
     func tokenomicsInfo(block: BlockIdentifier) async throws -> TokenomicsInfo
-    // NOTE: The following methods should be implemented to allow wallets to transition to use GRPC client instead of wallet proxy.
-    // TODO: func source(moduleRef: ModuleReference, block: BlockIdentifier) async throws -> WasmModule
+    /// Get the ``WasmModule`` corresponding to the given ``ModuleReference``
+    func source(moduleRef: ModuleReference, block: BlockIdentifier) async throws -> WasmModule
     // TODO: func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo
     // TODO: func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeInstanceResult
     // TODO: func bakers(block: BlockIdentifier) async throws -> AsyncStream<AccountIndex>
@@ -243,6 +243,13 @@ public class GRPCNodeClient: NodeClient {
 
     public func tokenomicsInfo(block: BlockIdentifier) async throws -> TokenomicsInfo {
         try await .fromGRPC(grpc.getTokenomicsInfo(block.toGRPC()))
+    }
+
+    public func source(moduleRef: ModuleReference, block: BlockIdentifier) async throws -> WasmModule {
+        var req = Concordium_V2_ModuleSourceRequest()
+        req.moduleRef = moduleRef.toGRPC()
+        req.blockHash = block.toGRPC()
+        return try await .fromGRPC(grpc.getModuleSource(req))
     }
 }
 
