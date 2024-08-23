@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NodeClient.finalizedBlocks` to query finalized blocks added from the time the query is made
 - `NodeClient.waitUntilFinalization` helper function to get the summary of a transaction and the block it is finalized into while waiting for it to be finalized.
 - `NodeClient.consensusInfo` for querying the consensus info of the chain.
+- `NodeClient.chainParameters` for querying the the parameters of the chain.
 
 ### Changed
 

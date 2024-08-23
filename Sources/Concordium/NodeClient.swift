@@ -230,6 +230,10 @@ public class GRPCNodeClient: NodeClient {
     public func consensusInfo() async throws -> ConsensusInfo {
         try await .fromGRPC(grpc.getConsensusInfo(Concordium_V2_Empty()))
     }
+
+    public func chainParameters(block: BlockIdentifier) async throws -> ChainParameters {
+        try await .fromGRPC(grpc.getBlockChainParameters(block.toGRPC()))
+    }
 }
 
 /// Signals that a timeout was hit prior to finishing a task.

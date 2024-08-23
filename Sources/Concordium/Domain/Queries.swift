@@ -216,6 +216,19 @@ public enum ChainParameters {
     case v2(_ params: ChainParametersV2)
 }
 
+extension ChainParameters: FromGRPC {
+    typealias GRPC = Concordium_V2_ChainParameters
+
+    static func fromGRPC(_ g: GRPC) throws -> ChainParameters {
+        let gChainParameters = try g.parameters ?! GRPCError.missingRequiredValue("Missing parameters enum")
+        switch gChainParameters {
+        case let .v0(v0): return try .v0(.fromGRPC(v0))
+        case let .v1(v1): return try .v1(.fromGRPC(v1))
+        case let .v2(v2): return try .v2(.fromGRPC(v2))
+        }
+    }
+}
+
 /// The election difficulty with a precision of 1/100000.
 public struct ElectionDifficulty: FromGRPC, Equatable, Serialize, Deserialize {
     public var partsPerHundredThousand: UInt32
@@ -425,7 +438,7 @@ public struct KeysWithThreshold {
 extension KeysWithThreshold: FromGRPC {
     typealias GRPC = Concordium_V2_HigherLevelKeys
 
-    static func fromGRPC(_ g: GRPC) throws -> KeysWithThreshold {
+    static func fromGRPC(_ g: GRPC) -> KeysWithThreshold {
         let keys = g.keys.map { VerifyKey.fromGRPCUpdateKey($0) }
         let threshold = UInt16(g.threshold.value)
         return Self(keys: keys, threshold: threshold)
@@ -440,8 +453,6 @@ public struct UpdateKeysCollection<Authorizations> {
     public let level2Keys: Authorizations
 }
 
-// TODO: Add `FromGRPC` conformance from this point
-
 /// And access structure for performing chain updates. The access structure is
 /// only meaningful in the context of a list of update keys to which the indices
 /// refer to.
@@ -449,6 +460,15 @@ public struct AccessStructure {
     /// The indices of the authorized keys
     public let authorizedKeys: Set<UInt16>
     public let threshold: UInt16
+}
+
+extension AccessStructure: FromGRPC {
+    typealias GRPC = Concordium_V2_AccessStructure
+
+    static func fromGRPC(_ g: GRPC) -> AccessStructure {
+        let authorizedKeys = Set(g.accessPublicKeys.map { UInt16($0.value) })
+        return Self(authorizedKeys: authorizedKeys, threshold: UInt16(g.accessThreshold.value))
+    }
 }
 
 /// Access structures for each of the different possible chain updates, together
@@ -473,7 +493,7 @@ public struct AuthorizationsV0 {
     /// Access structure for updating the transaction fee distribution.
     public let transactionFeeDistribution: AccessStructure
     /// Access structure for updating the gas reward distribution parameters.
-    public let paramGasRewards: AccessStructure
+    public let gasRewards: AccessStructure
     /// Access structure for updating the pool parameters. For V0 this is only
     /// the baker stake threshold, for V1 there are more.
     public let poolParameters: AccessStructure
@@ -483,6 +503,29 @@ public struct AuthorizationsV0 {
     public let addIdentityProvider: AccessStructure
 }
 
+extension AuthorizationsV0: FromGRPC {
+    typealias GRPC = Concordium_V2_AuthorizationsV0
+
+    static func fromGRPC(_ g: GRPC) -> AuthorizationsV0 {
+        let keys = g.keys.map { VerifyKey.fromGRPCUpdateKey($0) }
+        return Self(
+            keys: keys,
+            emergency: .fromGRPC(g.emergency),
+            protocolUpdate: .fromGRPC(g.protocol),
+            electionDifficulty: .fromGRPC(g.parameterConsensus),
+            euroPerEnergy: .fromGRPC(g.parameterEuroPerEnergy),
+            microCCDPerEuro: .fromGRPC(g.parameterMicroCcdPerEuro),
+            foundationAccount: .fromGRPC(g.parameterFoundationAccount),
+            mintDistribution: .fromGRPC(g.parameterMintDistribution),
+            transactionFeeDistribution: .fromGRPC(g.parameterTransactionFeeDistribution),
+            gasRewards: .fromGRPC(g.parameterGasRewards),
+            poolParameters: .fromGRPC(g.poolParameters),
+            addAnonymityRevoker: .fromGRPC(g.addAnonymityRevoker),
+            addIdentityProvider: .fromGRPC(g.addIdentityProvider)
+        )
+    }
+}
+
 public struct CooldownParameters {
     /// Number of seconds that pool owners must cooldown
     /// when reducing their equity capital or closing the pool.
@@ -490,6 +533,14 @@ public struct CooldownParameters {
     /// Number of seconds that a delegator must cooldown
     /// when reducing their delegated stake.
     public let delegatorCooldownSeconds: UInt64
+}
+
+extension CooldownParameters: FromGRPC {
+    typealias GRPC = Concordium_V2_CooldownParametersCpv1
+
+    static func fromGRPC(_ g: GRPC) -> CooldownParameters {
+        Self(poolOwnerCooldownSeconds: g.poolOwnerCooldown.value, delegatorCooldownSeconds: g.delegatorCooldown.value)
+    }
 }
 
 /// Parameters controlling consensus timeouts for the consensus protocol version
@@ -503,6 +554,14 @@ public struct TimeoutParameters {
     public let decrease: Ratio
 }
 
+extension TimeoutParameters: FromGRPC {
+    typealias GRPC = Concordium_V2_TimeoutParameters
+
+    static func fromGRPC(_ g: GRPC) throws -> TimeoutParameters {
+        try Self(baseDurationMilliseconds: g.timeoutBase.value, increase: .fromGRPC(g.timeoutIncrease), decrease: .fromGRPC(g.timeoutDecrease))
+    }
+}
+
 /// The time parameters are introduced as of protocol version 4, and consist of
 /// the reward period length and the mint rate per payday. These are coupled as
 /// a change to either affects the overall rate of minting.
@@ -511,9 +570,25 @@ public struct TimeParameters {
     public let mintPerPayday: MintRate
 }
 
+extension TimeParameters: FromGRPC {
+    typealias GRPC = Concordium_V2_TimeParametersCpv1
+
+    static func fromGRPC(_ g: GRPC) -> TimeParameters {
+        Self(rewardPeriodLengthEpochs: g.rewardPeriodLength.value.value, mintPerPayday: .fromGRPC(g.mintPerPayday))
+    }
+}
+
 public struct InclusiveRange<T> {
     public let min: T
     public let max: T
+}
+
+extension InclusiveRange: FromGRPC where T == AmountFraction {
+    typealias GRPC = Concordium_V2_InclusiveRangeAmountFraction
+
+    static func fromGRPC(_ g: GRPC) -> InclusiveRange {
+        Self(min: .fromGRPC(g.min), max: .fromGRPC(g.max_))
+    }
 }
 
 /// Ranges of allowed commission values that pools may choose from.
@@ -524,6 +599,14 @@ public struct CommissionRanges {
     public let bakingCommissionRange: InclusiveRange<AmountFraction>
     /// The range of allowed transaction commissions.
     public let transactionCommissionRange: InclusiveRange<AmountFraction>
+}
+
+extension CommissionRanges: FromGRPC {
+    typealias GRPC = Concordium_V2_CommissionRanges
+
+    static func fromGRPC(_ g: GRPC) -> CommissionRanges {
+        Self(finalizationCommissionRange: .fromGRPC(g.finalization), bakingCommissionRange: .fromGRPC(g.baking), transactionCommissionRange: .fromGRPC(g.transaction))
+    }
 }
 
 /// Parameters related to staking pools. This applies to protocol version 4 and
@@ -538,13 +621,29 @@ public struct PoolParameters {
     /// Bounds on the commission rates that may be charged by bakers.
     public let commissionBounds: CommissionRanges
     /// Minimum equity capital required for a new baker.
-    public let minimumEquityCapital: Amount
+    public let minimumEquityCapital: CCD
     /// Maximum fraction of the total staked capital of that a new baker can
     /// have.
     public let capitalBound: AmountFraction
     /// The maximum leverage that a baker can have as a ratio of total stake
     /// to equity capital.
     public let leverageBound: Ratio
+}
+
+extension PoolParameters: FromGRPC {
+    typealias GRPC = Concordium_V2_PoolParametersCpv1
+
+    static func fromGRPC(_ g: GRPC) throws -> PoolParameters {
+        try Self(
+            passiveFinalizationCommission: .fromGRPC(g.passiveFinalizationCommission),
+            passiveBakingCommission: .fromGRPC(g.passiveBakingCommission),
+            passiveTransactionCommission: .fromGRPC(g.passiveTransactionCommission),
+            commissionBounds: .fromGRPC(g.commissionBounds),
+            minimumEquityCapital: .fromGRPC(g.minimumEquityCapital),
+            capitalBound: .fromGRPC(g.capitalBound.value),
+            leverageBound: .fromGRPC(g.leverageBound.value)
+        )
+    }
 }
 
 /// Finalization committee parameters. These parameters control which bakers are
@@ -560,6 +659,14 @@ public struct FinalizationCommitteeParameters {
     /// in pools * finalizerRelativeStakeThreshold` provided as parts per
     /// hundred thousands. Accepted values are between a value of 0 and 1.
     public let finalizersRelativeStakeThreshold: AmountFraction
+}
+
+extension FinalizationCommitteeParameters: FromGRPC {
+    typealias GRPC = Concordium_V2_FinalizationCommitteeParameters
+
+    static func fromGRPC(_ g: GRPC) throws -> FinalizationCommitteeParameters {
+        Self(minFinalizers: g.minimumFinalizers, maxFinalizers: g.maximumFinalizers, finalizersRelativeStakeThreshold: .fromGRPC(g.finalizerRelativeStakeThreshold))
+    }
 }
 
 /// Access structures for each of the different possible chain updates, together
@@ -584,7 +691,7 @@ public struct AuthorizationsV1 {
     /// Access structure for updating the transaction fee distribution.
     public let transactionFeeDistribution: AccessStructure
     /// Access structure for updating the gas reward distribution parameters.
-    public let paramGasRewards: AccessStructure
+    public let gasRewards: AccessStructure
     /// Access structure for updating the pool parameters. For V0 this is only
     /// the baker stake threshold, for V1 there are more.
     public let poolParameters: AccessStructure
@@ -596,6 +703,31 @@ public struct AuthorizationsV1 {
     public let cooldownParameters: AccessStructure
     /// Keys for changing the lenghts of the reward period.
     public let timeParameters: AccessStructure
+}
+
+extension AuthorizationsV1: FromGRPC {
+    typealias GRPC = Concordium_V2_AuthorizationsV1
+
+    static func fromGRPC(_ g: GRPC) -> AuthorizationsV1 {
+        let keys = g.v0.keys.map { VerifyKey.fromGRPCUpdateKey($0) }
+        return Self(
+            keys: keys,
+            emergency: .fromGRPC(g.v0.emergency),
+            protocolUpdate: .fromGRPC(g.v0.protocol),
+            electionDifficulty: .fromGRPC(g.v0.parameterConsensus),
+            euroPerEnergy: .fromGRPC(g.v0.parameterEuroPerEnergy),
+            microCCDPerEuro: .fromGRPC(g.v0.parameterMicroCcdPerEuro),
+            foundationAccount: .fromGRPC(g.v0.parameterFoundationAccount),
+            mintDistribution: .fromGRPC(g.v0.parameterMintDistribution),
+            transactionFeeDistribution: .fromGRPC(g.v0.parameterTransactionFeeDistribution),
+            gasRewards: .fromGRPC(g.v0.parameterGasRewards),
+            poolParameters: .fromGRPC(g.v0.poolParameters),
+            addAnonymityRevoker: .fromGRPC(g.v0.addAnonymityRevoker),
+            addIdentityProvider: .fromGRPC(g.v0.addIdentityProvider),
+            cooldownParameters: .fromGRPC(g.parameterCooldown),
+            timeParameters: .fromGRPC(g.parameterTime)
+        )
+    }
 }
 
 /// Values of chain parameters that can be updated via chain updates.
@@ -621,9 +753,29 @@ public struct ChainParametersV0 {
     /// Address of the foundation account.
     public let foundationAccount: AccountAddress
     /// Minimum threshold for becoming a baker.
-    public let minimumThresholdForBaking: Amount
+    public let minimumThresholdForBaking: CCD
     /// Keys allowed to do updates.
     public let keys: UpdateKeysCollection<AuthorizationsV0>
+}
+
+extension ChainParametersV0: FromGRPC {
+    typealias GRPC = Concordium_V2_ChainParametersV0
+
+    static func fromGRPC(_ g: GRPC) throws -> ChainParametersV0 {
+        try Self(
+            electionDifficulty: .fromGRPC(g.electionDifficulty),
+            euroPerEnergy: .fromGRPC(g.euroPerEnergy),
+            microCcdPerEuro: .fromGRPC(g.microCcdPerEuro),
+            bakerCooldownEpochs: g.bakerCooldownEpochs.value,
+            accountCreationLimit: UInt16(g.accountCreationLimit.value),
+            mintDistribution: .fromGRPC(g.mintDistribution),
+            transactionFeeDistribution: .fromGRPC(g.transactionFeeDistribution),
+            gasRewards: .fromGRPC(g.gasRewards),
+            foundationAccount: .fromGRPC(g.foundationAccount),
+            minimumThresholdForBaking: .fromGRPC(g.minimumThresholdForBaking),
+            keys: .init(rootKeys: .fromGRPC(g.rootKeys), level1Keys: .fromGRPC(g.level1Keys), level2Keys: .fromGRPC(g.level2Keys))
+        )
+    }
 }
 
 /// Values of chain parameters that can be updated via chain updates.
@@ -655,11 +807,30 @@ public struct ChainParametersV1 {
     public let keys: UpdateKeysCollection<AuthorizationsV1>
 }
 
+extension ChainParametersV1: FromGRPC {
+    typealias GRPC = Concordium_V2_ChainParametersV1
+
+    static func fromGRPC(_ g: GRPC) throws -> ChainParametersV1 {
+        try Self(
+            electionDifficulty: .fromGRPC(g.electionDifficulty),
+            euroPerEnergy: .fromGRPC(g.euroPerEnergy),
+            microCcdPerEuro: .fromGRPC(g.microCcdPerEuro),
+            cooldownParameters: .fromGRPC(g.cooldownParameters),
+            timeParameters: .fromGRPC(g.timeParameters),
+            accountCreationLimit: UInt16(g.accountCreationLimit.value),
+            mintDistribution: .fromGRPC(g.mintDistribution),
+            transactionFeeDistribution: .fromGRPC(g.transactionFeeDistribution),
+            gasRewards: .fromGRPC(g.gasRewards),
+            foundationAccount: .fromGRPC(g.foundationAccount),
+            poolParameters: .fromGRPC(g.poolParameters),
+            keys: .init(rootKeys: .fromGRPC(g.rootKeys), level1Keys: .fromGRPC(g.level1Keys), level2Keys: .fromGRPC(g.level2Keys))
+        )
+    }
+}
+
 /// Values of chain parameters that can be updated via chain updates.
 /// This applies to protocol version 6 and up.
 public struct ChainParametersV2 {
-    /// Election difficulty for consensus lottery.
-    public let electionDifficulty: ElectionDifficulty
     /// Euro per energy exchange rate.
     public let euroPerEnergy: ExchangeRate
     /// Micro ccd per euro exchange rate.
@@ -690,4 +861,28 @@ public struct ChainParametersV2 {
     public let finalizationCommitteeParameters: FinalizationCommitteeParameters
     /// Keys allowed to do updates.
     public let keys: UpdateKeysCollection<AuthorizationsV1>
+}
+
+extension ChainParametersV2: FromGRPC {
+    typealias GRPC = Concordium_V2_ChainParametersV2
+
+    static func fromGRPC(_ g: GRPC) throws -> ChainParametersV2 {
+        try Self(
+            euroPerEnergy: .fromGRPC(g.euroPerEnergy),
+            microCcdPerEuro: .fromGRPC(g.microCcdPerEuro),
+            cooldownParameters: .fromGRPC(g.cooldownParameters),
+            timeParameters: .fromGRPC(g.timeParameters),
+            accountCreationLimit: UInt16(g.accountCreationLimit.value),
+            mintDistribution: .fromGRPC(g.mintDistribution),
+            transactionFeeDistribution: .fromGRPC(g.transactionFeeDistribution),
+            gasRewards: .fromGRPC(g.gasRewards),
+            foundationAccount: .fromGRPC(g.foundationAccount),
+            poolParameters: .fromGRPC(g.poolParameters),
+            timeoutParameters: .fromGRPC(g.consensusParameters.timeoutParameters),
+            minBlockTimeMilliseconds: g.consensusParameters.minBlockTime.value,
+            blockEnergyLimit: g.consensusParameters.blockEnergyLimit.value,
+            finalizationCommitteeParameters: .fromGRPC(g.finalizationCommitteeParameters),
+            keys: .init(rootKeys: .fromGRPC(g.rootKeys), level1Keys: .fromGRPC(g.level1Keys), level2Keys: .fromGRPC(g.level2Keys))
+        )
+    }
 }
