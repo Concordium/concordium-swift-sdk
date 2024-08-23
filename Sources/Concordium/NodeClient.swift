@@ -70,13 +70,14 @@ public protocol NodeClient {
     func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo
     /// Invoke a contract instance corresponding to the given ``ContractInvokeRequest``
     func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeContractResult
-    // TODO: func bakers(block: BlockIdentifier) async throws -> AsyncStream<AccountIndex>
+    /// Get a stream of the validators registered at the time defined by the given ``BlockIdentifier``
+    func validators(block: BlockIdentifier) -> AsyncThrowingStream<AccountIndex, Error>
     // TODO: func poolInfo(bakerId: AccountIndex, block: BlockIdentifier) async throws -> BakerPoolStatus
     // TODO: func passiveDelegationInfo(block: BlockIdentifier) async throws -> PassiveDelegationStatus
 }
 
 /// Convert a GRPC response stream consisting of a GRPC type `V`, to an ``AsyncThrowingStream`` of ``R``
-func convertStream<V, R>(for stream: GRPCAsyncResponseStream<V>, with transform: @escaping ((V) throws -> R)) -> AsyncThrowingStream<R, Error> where R: FromGRPC<V> {
+func convertStream<V, R>(for stream: GRPCAsyncResponseStream<V>, with transform: @escaping ((V) throws -> R)) -> AsyncThrowingStream<R, Error> {
     AsyncThrowingStream { continuation in
         let task = Task {
             do {
@@ -265,6 +266,10 @@ public class GRPCNodeClient: NodeClient {
 
     public func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeContractResult {
         try await .fromGRPC(grpc.invokeInstance(request.toGRPC(with: block)))        
+    }
+
+    public func validators(block: BlockIdentifier) async throws -> AsyncThrowingStream<AccountIndex, Error> {
+        return convertStream(for: grpc.getBakerList(block.toGRPC())) { v in v.value }
     }
 }
 
