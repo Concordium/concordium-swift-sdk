@@ -925,16 +925,15 @@ extension LeadershipElectionNonce: CustomStringConvertible {
     }
 }
 
-
 /// The state of consensus parameters, and allowed participants (i.e., bakers).
 public struct ElectionInfo {
     /// Current election difficulty. This is only present for protocol versions
     /// 1-5.
     public let electionDifficulty: ElectionDifficulty?
     /// Leadership election nonce for the current epoch.
-    public let electionNonce:      LeadershipElectionNonce
+    public let electionNonce: LeadershipElectionNonce
     /// The list of active bakers.
-    public let bakers:              [Baker]
+    public let bakers: [Baker]
 }
 
 extension ElectionInfo: FromGRPC {
@@ -943,19 +942,19 @@ extension ElectionInfo: FromGRPC {
     static func fromGRPC(_ g: GRPC) throws -> ElectionInfo {
         let electionDifficulty = g.hasElectionDifficulty ? ElectionDifficulty.fromGRPC(g.electionDifficulty) : nil
         let bakers = try g.bakerElectionInfo.map(Baker.fromGRPC)
-        return Self(electionDifficulty: electionDifficulty, electionNonce: try .fromGRPC(g.electionNonce), bakers: bakers)
+        return try Self(electionDifficulty: electionDifficulty, electionNonce: .fromGRPC(g.electionNonce), bakers: bakers)
     }
 }
 
 /// State of an individual baker.
 public struct Baker {
     /// ID of the baker. Matches their account index.
-    public let bakerId:            BakerID
+    public let bakerId: BakerID
     /// The lottery power of the baker. This is the baker's stake relative to
     /// the total staked amount.
     public let bakerLotteryPower: Double
     /// Address of the account this baker is associated with.
-    public let bakerAccount:       AccountAddress
+    public let bakerAccount: AccountAddress
 }
 
 extension Baker: FromGRPC {

@@ -42,3 +42,5 @@ cli_path="${dir_path}/concordium-example-client"
 "${cli_path}" --host="${host}" --port="${port}" consensus-info
 "${cli_path}" --host="${host}" --port="${port}" chain-parameters
 "${cli_path}" --host="${host}" --port="${port}" chain-parameters --block="${some_block_hash}"
+"${cli_path}" --host="${host}" --port="${port}" election-info
+"${cli_path}" --host="${host}" --port="${port}" election-info --block="${some_block_hash}"

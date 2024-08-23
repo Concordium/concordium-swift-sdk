@@ -90,6 +90,7 @@ struct Root: AsyncParsableCommand {
             CryptographicParameters.self,
             ConsensusInfo.self,
             ChainParameters.self,
+            ElectionInfo.self,
             GenerateSeedPhrase.self,
             Account.self,
             Wallet.self,
@@ -150,6 +151,25 @@ struct Root: AsyncParsableCommand {
         func run() async throws {
             let res = try await withGRPCClient(rootCmd.opts) {
                 try await $0.chainParameters(block: block)
+            }
+            print(res)
+        }
+    }
+
+    struct ElectionInfo: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Display the election info of the chain."
+        )
+
+        @OptionGroup
+        var rootCmd: Root
+
+        @Option(help: "Hash of the block to query against.")
+        var block: BlockIdentifier = .lastFinal
+
+        func run() async throws {
+            let res = try await withGRPCClient(rootCmd.opts) {
+                try await $0.electionInfo(block: block)
             }
             print(res)
         }
