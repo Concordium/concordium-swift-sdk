@@ -964,3 +964,102 @@ extension Baker: FromGRPC {
         Self(bakerId: g.baker.value, bakerLotteryPower: g.lotteryPower, bakerAccount: .fromGRPC(g.account))
     }
 }
+
+/// Tokenomics info for protocol version `1..=3`
+public struct TokenomicsInfoV0 {
+    /// Protocol version that applies to these rewards. V0 variant
+    /// only exists for protocol versions 1, 2, and 3.
+    public let protocolVersion: ProtocolVersion
+    /// The total CCD in existence.
+    public let totalAmount: CCD
+    /// The total CCD in encrypted balances.
+    public let totalEncryptedAmount: CCD
+    /// The amount in the baking reward account.
+    public let bakingRewardAccount: CCD
+    /// The amount in the finalization reward account.
+    public let finalizationRewardAccount: CCD
+    /// The amount in the GAS account.
+    public let gasAccount: CCD
+}
+
+extension TokenomicsInfoV0: FromGRPC {
+    typealias GRPC = Concordium_V2_TokenomicsInfo.V0
+
+    static func fromGRPC(_ g: GRPC) throws -> TokenomicsInfoV0 {
+        try Self(
+            protocolVersion: .fromGRPC(g.protocolVersion),
+            totalAmount: .fromGRPC(g.totalAmount),
+            totalEncryptedAmount: .fromGRPC(g.totalEncryptedAmount),
+            bakingRewardAccount: .fromGRPC(g.bakingRewardAccount),
+            finalizationRewardAccount: .fromGRPC(g.finalizationRewardAccount),
+            gasAccount: .fromGRPC(g.gasAccount)
+        )
+    }
+}
+
+/// Tokenomics info for protocol version `4..`
+public struct TokenomicsInfoV1 {
+    /// Protocol version that applies to these rewards. V0 variant
+    /// only exists for protocol versions 1, 2, and 3.
+    public let protocolVersion: ProtocolVersion
+    /// The total CCD in existence.
+    public let totalAmount: CCD
+    /// The total CCD in encrypted balances.
+    public let totalEncryptedAmount: CCD
+    /// The amount in the baking reward account.
+    public let bakingRewardAccount: CCD
+    /// The amount in the finalization reward account.
+    public let finalizationRewardAccount: CCD
+    /// The amount in the GAS account.
+    public let gasAccount: CCD
+    /// The transaction reward fraction accruing to the foundation (to be
+    /// paid at next payday).
+    public let foundationTransactionRewards: CCD
+    /// The time of the next payday.
+    public let nextPaydayTime: Date
+    /// The rate at which CCD will be minted (as a proportion of the total
+    /// supply) at the next payday
+    public let nextPaydayMintRate: MintRate
+    /// The total capital put up as stake by bakers and delegators
+    public let totalStakedCapital: CCD
+}
+
+extension TokenomicsInfoV1: FromGRPC {
+    typealias GRPC = Concordium_V2_TokenomicsInfo.V1
+
+    static func fromGRPC(_ g: GRPC) throws -> TokenomicsInfoV1 {
+        try Self(
+            protocolVersion: .fromGRPC(g.protocolVersion),
+            totalAmount: .fromGRPC(g.totalAmount),
+            totalEncryptedAmount: .fromGRPC(g.totalEncryptedAmount),
+            bakingRewardAccount: .fromGRPC(g.bakingRewardAccount),
+            finalizationRewardAccount: .fromGRPC(g.finalizationRewardAccount),
+            gasAccount: .fromGRPC(g.gasAccount),
+            foundationTransactionRewards: .fromGRPC(g.foundationTransactionRewards),
+            nextPaydayTime: .fromGRPC(g.nextPaydayTime),
+            nextPaydayMintRate: .fromGRPC(g.nextPaydayMintRate),
+            totalStakedCapital: .fromGRPC(g.totalStakedCapital)
+        )
+    }
+}
+
+/// Describes the different versions of tokenomics info across all protocol versions
+public enum TokenomicsInfo {
+    /// Protocol version `1..=3`
+    case v0(_ info: TokenomicsInfoV0)
+    /// Protocol version `4..`
+    case v1(_ info: TokenomicsInfoV1)
+}
+
+extension TokenomicsInfo: FromGRPC {
+    typealias GRPC = Concordium_V2_TokenomicsInfo
+
+    static func fromGRPC(_ g: GRPC) throws -> TokenomicsInfo {
+        let info = try g.tokenomics ?! GRPCError.missingRequiredValue("Missing 'tokenomics' value")
+
+        switch info {
+        case let .v0(v0): return try .v0(.fromGRPC(v0))
+        case let .v1(v1): return try .v1(.fromGRPC(v1))
+        }
+    }
+}
