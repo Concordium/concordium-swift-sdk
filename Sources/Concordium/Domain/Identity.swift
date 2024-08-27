@@ -27,8 +27,8 @@ extension IdentityProviderInfo: FromGRPC {
         .init(
             identity: grpc.identity.value,
             description: .fromGRPC(grpc.description_p),
-            verifyKeyHex: grpc.verifyKey.value.hex,
-            cdiVerifyKeyHex: grpc.cdiVerifyKey.value.hex
+            verifyKey: grpc.verifyKey.value,
+            cdiVerifyKey: grpc.cdiVerifyKey.value
         )
     }
 }
@@ -38,7 +38,7 @@ extension AnonymityRevokerInfo: FromGRPC {
         .init(
             identity: grpc.identity.value,
             description: .fromGRPC(grpc.description_p),
-            publicKeyHex: grpc.publicKey.value.hex
+            publicKey: grpc.publicKey.value
         )
     }
 }
@@ -55,7 +55,7 @@ extension IdentityObject: Decodable {
         try self.init(
             preIdentityObject: container.decode(PreIdentityObject.self, forKey: .preIdentityObject),
             attributeList: container.decode(AttributeList.self, forKey: .attributeList),
-            signatureHex: container.decode(String.self, forKey: .signature)
+            signature: Data(hex: container.decode(String.self, forKey: .signature))
         )
     }
 }
@@ -74,7 +74,7 @@ extension PreIdentityObject: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
-            idCredPubHex: container.decode(String.self, forKey: .idCredPub),
+            idCredPub: Data(hex: container.decode(String.self, forKey: .idCredPub)),
             ipArData: container.decode([String: AnonymityRevokerData].self, forKey: .ipArData).reduce(into: [:]) { res, e in
                 guard let key = UInt32(e.key) else {
                     throw DecodingError.dataCorruptedError(forKey: .ipArData, in: container, debugDescription: "invalid key index")
@@ -82,10 +82,10 @@ extension PreIdentityObject: Decodable {
                 res[key] = e.value
             },
             choiceArData: container.decode(ChoiceArParameters.self, forKey: .choiceArData),
-            idCredSecCommitmentHex: container.decode(String.self, forKey: .idCredSecCommitment),
-            prfKeyCommitmentWithIpHex: container.decode(String.self, forKey: .prfKeyCommitmentWithIP),
-            prfKeySharingCoeffCommitmentsHex: container.decode([String].self, forKey: .prfKeySharingCoeffCommitments),
-            proofsOfKnowledgeHex: container.decode(String.self, forKey: .proofsOfKnowledge)
+            idCredSecCommitment: Data(hex: container.decode(String.self, forKey: .idCredSecCommitment)),
+            prfKeyCommitmentWithIp: Data(hex: container.decode(String.self, forKey: .prfKeyCommitmentWithIP)),
+            prfKeySharingCoeffCommitments: container.decode([String].self, forKey: .prfKeySharingCoeffCommitments).map { try Data(hex: $0) },
+            proofsOfKnowledge: Data(hex: container.decode(String.self, forKey: .proofsOfKnowledge))
         )
     }
 }
@@ -99,8 +99,8 @@ extension AnonymityRevokerData: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
-            encPrfKeyShareHex: container.decode(String.self, forKey: .encPrfKeyShare),
-            proofComEncEqHex: container.decode(String.self, forKey: .proofComEncEq)
+            encPrfKeyShare: Data(hex: container.decode(String.self, forKey: .encPrfKeyShare)),
+            proofComEncEq: Data(hex: container.decode(String.self, forKey: .proofComEncEq))
         )
     }
 }

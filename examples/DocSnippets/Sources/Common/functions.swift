@@ -5,13 +5,13 @@ import MnemonicSwift // external package for converting seed phrase to bytes
 /// Construct seed from seed phrase.
 public func decodeSeed(_ seedPhrase: String, _ network: Network) throws -> WalletSeed {
     let seedHex = try Mnemonic.deterministicSeedString(from: seedPhrase)
-    return WalletSeed(seedHex: seedHex, network: network)
+    return try WalletSeed(seedHex: seedHex, network: network)
 }
 
 /// Fetch all identity providers.
 public func identityProviders(_ walletProxy: WalletProxy) async throws -> [IdentityProvider] {
     let res = try await walletProxy.getIdentityProviders.send(session: URLSession.shared)
-    return res.map { $0.toSDKType() }
+    return try res.map { try $0.toSDKType() }
 }
 
 /// Fetch an identity provider with a specific ID.

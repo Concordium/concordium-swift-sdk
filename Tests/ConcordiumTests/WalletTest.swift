@@ -6,13 +6,13 @@ import XCTest
 final class WalletTest: XCTestCase {
     let TEST_SEED = "efa5e27326f8fa0902e647b52449bf335b7b605adc387015ec903f41d95080eb71361cbc7fb78721dcd4f3926a337340aa1406df83332c44c1cdcfe100603860"
     let TESTNET_CRYPTO_PARAMS = CryptographicParameters(
-        onChainCommitmentKeyHex: "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac",
-        bulletproofGeneratorsHex: "", // not used in this test
+        onChainCommitmentKey: try! Data(hex: "b14cbfe44a02c6b1f78711176d5f437295367aa4f2a8c2551ee10d25a03adc69d61a332a058971919dad7312e1fc94c5a8d45e64b6f917c540eee16c970c3d4b7f3caf48a7746284878e2ace21c82ea44bf84609834625be1f309988ac523fac"),
+        bulletproofGenerators: Data(), // not used in this test
         genesisString: "" // not used in this test
     )
 
     func testSimpleTransfer() throws {
-        let seed = WalletSeed(seedHex: TEST_SEED, network: .testnet)
+        let seed = try WalletSeed(seedHex: TEST_SEED, network: .testnet)
         let gen = SeedBasedAccountDerivation(seed: seed, cryptoParams: TESTNET_CRYPTO_PARAMS)
         let account1 = try gen.deriveAccount(
             credentials: [.init(identity: .init(providerID: 0, index: 0), counter: 0)]
@@ -38,12 +38,10 @@ final class WalletTest: XCTestCase {
         XCTAssertEqual(signaturesCred0.count, 1)
         let signature = signaturesCred0[0]!
         let account1PublicKey = try Curve25519.Signing.PublicKey(
-            rawRepresentation: Data(
-                hex: seed.publicKeyHex(
-                    accountCredentialIndexes: .init(
-                        identity: .init(providerID: 0, index: 0),
-                        counter: 0
-                    )
+            rawRepresentation: seed.publicKey(
+                accountCredentialIndexes: .init(
+                    identity: .init(providerID: 0, index: 0),
+                    counter: 0
                 )
             )
         )

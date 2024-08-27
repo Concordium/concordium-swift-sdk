@@ -331,7 +331,7 @@ public enum VerifyKeyError: Error, Equatable {
 extension VerifyKey: FromGRPC, Serialize, Deserialize {
     public static let SIZE: UInt8 = 32
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeInteger(0, as: UInt8.self) + buffer.writeData(try! Data(hex: keyHex)) // We unwrap, as initializing safely will mean this always succeeds
+        buffer.writeInteger(0, as: UInt8.self) + buffer.writeData(key) // We unwrap, as initializing safely will mean this always succeeds
     }
 
     public static func deserialize(_ data: inout Cursor) -> ConcordiumWalletCrypto.VerifyKey? {
@@ -345,12 +345,16 @@ extension VerifyKey: FromGRPC, Serialize, Deserialize {
         }
     }
 
+    public init(ed25519Key: Data) throws {
+        guard ed25519Key.count == Self.SIZE else { throw VerifyKeyError.unexpectedLength(actual: UInt8(ed25519Key.count)) }
+        self.init(schemeId: "Ed25519", key: ed25519Key)
+    }
+
     /// Safely initialize a verify key from a 32 length byte sequence in hex format
     /// - Throws: ``VerifyKeyError`` in case the passed hex string is not a valid ed25519 verify key
     public init(ed25519KeyHex: String) throws {
         let parsed = try Data(hex: ed25519KeyHex) ?! VerifyKeyError.invalidHex // Check that the data is hex
-        guard parsed.count == Self.SIZE else { throw VerifyKeyError.unexpectedLength(actual: UInt8(parsed.count)) }
-        self.init(schemeId: "Ed25519", keyHex: ed25519KeyHex)
+        try self.init(ed25519Key: parsed)
     }
 
     static func fromGRPC(_ grpc: Concordium_V2_AccountVerifyKey) throws -> Self {
@@ -358,7 +362,7 @@ extension VerifyKey: FromGRPC, Serialize, Deserialize {
         case nil:
             throw GRPCError.missingRequiredValue("verify key")
         case let .ed25519Key(d):
-            return try! .init(ed25519KeyHex: d.hex) // converting data to hex never fails
+            return try! .init(ed25519Key: d) // converting data to hex never fails
         }
     }
 
@@ -376,19 +380,19 @@ extension VerifyKey: Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(schemeId, forKey: .schemeId)
-        try container.encode(keyHex, forKey: .verifyKey)
+        try container.encode(key.hex, forKey: .verifyKey)
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let schemeId = try container.decode(String.self, forKey: .schemeId)
         let keyHex = try container.decode(String.self, forKey: .verifyKey)
-        self.init(schemeId: schemeId, keyHex: keyHex)
+        try self.init(schemeId: schemeId, key: Data(hex: keyHex))
     }
 }
 
 extension VerifyKey: CustomStringConvertible {
-    public var description: String { "\(keyHex)" }
+    public var description: String { "\(key.hex)" }
 }
 
 func yearMonthString(year: UInt32, month: UInt32) -> String {
@@ -467,18 +471,18 @@ extension ChainArData: FromGRPC, Codable {
     }
 
     static func fromGRPC(_ grpc: Concordium_V2_ChainArData) -> Self {
-        .init(encIdCredPubShareHex: grpc.encIDCredPubShare.hex)
+        .init(encIdCredPubShare: grpc.encIDCredPubShare)
     }
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(encIdCredPubShareHex, forKey: .encIdCredPubShare)
+        try container.encode(encIdCredPubShare.hex, forKey: .encIdCredPubShare)
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let encIdCredPubShareHex = try container.decode(String.self, forKey: .encIdCredPubShare)
-        self.init(encIdCredPubShareHex: encIdCredPubShareHex)
+        let encIdCredPubShare = try Data(hex: container.decode(String.self, forKey: .encIdCredPubShare))
+        self.init(encIdCredPubShare: encIdCredPubShare)
     }
 }
 
@@ -507,7 +511,7 @@ public struct CredentialDeploymentValuesNormal: FromGRPC {
     public func toCryptoType(proofs: Proofs) -> AccountCredential {
         .init(
             arData: anonymityRevokerData,
-            credIdHex: initial.credentialID.value.hex,
+            credId: initial.credentialID.value,
             credentialPublicKeys: initial.credentialPublicKeys,
             ipIdentity: initial.identityProviderID,
             policy: initial.policy,
