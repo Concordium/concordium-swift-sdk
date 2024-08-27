@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Return type of `NodeClient.send` to `SubmittedTransaction` to provide ergonomics for working with transaction submitted to chain.
+- Representation of raw data is changed from hex strings to `Data` across all functions and data structures
 
 ## [0.1.1] - 2024-04-29
 
