@@ -60,7 +60,7 @@ final class WalletConnectTest: XCTestCase {
     }
 
     func testUpdateContractDecode() throws {
-        let type = TransactionTypeString.updateContract
+        let type = TransactionTypeString.update
         let contractAddress = ContractAddress(index: 123, subindex: 2)
 
         let tJson = """
