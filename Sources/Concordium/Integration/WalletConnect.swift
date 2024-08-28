@@ -174,7 +174,7 @@ extension WalletConnectSendTransactionParam: Decodable {
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: Self.CodingKeys.self)
-        type = try container.decode(TransactionTypeString.self, forKey: Self.CodingKeys.type).transactionType
+        type = try container.decode(TransactionType.self, forKey: Self.CodingKeys.type)
         sender = try container.decode(AccountAddress.self, forKey: Self.CodingKeys.sender)
         schema = try container.decodeIfPresent(WalletConnectSchema.self, forKey: Self.CodingKeys.schema)
 
@@ -185,7 +185,7 @@ extension WalletConnectSendTransactionParam: Decodable {
         case .initContract:
             let data = try container.decode(InitContractJsonBridge.self, forKey: Self.CodingKeys.payload)
             payload = .initContract(amount: data.amount, modRef: data.moduleRef, initName: data.initName, param: data.param, maxEnergy: data.maxContractExecutionEnergy)
-        case .updateContract:
+        case .update:
             let data = try container.decode(UpdateContractJsonBridge.self, forKey: Self.CodingKeys.payload)
             payload = .updateContract(amount: data.amount, address: data.address, receiveName: data.receiveName, message: data.message, maxEnergy: data.maxContractExecutionEnergy)
         case .transfer, .transferWithMemo:

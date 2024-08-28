@@ -277,7 +277,7 @@ public struct SignedAccountTransaction: ToGRPC {
 enum TransactionTypeString: String, Codable {
     case deployModule
     case initContract
-    case updateContract
+    case update
     case transfer
     /// Only effective prior to protocol version 4
     case addBaker
@@ -313,8 +313,8 @@ enum TransactionTypeString: String, Codable {
             self = .deployModule
         case .initContract:
             self = .initContract
-        case .updateContract:
-            self = .updateContract
+        case .update:
+            self = .update
         case .transfer:
             self = .transfer
         case .addBaker:
@@ -360,8 +360,8 @@ enum TransactionTypeString: String, Codable {
             return .deployModule
         case .initContract:
             return .initContract
-        case .updateContract:
-            return .updateContract
+        case .update:
+            return .update
         case .transfer:
             return .transfer
         case .addBaker:
@@ -402,11 +402,12 @@ enum TransactionTypeString: String, Codable {
     }
 }
 
-/// Describes the different transaction types available
+/// Describes the different transaction types available. The values of these are used when serializing transactions
+/// and as such need to match the values expected by the node.
 public enum TransactionType: UInt8, Serialize, Deserialize, Codable {
     case deployModule = 0
     case initContract = 1
-    case updateContract = 2
+    case update = 2
     case transfer = 3
     /// Only effective prior to protocol version 4
     case addBaker = 4
@@ -418,23 +419,23 @@ public enum TransactionType: UInt8, Serialize, Deserialize, Codable {
     case updateBakerRestakeEarnings = 7
     /// Only effective prior to protocol version 4
     case updateBakerKeys = 8
-    case updateCredentialKeys = 9
+    case updateCredentialKeys = 13
     /// Only effective prior to protocol version 7
-    case encryptedAmountTransfer = 10
+    case encryptedAmountTransfer = 16
     /// Only effective prior to protocol version 7
-    case transferToEncrypted = 11
-    case transferToPublic = 12
-    case transferWithSchedule = 13
-    case updateCredentials = 14
-    case registerData = 15
-    case transferWithMemo = 16
+    case transferToEncrypted = 17
+    case transferToPublic = 18
+    case transferWithSchedule = 19
+    case updateCredentials = 20
+    case registerData = 21
+    case transferWithMemo = 22
     /// Only effective prior to protocol version 7
-    case encryptedAmountTransferWithMemo = 17
-    case transferWithScheduleAndMemo = 18
+    case encryptedAmountTransferWithMemo = 23
+    case transferWithScheduleAndMemo = 24
     /// Effective from protocol version 4
-    case configureBaker = 19
+    case configureBaker = 25
     /// Effective from protocol version 4
-    case configureDelegation = 20
+    case configureDelegation = 26
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(rawValue)
@@ -458,8 +459,30 @@ extension TransactionType: FromGRPC {
     typealias GRPC = Concordium_V2_TransactionType
 
     static func fromGRPC(_ g: GRPC) throws -> TransactionType {
-        guard let v = Self(rawValue: UInt8(g.rawValue)) else { throw GRPCError.valueOutOfBounds }
-        return v
+        switch g {
+        case .deployModule: return .deployModule
+        case .initContract: return .initContract
+        case .update: return .update
+        case .transfer: return .transfer
+        case .addBaker: return .addBaker
+        case .removeBaker: return .removeBaker
+        case .updateBakerStake: return .updateBakerStake
+        case .updateBakerRestakeEarnings: return .updateBakerRestakeEarnings
+        case .updateBakerKeys: return .updateBakerKeys
+        case .updateCredentialKeys: return .updateCredentialKeys
+        case .encryptedAmountTransfer: return .encryptedAmountTransfer
+        case .transferToEncrypted: return .transferToEncrypted
+        case .transferToPublic: return .transferToPublic
+        case .transferWithSchedule: return .transferWithSchedule
+        case .updateCredentials: return .updateCredentials
+        case .registerData: return .registerData
+        case .transferWithMemo: return .transferWithMemo
+        case .encryptedAmountTransferWithMemo: return .encryptedAmountTransferWithMemo
+        case .transferWithScheduleAndMemo: return .transferWithScheduleAndMemo
+        case .configureBaker: return .configureBaker
+        case .configureDelegation: return .configureDelegation
+        case .UNRECOGNIZED: throw GRPCError.valueOutOfBounds
+        }
     }
 }
 
@@ -849,7 +872,7 @@ extension AccountTransactionPayload: Serialize, Deserialize {
             res += buffer.writeSerializable(initName)
             res += buffer.writeSerializable(param)
         case let .updateContract(amount, contractAddress, receiveName, param):
-            res += buffer.writeSerializable(TransactionType.updateContract)
+            res += buffer.writeSerializable(TransactionType.update)
             res += buffer.writeSerializable(amount)
             res += buffer.writeSerializable(contractAddress)
             res += buffer.writeSerializable(receiveName)
@@ -915,7 +938,7 @@ extension AccountTransactionPayload: Serialize, Deserialize {
                   let initName = InitName.deserialize(&data),
                   let param = Parameter.deserialize(&data) else { return nil }
             return AccountTransactionPayload.initContract(amount: amount, modRef: modRef, initName: initName, param: param)
-        case .updateContract:
+        case .update:
             guard let amount = CCD.deserialize(&data),
                   let contractAddress = ContractAddress.deserialize(&data),
                   let receiveName = ReceiveName.deserialize(&data),
