@@ -907,6 +907,39 @@ public enum ModuleSchemaVersion: UInt8, Codable {
     case V2
 }
 
+/// Represents a schema to be used for encoding/decoding smart contract types to/from it's corresponding JSON format.
+public enum ContractSchema: Equatable {
+    case parameter(value: Data)
+    case module(value: Data, version: ModuleSchemaVersion?)
+}
+
+extension ContractSchema: Decodable {
+    private enum SchemaType: String, Codable {
+        case parameter
+        case module
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case value
+        case version
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: Self.CodingKeys.self)
+        let type = try container.decode(SchemaType.self, forKey: Self.CodingKeys.type)
+        let value = try Data(base64Encoded: container.decode(String.self, forKey: Self.CodingKeys.value)) ?! DecodingError.typeMismatch(String.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Expected base64 encoded string"))
+
+        switch type {
+        case .parameter:
+            self = .parameter(value: value)
+        case .module:
+            let version = try container.decodeIfPresent(ModuleSchemaVersion.self, forKey: Self.CodingKeys.version)
+            self = .module(value: value, version: version)
+        }
+    }
+}
+
 /// Wrapper around serialized contract event
 public struct ContractEvent {
     public let data: Data
