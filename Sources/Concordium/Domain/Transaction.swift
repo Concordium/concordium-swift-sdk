@@ -870,7 +870,7 @@ extension AccountTransactionPayload {
     /// - Parameter schema: The schema to use for decoding the ``Parameter`` 
     /// - Throws: if this is invoked for any other variant than ``.initContract`` or ``.updateContract``.
     /// - Returns: A JSON string representation of the associated ``Parameter``
-    public func jsonParameter(schema: ContractSchema) throws -> String {
+    public func jsonParameter(schema: ContractSchema) throws -> SchemaJSONString {
         var typeSchema: TypeSchema
         var parameter: Parameter
 

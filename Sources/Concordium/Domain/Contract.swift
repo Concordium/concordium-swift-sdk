@@ -20,16 +20,33 @@ public typealias TypeSchema = ConcordiumWalletCrypto.TypeSchema
 /// Represents a schema of a specific version for a smart contract module.
 public typealias ModuleSchema = ConcordiumWalletCrypto.ModuleSchema 
 
+/// Represents JSON strings returned when decoding data using contract schemas
+public struct SchemaJSONString: CustomStringConvertible {
+    /// The inner JSON string value
+    public let value: String
+    public var description: String { get { self.value } }
+
+    init(_ value: String) {
+        self.value = value
+    }
+
+    /// Parse the JSON string into the ``Decodable`` type given as input
+    public func parse<T: Decodable>(_: T.Type) throws -> T {
+        let decoder = JSONDecoder()
+        return try decoder.decode(T.self, from: value.data(using: .utf8)!)
+    }
+}
+
 public extension TypeSchema {
     init(base64: String) throws {
         self.init(value: try Data(base64Encoded: base64) ?! SchemaError.ParseSchema(message: "Failed to construct schema from string value. Base64 string expected."))
     }
 
-    func decode(data: Data) throws -> String {
-        try deserializeTypeValue(value: data, schema: self)
+    func decode(data: Data) throws -> SchemaJSONString {
+        SchemaJSONString(try deserializeTypeValue(value: data, schema: self))
     }
 
-    func decode(value: any SchemaCodable) throws -> String {
+    func decode(value: any SchemaCodable) throws -> SchemaJSONString {
         try self.decode(data: value.value)
     }
 
@@ -40,10 +57,27 @@ public extension TypeSchema {
     func encode<T: SchemaCodable>(json: String, as _: T.Type) throws -> T {
         try T(encode(json: json))
     }
+
+    func encode<E: Encodable>(value: E) throws -> Data {
+        let encoder = JSONEncoder()
+        return try encoder.encode(value)
+    }
+
+    func encode<E: Encodable, T: SchemaCodable>(value: E, as _: T.Type) throws -> T {
+        try T(encode(value: value))
+    }
+
+    var base64: String { get {
+        self.value.base64EncodedString()
+    }}
+
+    var template: String { get throws {
+        try displayTypeSchemaTemplate(schema: self)
+    }}
 }
 
 public extension ModuleSchema {
-    init(base64: String, version: ModuleSchemaVersion?) throws {
+    init(base64: String, version: ModuleSchemaVersion? = nil) throws {
         let val = try Data(base64Encoded: base64) ?! SchemaError.ParseSchema(message: "Failed to construct schema from string value. Base64 string expected.")
         self.init(value: val, version: version)
     }
@@ -67,6 +101,10 @@ public extension ModuleSchema {
     func receiveErrorSchema(receiveName: ReceiveName) throws -> TypeSchema {
         try getReceiveErrorSchema(schema: self, contractName: receiveName.contractName.value, functionName: receiveName.entrypointName.value)
     }
+
+    var base64: String { get {
+        self.value.base64EncodedString()
+    }}
 }
 
 public protocol SchemaCodable {
@@ -76,7 +114,7 @@ public protocol SchemaCodable {
 }
 
 public extension SchemaCodable {
-    func decode(schema: TypeSchema) throws -> String {
+    func decode(schema: TypeSchema) throws -> SchemaJSONString {
         try schema.decode(value: self)
     }
 
@@ -192,7 +230,7 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC, Sc
         try Self(gRPC.value)
     }
 
-    public func decodeInit(contractName: ContractName, schema: ModuleSchema) throws -> String {
+    public func decodeInit(contractName: ContractName, schema: ModuleSchema) throws -> SchemaJSONString {
         let schema = try schema.initParameterSchema(contractName: contractName)
         return try self.decode(schema: schema)
     }
@@ -202,7 +240,7 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC, Sc
         self = try .init(json: json, schema: schema)
     }
 
-    public func decode(receiveName: ReceiveName, schema: ModuleSchema) throws -> String {
+    public func decode(receiveName: ReceiveName, schema: ModuleSchema) throws -> SchemaJSONString {
         let schema = try schema.receiveParameterSchema(receiveName: receiveName)
         return try self.decode(schema: schema)
     }
@@ -240,7 +278,7 @@ public struct ReturnValue: Equatable, SchemaCodable {
         self.value = value
     }
 
-    public func decode(receiveName: ReceiveName, schema: ModuleSchema) throws -> String {
+    public func decode(receiveName: ReceiveName, schema: ModuleSchema) throws -> SchemaJSONString {
         let schema = try schema.receiveReturnValueSchema(receiveName: receiveName)
         return try self.decode(schema: schema)
     }
@@ -273,7 +311,7 @@ public struct ContractError: Equatable, SchemaCodable {
         self.value = value
     }
 
-    public func decode(receiveName: ReceiveName, schema: ModuleSchema) throws -> String {
+    public func decode(receiveName: ReceiveName, schema: ModuleSchema) throws -> SchemaJSONString {
         let schema = try schema.receiveErrorSchema(receiveName: receiveName)
         return try self.decode(schema: schema)
     }
