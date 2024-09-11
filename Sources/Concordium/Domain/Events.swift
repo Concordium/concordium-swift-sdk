@@ -58,8 +58,7 @@ extension AccountTransactionEffects: FromGRPC {
         switch effects {
         case let .none(v):
             let transactionType = v.hasTransactionType ? try TransactionType.fromGRPC(v.transactionType) : nil
-            let reason = try v.rejectReason.reason ?! GRPCError.missingRequiredValue("reason")
-            let rejectReason = try RejectReason.fromGRPC(reason)
+            let rejectReason = try RejectReason.fromGRPC(v.rejectReason)
             return .none(transactionType: transactionType, rejectReason: rejectReason)
         case let .accountTransfer(v):
             let memo = v.hasMemo ? try Memo.fromGRPC(v.memo) : nil
@@ -211,7 +210,7 @@ extension BakerEvent: FromGRPC {
 /// A reason for why a transaction was rejected. Rejected means included in a
 /// block, but the desired action was not achieved. The only effect of a
 /// rejected transaction is payment.
-public enum RejectReason {
+public enum RejectReason: Error {
     /// Error raised when validating the Wasm module.
     case moduleNotWF
     /// As the name says.
@@ -346,10 +345,11 @@ public enum RejectReason {
 }
 
 extension RejectReason: FromGRPC {
-    typealias GRPC = Concordium_V2_RejectReason.OneOf_Reason
+    typealias GRPC = Concordium_V2_RejectReason
 
     static func fromGRPC(_ g: GRPC) throws -> RejectReason {
-        switch g {
+        let reason = try g.reason ?! GRPCError.missingRequiredValue("Missing 'reason' of value")
+        switch reason {
         case let .alreadyABaker(v):
             return .alreadyABaker(contents: v.value)
         case .alreadyADelegator:

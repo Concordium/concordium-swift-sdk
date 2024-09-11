@@ -3,7 +3,8 @@ import GRPC
 import NIOCore
 import NIOPosix
 
-/// Describes a transaction which has been submitted to a node.
+/// Describes a transaction which has been submitted to a node. The methods contained in this struct rely
+/// on the GRPC connection used to submit the transaction being active, as the same client is used internally.
 public struct SubmittedTransaction {
     /// The hash of the submitted transaction
     public let hash: TransactionHash
@@ -57,20 +58,28 @@ public protocol NodeClient {
     func waitUntilFinalized(transaction: TransactionHash, timeoutSeconds: UInt?) async throws -> (blockHash: BlockHash, summary: BlockItemSummary)
     /// Get the ``ConsensusInfo`` from the node
     func consensusInfo() async throws -> ConsensusInfo
+    /// Get the ``ChainParameters`` from the node
     func chainParameters(block: BlockIdentifier) async throws -> ChainParameters
-    // NOTE: The following methods should be implemented to allow wallets to transition to use GRPC client instead of wallet proxy.
-    // TODO: func source(moduleRef: ModuleReference, block: BlockIdentifier) async throws -> WasmModule
-    // TODO: func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo
-    // TODO: func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeInstanceResult
-    // TODO: func bakers(block: BlockIdentifier) async throws -> AsyncStream<AccountIndex>
-    // TODO: func poolInfo(bakerId: AccountIndex, block: BlockIdentifier) async throws -> BakerPoolStatus
-    // TODO: func passiveDelegationInfo(block: BlockIdentifier) async throws -> PassiveDelegationStatus
-    // TODO: func tokenomicsInfo(block: BlockIdentifier) async throws -> RewardsOverview
-    // TODO: func electionInfo(block: BlockIdentifier) async throws -> BirkParameters
+    /// Get the ``ElectionInfo`` containing information regarding active validators and election of these.
+    func electionInfo(block: BlockIdentifier) async throws -> ElectionInfo
+    /// Get the ``TokenomicsInfo`` containing an overview of the rewards given to different chain members.
+    func tokenomicsInfo(block: BlockIdentifier) async throws -> TokenomicsInfo
+    /// Get the ``WasmModule`` corresponding to the given ``ModuleReference``
+    func source(moduleRef: ModuleReference, block: BlockIdentifier) async throws -> WasmModule
+    /// Get the ``InstanceInfo`` of a contract instance corresponding to the given ``ContractAddress``
+    func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo
+    /// Invoke a contract instance corresponding to the given ``ContractInvokeRequest``
+    func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeContractResult
+    /// Get a stream of the validators registered at the time defined by the given ``BlockIdentifier``
+    func bakers(block: BlockIdentifier) -> AsyncThrowingStream<BakerID, Error>
+    /// Get the ``BakerPoolStatus`` of the baker pool identified by the given ``BakerID``
+    func poolInfo(bakerId: BakerID, block: BlockIdentifier) async throws -> BakerPoolStatus
+    /// Get the ``PassiveDelegationStatus`` for the chain
+    func passiveDelegationInfo(block: BlockIdentifier) async throws -> PassiveDelegationStatus
 }
 
 /// Convert a GRPC response stream consisting of a GRPC type `V`, to an ``AsyncThrowingStream`` of ``R``
-func convertStream<V, R>(for stream: GRPCAsyncResponseStream<V>, with transform: @escaping ((V) throws -> R)) -> AsyncThrowingStream<R, Error> where R: FromGRPC<V> {
+func convertStream<V, R>(for stream: GRPCAsyncResponseStream<V>, with transform: @escaping ((V) throws -> R)) -> AsyncThrowingStream<R, Error> {
     AsyncThrowingStream { continuation in
         let task = Task {
             do {
@@ -233,6 +242,45 @@ public class GRPCNodeClient: NodeClient {
 
     public func chainParameters(block: BlockIdentifier) async throws -> ChainParameters {
         try await .fromGRPC(grpc.getBlockChainParameters(block.toGRPC()))
+    }
+
+    public func electionInfo(block: BlockIdentifier) async throws -> ElectionInfo {
+        try await .fromGRPC(grpc.getElectionInfo(block.toGRPC()))
+    }
+
+    public func tokenomicsInfo(block: BlockIdentifier) async throws -> TokenomicsInfo {
+        try await .fromGRPC(grpc.getTokenomicsInfo(block.toGRPC()))
+    }
+
+    public func source(moduleRef: ModuleReference, block: BlockIdentifier) async throws -> WasmModule {
+        var req = Concordium_V2_ModuleSourceRequest()
+        req.moduleRef = moduleRef.toGRPC()
+        req.blockHash = block.toGRPC()
+        return try await .fromGRPC(grpc.getModuleSource(req))
+    }
+
+    public func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo {
+        var req = Concordium_V2_InstanceInfoRequest()
+        req.address = contractAddress.toGRPC()
+        req.blockHash = block.toGRPC()
+        return try await .fromGRPC(grpc.getInstanceInfo(req))
+    }
+
+    public func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeContractResult {
+        try await .fromGRPC(grpc.invokeInstance(request.toGRPC(with: block)))
+    }
+
+    public func bakers(block: BlockIdentifier) -> AsyncThrowingStream<BakerID, Error> {
+        convertStream(for: grpc.getBakerList(block.toGRPC())) { v in v.value }
+    }
+
+    public func poolInfo(bakerId: BakerID, block: BlockIdentifier) async throws -> BakerPoolStatus {
+        let req = Concordium_V2_PoolInfoRequest(bakerId: bakerId, block: block)
+        return try await .fromGRPC(grpc.getPoolInfo(req))
+    }
+
+    public func passiveDelegationInfo(block: BlockIdentifier) async throws -> PassiveDelegationStatus {
+        try await .fromGRPC(grpc.getPassiveDelegationInfo(block.toGRPC()))
     }
 }
 

@@ -50,6 +50,26 @@ extension AccountAddress: ExpressibleByArgument {
     }
 }
 
+extension ModuleReference: ExpressibleByArgument {
+    public init?(argument: String) {
+        do {
+            try self.init(Data(hex: argument))
+        } catch {
+            return nil
+        }
+    }
+}
+
+extension ReceiveName: ExpressibleByArgument {
+    public init?(argument: String) {
+        do {
+            try self.init(argument)
+        } catch {
+            return nil
+        }
+    }
+}
+
 extension CCD: ExpressibleByArgument {
     public init?(argument: String) {
         do {
@@ -90,6 +110,14 @@ struct Root: AsyncParsableCommand {
             CryptographicParameters.self,
             ConsensusInfo.self,
             ChainParameters.self,
+            ElectionInfo.self,
+            TokenomicsInfo.self,
+            FinalizedBlocks.self,
+            ModuleSource.self,
+            InvokeInstance.self,
+            Bakers.self,
+            PoolInfo.self,
+            PassivePoolInfo.self,
             GenerateSeedPhrase.self,
             Account.self,
             Wallet.self,
@@ -150,6 +178,186 @@ struct Root: AsyncParsableCommand {
         func run() async throws {
             let res = try await withGRPCClient(rootCmd.opts) {
                 try await $0.chainParameters(block: block)
+            }
+            print(res)
+        }
+    }
+
+    struct ElectionInfo: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Display the election info of the chain."
+        )
+
+        @OptionGroup
+        var rootCmd: Root
+
+        @Option(help: "Hash of the block to query against.")
+        var block: BlockIdentifier = .lastFinal
+
+        func run() async throws {
+            let res = try await withGRPCClient(rootCmd.opts) {
+                try await $0.electionInfo(block: block)
+            }
+            print(res)
+        }
+    }
+
+    struct TokenomicsInfo: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Display the tokenomics info of the chain."
+        )
+
+        @OptionGroup
+        var rootCmd: Root
+
+        @Option(help: "Hash of the block to query against.")
+        var block: BlockIdentifier = .lastFinal
+
+        func run() async throws {
+            let res = try await withGRPCClient(rootCmd.opts) {
+                try await $0.tokenomicsInfo(block: block)
+            }
+            print(res)
+        }
+    }
+
+    struct FinalizedBlocks: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Display a continuous stream of finalized blocks"
+        )
+
+        @OptionGroup
+        var rootCmd: Root
+
+        @Option(help: "Number of blocks to stream. If not defined, the stream will not terminate until done so manually")
+        var numBlocks: UInt?
+
+        func run() async throws {
+            try await withGRPCClient(rootCmd.opts) {
+                var i = 0
+                for try await info in $0.finalizedBlocks() {
+                    print("finalized block: \(info.blockHash) at height: \(info.absoluteHeight)")
+
+                    if numBlocks != nil {
+                        i += 1
+                        if i >= numBlocks! {
+                            return
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    struct ModuleSource: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Display module source corresponding to module reference"
+        )
+
+        @OptionGroup
+        var rootCmd: Root
+
+        @Option(help: "Hash of the block to query against.")
+        var block: BlockIdentifier = .lastFinal
+
+        @Option(help: "Hex encoded module reference")
+        var moduleRef: ModuleReference
+
+        func run() async throws {
+            let res = try await withGRPCClient(rootCmd.opts) {
+                try await $0.source(moduleRef: moduleRef, block: block)
+            }
+            print(res)
+        }
+    }
+
+    struct InvokeInstance: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Display result of instance invocation"
+        )
+
+        @OptionGroup
+        var rootCmd: Root
+
+        @Option(help: "Hash of the block to query against.")
+        var block: BlockIdentifier = .lastFinal
+
+        @Option()
+        var index: UInt64
+
+        @Option()
+        var subindex: UInt64
+
+        @Option()
+        var entrypoint: ReceiveName
+
+        func run() async throws {
+            let res = try await withGRPCClient(rootCmd.opts) {
+                try await $0.invokeInstance(
+                    request: ContractInvokeRequest(contract: ContractAddress(index: index, subindex: subindex), method: entrypoint),
+                    block: block
+                )
+            }
+            print(res)
+        }
+    }
+
+    struct Bakers: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Display a stream of bakers on chain"
+        )
+
+        @OptionGroup
+        var rootCmd: Root
+
+        @Option(help: "Hash of the block to query against.")
+        var block: BlockIdentifier = .lastFinal
+
+        func run() async throws {
+            try await withGRPCClient(rootCmd.opts) {
+                for try await baker in $0.bakers(block: block) {
+                    print(baker)
+                }
+            }
+        }
+    }
+
+    struct PoolInfo: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Display a pool info for a baker pool"
+        )
+
+        @OptionGroup
+        var rootCmd: Root
+
+        @Option(help: "Hash of the block to query against.")
+        var block: BlockIdentifier = .lastFinal
+
+        @Option()
+        var bakerId: BakerID
+
+        func run() async throws {
+            let res = try await withGRPCClient(rootCmd.opts) {
+                try await $0.poolInfo(bakerId: bakerId, block: block)
+            }
+            print(res)
+        }
+    }
+
+    struct PassivePoolInfo: AsyncParsableCommand {
+        static var configuration = CommandConfiguration(
+            abstract: "Display a pool info for the passive delegation pool"
+        )
+
+        @OptionGroup
+        var rootCmd: Root
+
+        @Option(help: "Hash of the block to query against.")
+        var block: BlockIdentifier = .lastFinal
+
+        func run() async throws {
+            let res = try await withGRPCClient(rootCmd.opts) {
+                try await $0.passiveDelegationInfo(block: block)
             }
             print(res)
         }

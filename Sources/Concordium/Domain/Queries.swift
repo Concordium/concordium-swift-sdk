@@ -244,6 +244,13 @@ public struct ElectionDifficulty: FromGRPC, Equatable, Serialize, Deserialize {
     public static func deserialize(_ data: inout Cursor) -> Self? {
         data.parseUInt(UInt32.self).flatMap { Self(partsPerHundredThousand: $0) }
     }
+
+    /// Floating point representation of the ``AmountFraction``
+    public var value: Double { Double(partsPerHundredThousand) / 100_000 }
+}
+
+extension ElectionDifficulty: CustomStringConvertible {
+    public var description: String { "\(value)" }
 }
 
 /// Represents possible errors from creating ``ExchangeRate``s
@@ -274,6 +281,9 @@ public struct ExchangeRate {
         self.numerator = numerator
         self.denominator = denominator
     }
+
+    /// Represents the ``ExchangeRate`` as ``Double``. For values consisting of very big numbers, this might result in loss of precision.
+    public var value: Double { Double(numerator) / Double(denominator) }
 }
 
 extension ExchangeRate: FromGRPC {
@@ -282,6 +292,10 @@ extension ExchangeRate: FromGRPC {
     static func fromGRPC(_ g: GRPC) throws -> ExchangeRate {
         try Self(numerator: g.value.numerator, denominator: g.value.denominator) ?! GRPCError.valueOutOfBounds
     }
+}
+
+extension ExchangeRate: CustomStringConvertible {
+    public var description: String { "\(value)" }
 }
 
 public struct Ratio {
@@ -295,6 +309,9 @@ public struct Ratio {
         self.numerator = numerator
         self.denominator = denominator
     }
+
+    /// Represents the ``Ratio`` as ``Double``. For values consisting of very big numbers, this might result in loss of precision.
+    public var value: Double { Double(numerator) / Double(denominator) }
 }
 
 extension Ratio: FromGRPC {
@@ -303,6 +320,10 @@ extension Ratio: FromGRPC {
     static func fromGRPC(_ g: GRPC) throws -> Ratio {
         try Self(numerator: g.numerator, denominator: g.denominator) ?! GRPCError.valueOutOfBounds
     }
+}
+
+extension Ratio: CustomStringConvertible {
+    public var description: String { "\(value)" }
 }
 
 /// Rate of creation of new CCDs. For example, A value of `0.05` would mean an
@@ -322,6 +343,13 @@ extension MintRate: FromGRPC {
     static func fromGRPC(_ g: GRPC) -> MintRate {
         Self(mantissa: g.mantissa, exponent: UInt8(g.exponent))
     }
+
+    /// Represents the ``MintRate`` as ``Double``. For values consisting of very big numbers, this might result in loss of precision.
+    public var value: Double { Double(mantissa) * pow(10, Double(exponent)) }
+}
+
+extension MintRate: CustomStringConvertible {
+    public var description: String { "\(value)" }
 }
 
 /// Mint distribution that applies to protocol versions 1-3.
@@ -883,6 +911,504 @@ extension ChainParametersV2: FromGRPC {
             blockEnergyLimit: g.consensusParameters.blockEnergyLimit.value,
             finalizationCommitteeParameters: .fromGRPC(g.finalizationCommitteeParameters),
             keys: .init(rootKeys: .fromGRPC(g.rootKeys), level1Keys: .fromGRPC(g.level1Keys), level2Keys: .fromGRPC(g.level2Keys))
+        )
+    }
+}
+
+/// Represents a Concordium transaction hash
+public struct LeadershipElectionNonce: HashBytes, ToGRPC, FromGRPC, Equatable, Hashable {
+    public let value: Data
+    public init(unchecked value: Data) {
+        self.value = value
+    }
+
+    func toGRPC() -> Concordium_V2_LeadershipElectionNonce {
+        var t = GRPC()
+        t.value = value
+        return t
+    }
+
+    /// Initializes the type from the associated GRPC type
+    /// - Throws: `ExactSizeError` if conversion could not be made
+    static func fromGRPC(_ g: Concordium_V2_LeadershipElectionNonce) throws -> Self {
+        try Self(g.value)
+    }
+}
+
+extension LeadershipElectionNonce: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        value = try Data(hex: container.decode(String.self))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value.hex)
+    }
+}
+
+extension LeadershipElectionNonce: CustomStringConvertible {
+    public var description: String {
+        value.hex
+    }
+}
+
+/// The state of consensus parameters, and allowed participants (i.e., bakers).
+public struct ElectionInfo {
+    /// Current election difficulty. This is only present for protocol versions
+    /// 1-5.
+    public let electionDifficulty: ElectionDifficulty?
+    /// Leadership election nonce for the current epoch.
+    public let electionNonce: LeadershipElectionNonce
+    /// The list of active bakers.
+    public let bakers: [Baker]
+}
+
+extension ElectionInfo: FromGRPC {
+    typealias GRPC = Concordium_V2_ElectionInfo
+
+    static func fromGRPC(_ g: GRPC) throws -> ElectionInfo {
+        let electionDifficulty = g.hasElectionDifficulty ? ElectionDifficulty.fromGRPC(g.electionDifficulty) : nil
+        let bakers = try g.bakerElectionInfo.map(Baker.fromGRPC)
+        return try Self(electionDifficulty: electionDifficulty, electionNonce: .fromGRPC(g.electionNonce), bakers: bakers)
+    }
+}
+
+/// State of an individual baker.
+public struct Baker {
+    /// ID of the baker. Matches their account index.
+    public let bakerId: BakerID
+    /// The lottery power of the baker. This is the baker's stake relative to
+    /// the total staked amount.
+    public let bakerLotteryPower: Double
+    /// Address of the account this baker is associated with.
+    public let bakerAccount: AccountAddress
+}
+
+extension Baker: FromGRPC {
+    typealias GRPC = Concordium_V2_ElectionInfo.Baker
+
+    static func fromGRPC(_ g: GRPC) throws -> Baker {
+        Self(bakerId: g.baker.value, bakerLotteryPower: g.lotteryPower, bakerAccount: .fromGRPC(g.account))
+    }
+}
+
+/// Tokenomics info for protocol version `1..=3`
+public struct TokenomicsInfoV0 {
+    /// Protocol version that applies to these rewards. V0 variant
+    /// only exists for protocol versions 1, 2, and 3.
+    public let protocolVersion: ProtocolVersion
+    /// The total CCD in existence.
+    public let totalAmount: CCD
+    /// The total CCD in encrypted balances.
+    public let totalEncryptedAmount: CCD
+    /// The amount in the baking reward account.
+    public let bakingRewardAccount: CCD
+    /// The amount in the finalization reward account.
+    public let finalizationRewardAccount: CCD
+    /// The amount in the GAS account.
+    public let gasAccount: CCD
+}
+
+extension TokenomicsInfoV0: FromGRPC {
+    typealias GRPC = Concordium_V2_TokenomicsInfo.V0
+
+    static func fromGRPC(_ g: GRPC) throws -> TokenomicsInfoV0 {
+        try Self(
+            protocolVersion: .fromGRPC(g.protocolVersion),
+            totalAmount: .fromGRPC(g.totalAmount),
+            totalEncryptedAmount: .fromGRPC(g.totalEncryptedAmount),
+            bakingRewardAccount: .fromGRPC(g.bakingRewardAccount),
+            finalizationRewardAccount: .fromGRPC(g.finalizationRewardAccount),
+            gasAccount: .fromGRPC(g.gasAccount)
+        )
+    }
+}
+
+/// Tokenomics info for protocol version `4..`
+public struct TokenomicsInfoV1 {
+    /// Protocol version that applies to these rewards. V0 variant
+    /// only exists for protocol versions 1, 2, and 3.
+    public let protocolVersion: ProtocolVersion
+    /// The total CCD in existence.
+    public let totalAmount: CCD
+    /// The total CCD in encrypted balances.
+    public let totalEncryptedAmount: CCD
+    /// The amount in the baking reward account.
+    public let bakingRewardAccount: CCD
+    /// The amount in the finalization reward account.
+    public let finalizationRewardAccount: CCD
+    /// The amount in the GAS account.
+    public let gasAccount: CCD
+    /// The transaction reward fraction accruing to the foundation (to be
+    /// paid at next payday).
+    public let foundationTransactionRewards: CCD
+    /// The time of the next payday.
+    public let nextPaydayTime: Date
+    /// The rate at which CCD will be minted (as a proportion of the total
+    /// supply) at the next payday
+    public let nextPaydayMintRate: MintRate
+    /// The total capital put up as stake by bakers and delegators
+    public let totalStakedCapital: CCD
+}
+
+extension TokenomicsInfoV1: FromGRPC {
+    typealias GRPC = Concordium_V2_TokenomicsInfo.V1
+
+    static func fromGRPC(_ g: GRPC) throws -> TokenomicsInfoV1 {
+        try Self(
+            protocolVersion: .fromGRPC(g.protocolVersion),
+            totalAmount: .fromGRPC(g.totalAmount),
+            totalEncryptedAmount: .fromGRPC(g.totalEncryptedAmount),
+            bakingRewardAccount: .fromGRPC(g.bakingRewardAccount),
+            finalizationRewardAccount: .fromGRPC(g.finalizationRewardAccount),
+            gasAccount: .fromGRPC(g.gasAccount),
+            foundationTransactionRewards: .fromGRPC(g.foundationTransactionRewards),
+            nextPaydayTime: .fromGRPC(g.nextPaydayTime),
+            nextPaydayMintRate: .fromGRPC(g.nextPaydayMintRate),
+            totalStakedCapital: .fromGRPC(g.totalStakedCapital)
+        )
+    }
+}
+
+/// Describes the different versions of tokenomics info across all protocol versions
+public enum TokenomicsInfo {
+    /// Protocol version `1..=3`
+    case v0(_ info: TokenomicsInfoV0)
+    /// Protocol version `4..`
+    case v1(_ info: TokenomicsInfoV1)
+}
+
+extension TokenomicsInfo: FromGRPC {
+    typealias GRPC = Concordium_V2_TokenomicsInfo
+
+    static func fromGRPC(_ g: GRPC) throws -> TokenomicsInfo {
+        let info = try g.tokenomics ?! GRPCError.missingRequiredValue("Missing 'tokenomics' value")
+
+        switch info {
+        case let .v0(v0): return try .v0(.fromGRPC(v0))
+        case let .v1(v1): return try .v1(.fromGRPC(v1))
+        }
+    }
+}
+
+public struct InstanceInfoV0 {
+    public let model: Data
+    public let owner: AccountAddress
+    public let amount: CCD
+    public let methods: Set<ReceiveName>
+    public let name: InitName
+    public let sourceModule: ModuleReference
+}
+
+extension InstanceInfoV0: FromGRPC {
+    typealias GRPC = Concordium_V2_InstanceInfo.V0
+
+    static func fromGRPC(_ g: GRPC) throws -> InstanceInfoV0 {
+        let methods = try Set(g.methods.map(ReceiveName.fromGRPC))
+        return try Self(
+            model: g.model.value,
+            owner: .fromGRPC(g.owner),
+            amount: .fromGRPC(g.amount),
+            methods: methods,
+            name: .fromGRPC(g.name),
+            sourceModule: .fromGRPC(g.sourceModule)
+        )
+    }
+}
+
+public struct InstanceInfoV1 {
+    public let owner: AccountAddress
+    public let amount: CCD
+    public let methods: Set<ReceiveName>
+    public let name: InitName
+    public let sourceModule: ModuleReference
+}
+
+extension InstanceInfoV1: FromGRPC {
+    typealias GRPC = Concordium_V2_InstanceInfo.V1
+
+    static func fromGRPC(_ g: GRPC) throws -> InstanceInfoV1 {
+        let methods = try Set(g.methods.map(ReceiveName.fromGRPC))
+        return try Self(
+            owner: .fromGRPC(g.owner),
+            amount: .fromGRPC(g.amount),
+            methods: methods,
+            name: .fromGRPC(g.name),
+            sourceModule: .fromGRPC(g.sourceModule)
+        )
+    }
+}
+
+/// Holds information of a contract instance
+public enum InstanceInfo {
+    case v0(_ info: InstanceInfoV0)
+    case v1(_ info: InstanceInfoV1)
+}
+
+extension InstanceInfo: FromGRPC {
+    typealias GRPC = Concordium_V2_InstanceInfo
+
+    static func fromGRPC(_ g: GRPC) throws -> InstanceInfo {
+        let info = try g.version ?! GRPCError.missingRequiredValue("Missing 'version' value")
+
+        switch info {
+        case let .v0(v0): return try .v0(.fromGRPC(v0))
+        case let .v1(v1): return try .v1(.fromGRPC(v1))
+        }
+    }
+}
+
+public struct InvokeContractSuccess {
+    public let returnValue: Data?
+    public let events: [ContractTraceElement]
+    public let usedEnergy: Energy
+}
+
+public struct InvokeContractFailure: Error {
+    public let returnValue: Data?
+    public let rejectReason: RejectReason
+    public let usedEnergy: Energy
+}
+
+public enum InvokeContractResult {
+    case success(_ value: InvokeContractSuccess)
+    case failure(_ value: InvokeContractFailure)
+
+    public var usedEnergy: Energy {
+        switch self {
+        case let .success(v): return v.usedEnergy
+        case let .failure(v): return v.usedEnergy
+        }
+    }
+
+    /// Converts the result to a ``InvokeContractSuccess``
+    ///
+    /// - Throws: ``InvokeContractFailure`` if the result is not a ``.success``
+    public func success() throws -> InvokeContractSuccess {
+        switch self {
+        case let .success(value): return value
+        case let .failure(value): throw value
+        }
+    }
+}
+
+extension InvokeContractResult: FromGRPC {
+    typealias GRPC = Concordium_V2_InvokeInstanceResponse
+
+    static func fromGRPC(_ g: GRPC) throws -> InvokeContractResult {
+        let result = try g.result ?! GRPCError.missingRequiredValue("Missing 'result' of value")
+
+        switch result {
+        case let .success(value):
+            let events = try value.effects.map(ContractTraceElement.fromGRPC)
+            return .success(InvokeContractSuccess(returnValue: value.returnValue, events: events, usedEnergy: value.usedEnergy.value))
+        case let .failure(value):
+            return try .failure(InvokeContractFailure(returnValue: value.returnValue, rejectReason: .fromGRPC(value.reason), usedEnergy: value.usedEnergy.value))
+        }
+    }
+}
+
+/// Data needed to invoke the contract.
+public struct ContractInvokeRequest {
+    /// Invoker of the contract. If this is not supplied then the contract will
+    /// be invoked, by an account with address 0, no credentials and
+    /// sufficient amount of CCD to cover the transfer amount. If given, the
+    /// relevant address must exist in the blockstate.
+    public var invoker: Address?
+    /// Contract to invoke.
+    public var contract: ContractAddress
+    /// Amount to invoke the contract with.
+    public var amount: CCD
+    /// Which entrypoint to invoke.
+    public var method: ReceiveName
+    /// And with what parameter.
+    public var parameter: Parameter
+    /// The energy to allow for execution. If not set the node decides on the
+    /// maximum amount.
+    public var energy: Energy?
+
+    public init(contract: ContractAddress, method: ReceiveName) {
+        invoker = nil
+        self.contract = contract
+        amount = CCD(microCCD: 0)
+        self.method = method
+        parameter = Parameter(unchecked: Data())
+        energy = nil
+    }
+}
+
+extension Concordium_V2_Energy {
+    init(_ value: UInt64) {
+        self.value = value
+    }
+}
+
+extension ContractInvokeRequest {
+    func toGRPC(with block: BlockIdentifier) -> Concordium_V2_InvokeInstanceRequest {
+        var req = Concordium_V2_InvokeInstanceRequest()
+        req.blockHash = block.toGRPC()
+        if let invoker = invoker {
+            req.invoker = invoker.toGRPC()
+        }
+        req.instance = contract.toGRPC()
+        req.amount = amount.toGRPC()
+        req.entrypoint = method.toGRPC()
+        req.parameter = parameter.toGRPC()
+        if let energy = energy {
+            req.energy = Concordium_V2_Energy(energy)
+        }
+        return req
+    }
+}
+
+public enum PoolPendingChange {
+    case noChange
+    case reduceBakerCapital(bakerEquityCapital: CCD, effectiveTime: Date)
+    case removePool(effectiveTime: Date)
+}
+
+extension PoolPendingChange: FromGRPC {
+    typealias GRPC = Concordium_V2_PoolPendingChange
+
+    static func fromGRPC(_ g: GRPC) throws -> PoolPendingChange {
+        guard let change = g.change else { return .noChange }
+
+        switch change {
+        case let .reduce(value): return try .reduceBakerCapital(bakerEquityCapital: .fromGRPC(value.reducedEquityCapital), effectiveTime: .fromGRPC(value.effectiveTime))
+        case let .remove(value): return .removePool(effectiveTime: .fromGRPC(value.effectiveTime))
+        }
+    }
+}
+
+public struct CurrentPaydayBakerPoolStatus {
+    /// The number of blocks baked in the current reward period.
+    public let blocksBaked: UInt64
+    /// Whether the baker has contributed a finalization proof in the current
+    /// reward period.
+    public let finalizationLive: Bool
+    /// The transaction fees accruing to the pool in the current reward period.
+    public let transactionFeesEarned: CCD
+    /// The effective stake of the baker in the current reward period.
+    public let effectiveStake: CCD
+    /// The lottery power of the baker in the current reward period.
+    public let lotteryPower: Double
+    /// The effective equity capital of the baker for the current reward period.
+    public let bakerEquityCapital: CCD
+    /// The effective delegated capital to the pool for the current reward
+    /// period.
+    public let delegatedCapital: CCD
+    /// The commission rates that apply for the current reward period for the
+    /// baker pool.
+    public let commissionRates: CommissionRates
+}
+
+extension CurrentPaydayBakerPoolStatus: FromGRPC {
+    typealias GRPC = Concordium_V2_PoolCurrentPaydayInfo
+
+    static func fromGRPC(_ g: GRPC) throws -> CurrentPaydayBakerPoolStatus {
+        try Self(
+            blocksBaked: g.blocksBaked,
+            finalizationLive: g.finalizationLive,
+            transactionFeesEarned: .fromGRPC(g.transactionFeesEarned),
+            effectiveStake: .fromGRPC(g.effectiveStake),
+            lotteryPower: g.lotteryPower,
+            bakerEquityCapital: .fromGRPC(g.bakerEquityCapital),
+            delegatedCapital: .fromGRPC(g.delegatedCapital),
+            commissionRates: .fromGRPC(g.commissionRates)
+        )
+    }
+}
+
+/// The state of the baker currently registered on the account.
+/// Current here means "present". This is the information that is being updated
+/// by transactions (and rewards). This is in contrast to "epoch baker" which is
+/// the state of the baker that is currently eligible for baking.
+public struct BakerPoolStatus {
+    /// The 'BakerID' of the pool owner.
+    public let bakerId: BakerID
+    /// The account address of the pool owner.
+    public let bakerAddress: AccountAddress
+    /// The equity capital provided by the pool owner.
+    public let bakerEquityCapital: CCD
+    /// The capital delegated to the pool by other accounts.
+    public let delegatedCapital: CCD
+    /// The maximum amount that may be delegated to the pool, accounting for
+    /// leverage and stake limits.
+    public let delegatedCapitalCap: CCD
+    /// The pool info associated with the pool: open status, metadata URL
+    /// and commission rates.
+    public let poolInfo: BakerPoolInfo
+    /// Any pending change to the baker's stake.
+    public let bakerStakePendingChange: PoolPendingChange
+    /// Status of the pool in the current reward period. This will be [`None`]
+    /// if the pool is not a baker in the payday (e.g., because they just
+    /// registered and a new payday has not started yet).
+    public let currentPaydayStatus: CurrentPaydayBakerPoolStatus?
+    /// Total capital staked across all pools.
+    public let allPoolTotalCapital: CCD
+}
+
+extension BakerPoolStatus: FromGRPC {
+    typealias GRPC = Concordium_V2_PoolInfoResponse
+
+    static func fromGRPC(_ g: GRPC) throws -> BakerPoolStatus {
+        let currentPaydayStatus = g.hasCurrentPaydayInfo ? try CurrentPaydayBakerPoolStatus.fromGRPC(g.currentPaydayInfo) : nil
+        return try Self(
+            bakerId: g.baker.value,
+            bakerAddress: .fromGRPC(g.address),
+            bakerEquityCapital: .fromGRPC(g.equityCapital),
+            delegatedCapital: .fromGRPC(g.delegatedCapital),
+            delegatedCapitalCap: .fromGRPC(g.delegatedCapitalCap),
+            poolInfo: .fromGRPC(g.poolInfo),
+            bakerStakePendingChange: .fromGRPC(g.equityPendingChange),
+            currentPaydayStatus: currentPaydayStatus,
+            allPoolTotalCapital: .fromGRPC(g.allPoolTotalCapital)
+        )
+    }
+}
+
+extension Concordium_V2_BakerId {
+    init(_ value: BakerID) {
+        self.value = value
+    }
+}
+
+extension Concordium_V2_PoolInfoRequest {
+    init(bakerId: BakerID, block: BlockIdentifier) {
+        baker = Concordium_V2_BakerId(bakerId)
+        blockHash = block.toGRPC()
+    }
+}
+
+/// State of the passive delegation pool at present. Changes to delegation
+/// e.g., an account deciding to delegate are reflected in this structure at
+/// first.
+public struct PassiveDelegationStatus {
+    /// The total capital delegated passively.
+    public let delegatedCapital: CCD
+    /// The passive delegation commission rates.
+    public let commissionRates: CommissionRates
+    /// The transaction fees accruing to the passive delegators in the
+    /// current reward period.
+    public let currentPaydayTransactionFeesEarned: CCD
+    /// The effective delegated capital to the passive delegators for the
+    /// current reward period.
+    public let currentPaydayDelegatedCapital: CCD
+    /// Total capital staked across all pools, including passive delegation.
+    public let allPoolTotalCapital: CCD
+}
+
+extension PassiveDelegationStatus: FromGRPC {
+    typealias GRPC = Concordium_V2_PassiveDelegationInfo
+
+    static func fromGRPC(_ g: GRPC) throws -> PassiveDelegationStatus {
+        try Self(
+            delegatedCapital: .fromGRPC(g.delegatedCapital),
+            commissionRates: .fromGRPC(g.commissionRates),
+            currentPaydayTransactionFeesEarned: .fromGRPC(g.currentPaydayTransactionFeesEarned),
+            currentPaydayDelegatedCapital: .fromGRPC(g.currentPaydayDelegatedCapital),
+            allPoolTotalCapital: .fromGRPC(g.allPoolTotalCapital)
         )
     }
 }
