@@ -864,13 +864,13 @@ public enum AccountTransactionPayload: Equatable {
     case configureDelegation(_ data: ConfigureDelegationPayload)
 }
 
-extension AccountTransactionPayload {
+public extension AccountTransactionPayload {
     /// Gives a JSON representation of a ``Parameter`` associated with the transaction decoded with the given ``ContractSchema``
     ///
-    /// - Parameter schema: The schema to use for decoding the ``Parameter`` 
+    /// - Parameter schema: The schema to use for decoding the ``Parameter``
     /// - Throws: if this is invoked for any other variant than ``.initContract`` or ``.updateContract``.
     /// - Returns: A JSON string representation of the associated ``Parameter``
-    public func jsonParameter(schema: ContractSchema) throws -> SchemaJSONString {
+    func jsonParameter(schema: ContractSchema) throws -> SchemaJSONString {
         var typeSchema: TypeSchema
         var parameter: Parameter
 
@@ -879,21 +879,21 @@ extension AccountTransactionPayload {
             parameter = param
 
             switch schema {
-            case .module(let value):
+            case let .module(value):
                 typeSchema = try value.initParameterSchema(contractName: initName.contractName)
-            case .type(let value):
+            case let .type(value):
                 typeSchema = value
             }
         case let .updateContract(_, _, receiveName, param):
             parameter = param
 
             switch schema {
-            case .module(let value):
+            case let .module(value):
                 typeSchema = try value.receiveParameterSchema(receiveName: receiveName)
-            case .type(let value):
+            case let .type(value):
                 typeSchema = value
             }
-        default: 
+        default:
             throw ParameterJsonError.invalidTransactionType
         }
 
