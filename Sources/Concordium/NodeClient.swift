@@ -29,208 +29,6 @@ public struct SubmittedTransaction {
     }
 }
 
-/// Describes the possible status variants of a transaction submitted to a node.
-public enum TransactionStatus {
-    case received
-    case committed(outcomes: [BlockHash: BlockItemSummary])
-    case finalized(outcome: (blockHash: BlockHash, summary: BlockItemSummary))
-}
-
-extension TransactionStatus: FromGRPC {
-    typealias GRPC = Concordium_V2_BlockItemStatus
-
-    static func fromGRPC(_ g: GRPC) throws -> TransactionStatus {
-        guard let status = g.status else { throw GRPCError.missingRequiredValue("Expected 'status' to be available for 'BlockItemStatus'") }
-        switch status {
-        case .received:
-            return .received
-        case let .committed(data):
-            let outcomes = try data.outcomes.reduce(into: [:]) { acc, block in
-                try acc[BlockHash.fromGRPC(block.blockHash)] = try BlockItemSummary.fromGRPC(block.outcome)
-            }
-            return .committed(outcomes: outcomes)
-        case let .finalized(data):
-            let blockHash = try BlockHash.fromGRPC(data.outcome.blockHash)
-            let summary = try BlockItemSummary.fromGRPC(data.outcome.outcome)
-            return .finalized(outcome: (blockHash: blockHash, summary: summary))
-        }
-    }
-}
-
-/// Information about the block finalized on chain as part of a stream of finalized blocks.
-public struct FinalizedBlockInfo: FromGRPC {
-    /// The block hash of the finalized block
-    public let blockHash: BlockHash
-    /// The absolute height of the block from the original genesis block of the chain
-    public let absoluteHeight: UInt64
-
-    typealias GRPC = Concordium_V2_FinalizedBlockInfo
-
-    static func fromGRPC(_ g: GRPC) throws -> FinalizedBlockInfo {
-        try .init(blockHash: .fromGRPC(g.hash), absoluteHeight: g.height.value)
-    }
-}
-
-/// Summary of the current state of consensus.
-public struct ConsensusInfo {
-    /// Height of the last finalized block. Genesis block has height 0.
-    public let lastFinalizedBlockHeight: UInt64
-    /// The exponential moving average standard deviation of the time between a
-    /// block's nominal slot time, and the time at which it is verified.
-    public let blockArriveLatencyEMSD: Double
-    /// Exponential moving average standard deviation of block receive latency
-    /// (in seconds), i.e. the time between a block's nominal slot time, and
-    /// the time at which is received.
-    public let blockReceiveLatencyEMSD: Double
-    /// Hash of the last, i.e., most recent, finalized block.
-    public let lastFinalizedBlock: BlockHash
-    /// Exponential moving average standard deviation of the time between
-    /// receiving blocks (in seconds).
-    public let blockReceivePeriodEMSD: Double?
-    /// Exponential moving average standard deviation of the time between blocks
-    /// being verified.
-    public let blockArrivePeriodEMSD: Double?
-    /// The number of blocks that have been received.
-    public let blocksReceivedCount: UInt64
-    /// Exponential moving average standard deviation of the number of
-    /// transactions per block.
-    public let transactionsPerBlockEMSD: Double
-    /// Exponential moving average of the time between finalizations. Will be
-    /// `None` if there are no finalizations yet since the node start.
-    public let finalizationPeriodEMA: Double?
-    /// Height of the best block.
-    public let bestBlockHeight: UInt64
-    /// Time at which a block last became finalized. Note that this is the local
-    /// time of the node at the time the block was finalized.
-    public let lastFinalizedTime: Date?
-    /// The number of completed finalizations.
-    public let finalizationCount: UInt64
-    /// Duration of an epoch (in milliseconds).
-    public let epochDuration: UInt64
-    /// Number of blocks that arrived, i.e., were added to the tree. Note that
-    /// in some cases this can be more than
-    /// ``blocksReceivedCount`` since blocks that the node itself
-    /// produces count towards this, but are not received.
-    public let blocksVerifiedCount: UInt64
-    /// Duration of a slot (in milliseconds)
-    public let slotDuration: UInt64?
-    /// Slot time of the genesis block.
-    public let genesisTime: Date
-    /// Exponential moving average standard deviation of the time between
-    /// finalizations. Will be `none` if there are no finalizations yet
-    /// since the node start.
-    public let finalizationPeriodEMSD: Double?
-    /// Exponential moving average of the number of
-    /// transactions per block.
-    public let transactionsPerBlockEMA: Double
-    /// The exponential moving average of the time between a block's nominal
-    /// slot time, and the time at which it is verified.
-    public let blockArriveLatencyEMA: Double
-    /// Exponential moving average of block receive latency (in seconds), i.e.
-    /// the time between a block's nominal slot time, and the time at which is
-    /// received.
-    public let blockReceiveLatencyEMA: Double
-    /// Exponential moving average of the time between receiving blocks (in
-    /// seconds).
-    public let blockArrivePeriodEMA: Double?
-    /// Exponential moving average of the time between receiving blocks (in
-    /// seconds).
-    public let blockReceivePeriodEMA: Double?
-    /// The time (local time of the node) that a block last arrived, i.e., was
-    /// verified and added to the node's tree.
-    public let blockLastArrivedTime: Date?
-    /// Hash of the current best block. The best block is a protocol defined
-    /// block that the node must use a parent block to build the chain on.
-    /// Note that this is subjective, in the sense that it is only the best
-    /// block among the blocks the node knows about.
-    public let bestBlock: BlockHash
-    /// Hash of the genesis block.
-    public let genesisBlock: BlockHash
-    /// The time (local time of the node) that a block was last received.
-    public let blockLastReceivedTime: Date?
-    /// Currently active protocol version.
-    public let protocolVersion: ProtocolVersion
-    /// The number of chain restarts via a protocol update. An effected
-    /// protocol update instruction might not change the protocol version
-    /// specified in the previous field, but it always increments the genesis
-    /// index.
-    public let genesisIndex: GenesisIndex
-    /// Block hash of the genesis block of current era, i.e., since the last
-    /// protocol update. Initially this is equal to
-    /// ``genesisBlock``.
-    public let currentEraGenesisBlock: BlockHash
-    /// Time when the current era started.
-    public let currentEraGenesisTime: Date
-    /// Parameters that apply from protocol 6 onward. This is present if and
-    /// only if the `protocolVersion` is ``ProtocolVersion.p6`` or later.
-    public let concordiumBFTStatus: ConcordiumBFTDetails?
-}
-
-extension ConsensusInfo: FromGRPC {
-    typealias GRPC = Concordium_V2_ConsensusInfo
-
-    static func fromGRPC(_ g: GRPC) throws -> ConsensusInfo {
-        let bftChecks = [g.hasCurrentTimeoutDuration, g.hasCurrentRound, g.hasCurrentEpoch, g.hasTriggerBlockTime]
-        var concordiumBFTStatus: ConcordiumBFTDetails? = nil
-
-        if bftChecks.allSatisfy({ $0 == true }) {
-            concordiumBFTStatus = ConcordiumBFTDetails(
-                currentTimeoutDuration: g.currentTimeoutDuration.value,
-                currentRound: g.currentRound.value,
-                currentEpoch: g.currentEpoch.value,
-                triggerBlockTime: .fromGRPC(g.triggerBlockTime)
-            )
-        }
-
-        return try Self(
-            lastFinalizedBlockHeight: g.lastFinalizedBlockHeight.value,
-            blockArriveLatencyEMSD: g.blockArriveLatencyEmsd,
-            blockReceiveLatencyEMSD: g.blockReceiveLatencyEmsd,
-            lastFinalizedBlock: .fromGRPC(g.lastFinalizedBlock),
-            blockReceivePeriodEMSD: g.hasBlockReceivePeriodEmsd ? g.blockReceivePeriodEmsd : nil,
-            blockArrivePeriodEMSD: g.hasBlockArrivePeriodEmsd ? g.blockArrivePeriodEmsd : nil,
-            blocksReceivedCount: UInt64(g.blocksReceivedCount),
-            transactionsPerBlockEMSD: g.transactionsPerBlockEmsd,
-            finalizationPeriodEMA: g.hasFinalizationPeriodEma ? g.finalizationPeriodEma : nil,
-            bestBlockHeight: g.bestBlockHeight.value,
-            lastFinalizedTime: g.hasLastFinalizedTime ? .fromGRPC(g.lastFinalizedTime) : nil,
-            finalizationCount: UInt64(g.finalizationCount),
-            epochDuration: g.epochDuration.value,
-            blocksVerifiedCount: UInt64(g.blocksVerifiedCount),
-            slotDuration: g.hasSlotDuration ? g.slotDuration.value : nil,
-            genesisTime: .fromGRPC(g.genesisTime),
-            finalizationPeriodEMSD: g.hasFinalizationPeriodEmsd ? g.finalizationPeriodEmsd : nil,
-            transactionsPerBlockEMA: g.transactionsPerBlockEma,
-            blockArriveLatencyEMA: g.blockArriveLatencyEma,
-            blockReceiveLatencyEMA: g.blockReceiveLatencyEma,
-            blockArrivePeriodEMA: g.hasBlockArrivePeriodEma ? g.blockArrivePeriodEma : nil,
-            blockReceivePeriodEMA: g.hasBlockReceivePeriodEma ? g.blockReceivePeriodEma : nil,
-            blockLastArrivedTime: g.hasBlockLastArrivedTime ? .fromGRPC(g.blockLastArrivedTime) : nil,
-            bestBlock: .fromGRPC(g.bestBlock),
-            genesisBlock: .fromGRPC(g.genesisBlock),
-            blockLastReceivedTime: g.hasBlockLastReceivedTime ? .fromGRPC(g.blockLastReceivedTime) : nil,
-            protocolVersion: .fromGRPC(g.protocolVersion),
-            genesisIndex: g.genesisIndex.value,
-            currentEraGenesisBlock: .fromGRPC(g.currentEraGenesisBlock),
-            currentEraGenesisTime: .fromGRPC(g.currentEraGenesisTime),
-            concordiumBFTStatus: concordiumBFTStatus
-        )
-    }
-}
-
-/// Parameters pertaining to the Concordium BFT consensus.
-public struct ConcordiumBFTDetails {
-    /// The current duration to wait before a round times out (in milliseconds).
-    public let currentTimeoutDuration: UInt64
-    /// The current round.
-    public let currentRound: Round
-    /// The current epoch.
-    public let currentEpoch: Epoch
-    /// The first block in the epoch with timestamp at least this is considered
-    /// to be the trigger block for the epoch transition.
-    public let triggerBlockTime: Date
-}
-
 /// Protocol for Concordium node clients targetting the GRPC v2 API
 public protocol NodeClient {
     /// Get the global context for the chain
@@ -259,6 +57,7 @@ public protocol NodeClient {
     func waitUntilFinalized(transaction: TransactionHash, timeoutSeconds: UInt?) async throws -> (blockHash: BlockHash, summary: BlockItemSummary)
     /// Get the ``ConsensusInfo`` from the node
     func consensusInfo() async throws -> ConsensusInfo
+    func chainParameters(block: BlockIdentifier) async throws -> ChainParameters
     // NOTE: The following methods should be implemented to allow wallets to transition to use GRPC client instead of wallet proxy.
     // TODO: func source(moduleRef: ModuleReference, block: BlockIdentifier) async throws -> WasmModule
     // TODO: func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo
@@ -268,7 +67,6 @@ public protocol NodeClient {
     // TODO: func passiveDelegationInfo(block: BlockIdentifier) async throws -> PassiveDelegationStatus
     // TODO: func tokenomicsInfo(block: BlockIdentifier) async throws -> RewardsOverview
     // TODO: func electionInfo(block: BlockIdentifier) async throws -> BirkParameters
-    // TODO: func chainParameters(block: BlockIdentifier) async throws -> ChainParameters
 }
 
 /// Convert a GRPC response stream consisting of a GRPC type `V`, to an ``AsyncThrowingStream`` of ``R``
@@ -431,6 +229,10 @@ public class GRPCNodeClient: NodeClient {
 
     public func consensusInfo() async throws -> ConsensusInfo {
         try await .fromGRPC(grpc.getConsensusInfo(Concordium_V2_Empty()))
+    }
+
+    public func chainParameters(block: BlockIdentifier) async throws -> ChainParameters {
+        try await .fromGRPC(grpc.getBlockChainParameters(block.toGRPC()))
     }
 }
 

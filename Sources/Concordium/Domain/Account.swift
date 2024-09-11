@@ -358,8 +358,12 @@ extension VerifyKey: FromGRPC, Serialize, Deserialize {
         case nil:
             throw GRPCError.missingRequiredValue("verify key")
         case let .ed25519Key(d):
-            return try .init(ed25519KeyHex: d.hex) ?! GRPCError.unsupportedValue("Invalid hex string")
+            return try! .init(ed25519KeyHex: d.hex) // converting data to hex never fails
         }
+    }
+
+    static func fromGRPCUpdateKey(_ grpc: Concordium_V2_UpdatePublicKey) -> Self {
+        try! .init(ed25519KeyHex: grpc.value.hex)
     }
 }
 
@@ -616,6 +620,15 @@ public struct AmountFraction: FromGRPC, Equatable, Serialize, Deserialize {
 
     public static func deserialize(_ data: inout Cursor) -> AmountFraction? {
         data.parseUInt(UInt32.self).flatMap { Self(partsPerHundredThousand: $0) }
+    }
+}
+
+public extension AmountFraction {
+    /// Adds two ``AmountFraction``s together. If the result exceeds 100%, nil is returned.
+    static func + (lhs: Self, rhs: Self) -> Self? {
+        let result = lhs.partsPerHundredThousand + rhs.partsPerHundredThousand
+        guard result < 100_000 else { return nil }
+        return Self(partsPerHundredThousand: result)
     }
 }
 
