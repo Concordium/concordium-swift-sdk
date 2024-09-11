@@ -3,6 +3,7 @@ import GRPC
 import NIOCore
 import NIOPosix
 
+/// Describes a transaction which has been submitted to a node.
 public struct SubmittedTransaction {
     /// The hash of the submitted transaction
     public let hash: TransactionHash
@@ -13,14 +14,22 @@ public struct SubmittedTransaction {
         self.client = client
     }
 
-    // TODO: implement...
-    // public func waitUntilFinalized() throws -> (block: BlockHash, summary: BlockItemSummary) { }
+    /// Alias for ``NodeClient.waitUntilFinalized`` for the ``Self.hash``
+    ///
+    /// - Parameter timeoutSeconds: An optional timeout. It is recommended to supply this, as otherwise the function can run indefinitely.
+    /// - Throws: ``TimeoutError`` if the supplied timeout is hit before the transaction has been finalized in a block
+    /// - Returns: ``(blockHash: BlockHash, summary: BlockItemSummary)`` when the transaction has been finalized
+    public func waitUntilFinalized(timeoutSeconds: UInt? = nil) async throws -> (blockHash: BlockHash, summary: BlockItemSummary) {
+        try await client.waitUntilFinalized(transaction: hash, timeoutSeconds: timeoutSeconds)
+    }
+
     /// Alias for ``NodeClient.status`` for the ``Self.hash``
     public func status() async throws -> TransactionStatus {
         try await client.status(transaction: hash)
     }
 }
 
+/// Describes the possible status variants of a transaction submitted to a node.
 public enum TransactionStatus {
     case received
     case committed(outcomes: [BlockHash: BlockItemSummary])
@@ -48,14 +57,28 @@ extension TransactionStatus: FromGRPC {
     }
 }
 
+/// Information about the block finalized on chain as part of a stream of finalized blocks.
+public struct FinalizedBlockInfo: FromGRPC {
+    /// The block hash of the finalized block
+    public let blockHash: BlockHash
+    /// The absolute height of the block from the original genesis block of the chain
+    public let absoluteHeight: UInt64
+
+    typealias GRPC = Concordium_V2_FinalizedBlockInfo
+
+    static func fromGRPC(_ g: GRPC) throws -> FinalizedBlockInfo {
+        try .init(blockHash: .fromGRPC(g.hash), absoluteHeight: g.height.value)
+    }
+}
+
 /// Protocol for Concordium node clients targetting the GRPC v2 API
 public protocol NodeClient {
     /// Get the global context for the chain
     func cryptographicParameters(block: BlockIdentifier) async throws -> CryptographicParameters
     /// Get the list of identity providers registered for the chain
-    func identityProviders(block: BlockIdentifier) async throws -> [IdentityProviderInfo]
+    func identityProviders(block: BlockIdentifier) -> AsyncThrowingStream<IdentityProviderInfo, Error>
     /// Get the list of identity disclosure autorities registered for the chain
-    func anonymityRevokers(block: BlockIdentifier) async throws -> [AnonymityRevokerInfo]
+    func anonymityRevokers(block: BlockIdentifier) -> AsyncThrowingStream<AnonymityRevokerInfo, Error>
     /// Get the next account sequence number for the account
     func nextAccountSequenceNumber(address: AccountAddress) async throws -> NextAccountSequenceNumber
     /// Get the account info for an account
@@ -68,19 +91,47 @@ public protocol NodeClient {
     func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> SubmittedTransaction
     /// Query the status of a transaction
     func status(transaction: TransactionHash) async throws -> TransactionStatus
+    /// Get a continuing stream of finalized blocks from the point in time where the method was invoked.
+    func finalizedBlocks() -> AsyncThrowingStream<FinalizedBlockInfo, Error>
+    /// Wait until the block identified by the supplied ``TransactionHash`` finalizes.
+    /// - Returns: The hash of the block the transaction is included in, along with the associated transaction summary
+    /// - Throws: `NOT_FOUND` GRPC error if the transaction is not known to the node.
+    func waitUntilFinalized(transaction: TransactionHash, timeoutSeconds: UInt?) async throws -> (blockHash: BlockHash, summary: BlockItemSummary)
     // NOTE: The following methods should be implemented to allow wallets to transition to use GRPC client instead of wallet proxy.
     // TODO: func consensusInfo() async throws -> ConsensusInfo
     // TODO: func source(moduleRef: ModuleReference, block: BlockIdentifier) async throws -> WasmModule
     // TODO: func info(contractAddress: ContractAddress, block: BlockIdentifier) async throws -> InstanceInfo
-    // TODO: func waitUntilFinalized(transaction: TransactionHash) async throws -> (block: BlockHash, summary: BlockItemSummary)
     // TODO: func invokeInstance(request: ContractInvokeRequest, block: BlockIdentifier) async throws -> InvokeInstanceResult
     // TODO: func bakers(block: BlockIdentifier) async throws -> AsyncStream<AccountIndex>
     // TODO: func poolInfo(bakerId: AccountIndex, block: BlockIdentifier) async throws -> BakerPoolStatus
     // TODO: func passiveDelegationInfo(block: BlockIdentifier) async throws -> PassiveDelegationStatus
     // TODO: func tokenomicsInfo(block: BlockIdentifier) async throws -> RewardsOverview
-    // TODO: func tokenomicsInfo(block: BlockIdentifier) async throws -> RewardsOverview
     // TODO: func electionInfo(block: BlockIdentifier) async throws -> BirkParameters
     // TODO: func chainParameters(block: BlockIdentifier) async throws -> ChainParameters
+}
+
+/// Convert a GRPC response stream consisting of a GRPC type `V`, to an ``AsyncThrowingStream`` of ``R``
+func convertStream<V, R>(for stream: GRPCAsyncResponseStream<V>, with transform: @escaping ((V) throws -> R)) -> AsyncThrowingStream<R, Error> where R: FromGRPC<V> {
+    AsyncThrowingStream { continuation in
+        let task = Task {
+            do {
+                for try await value in stream {
+                    try Task.checkCancellation()
+                    continuation.yield(with: Result { try transform(value) })
+                }
+                continuation.finish()
+            } catch {
+                continuation.finish(throwing: error)
+            }
+        }
+
+        continuation.onTermination = { _ in task.cancel() }
+    }
+}
+
+/// Convert a GRPC response stream consisting of a GRPC type `V`, to an ``AsyncThrowingStream`` of ``R``
+func convertStream<V, R>(to _: R.Type, for stream: GRPCAsyncResponseStream<V>) -> AsyncThrowingStream<R, Error> where R: FromGRPC<V> {
+    convertStream(for: stream, with: R.fromGRPC)
 }
 
 /// Error happening while constructing a ``NodeClient``
@@ -90,9 +141,9 @@ public struct NodeClientError: Error {
 
 /// Defines a GRPC client for communicating with the GRPC v2 API of a given Concordium node.
 public class GRPCNodeClient: NodeClient {
-    let grpc: Concordium_V2_QueriesClientProtocol
+    let grpc: Concordium_V2_QueriesAsyncClientProtocol
 
-    init(_ grpc: Concordium_V2_QueriesClientProtocol) {
+    init(_ grpc: Concordium_V2_QueriesAsyncClientProtocol) {
         self.grpc = grpc
     }
 
@@ -112,39 +163,26 @@ public class GRPCNodeClient: NodeClient {
 
     /// Initialize a GRPC client from the supplied GRPC channel
     public convenience init(channel: GRPCChannel) {
-        self.init(Concordium_V2_QueriesNIOClient(channel: channel))
+        self.init(Concordium_V2_QueriesAsyncClient(channel: channel))
     }
 
     public func cryptographicParameters(block: BlockIdentifier = BlockIdentifier.lastFinal) async throws -> CryptographicParameters {
         let req = block.toGRPC()
-        let res = try await grpc.getCryptographicParameters(req).response.get()
+        let res = try await grpc.getCryptographicParameters(req)
         return .fromGRPC(res)
     }
 
-    public func identityProviders(block: BlockIdentifier = BlockIdentifier.lastFinal) async throws -> [IdentityProviderInfo] {
-        let req = block.toGRPC()
-        var res: [IdentityProviderInfo] = []
-        let call = grpc.getIdentityProviders(req) {
-            res.append(.fromGRPC($0))
-        }
-        _ = try await call.status.get()
-        return res
+    public func identityProviders(block: BlockIdentifier = BlockIdentifier.lastFinal) -> AsyncThrowingStream<IdentityProviderInfo, Error> {
+        convertStream(to: IdentityProviderInfo.self, for: grpc.getIdentityProviders(block.toGRPC()))
     }
 
-    public func anonymityRevokers(block: BlockIdentifier = BlockIdentifier.lastFinal) async throws -> [AnonymityRevokerInfo] {
-        let req = block.toGRPC()
-        var res: [AnonymityRevokerInfo] = []
-        let call = grpc.getAnonymityRevokers(req) {
-            res.append(.fromGRPC($0))
-        }
-        _ = try await call.status.get()
-        return res
+    public func anonymityRevokers(block: BlockIdentifier = BlockIdentifier.lastFinal) -> AsyncThrowingStream<AnonymityRevokerInfo, Error> {
+        convertStream(to: AnonymityRevokerInfo.self, for: grpc.getAnonymityRevokers(block.toGRPC()))
     }
 
     public func nextAccountSequenceNumber(address: AccountAddress) async throws -> NextAccountSequenceNumber {
-        var req = Concordium_V2_AccountAddress()
-        req.value = address.data
-        let res = try await grpc.getNextAccountSequenceNumber(req).response.get()
+        let req = address.toGRPC()
+        let res = try await grpc.getNextAccountSequenceNumber(req)
         return .fromGRPC(res)
     }
 
@@ -152,31 +190,84 @@ public class GRPCNodeClient: NodeClient {
         var req = Concordium_V2_AccountInfoRequest()
         req.accountIdentifier = account.toGRPC()
         req.blockHash = block.toGRPC()
-        let res = try await grpc.getAccountInfo(req).response.get()
+        let res = try await grpc.getAccountInfo(req)
         return try .fromGRPC(res)
     }
 
     public func info(block: BlockIdentifier = BlockIdentifier.lastFinal) async throws -> BlockInfo {
-        let res = try await grpc.getBlockInfo(block.toGRPC()).response.get()
+        let res = try await grpc.getBlockInfo(block.toGRPC())
         return try .fromGRPC(res)
     }
 
     public func send(transaction: SignedAccountTransaction) async throws -> SubmittedTransaction {
         var req = Concordium_V2_SendBlockItemRequest()
         req.accountTransaction = transaction.toGRPC()
-        let res = try await grpc.sendBlockItem(req).response.get()
+        let res = try await grpc.sendBlockItem(req)
         return try SubmittedTransaction(hash: .fromGRPC(res), client: self)
     }
 
     public func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> SubmittedTransaction {
         var req = Concordium_V2_SendBlockItemRequest()
         req.credentialDeployment = deployment.toGRPC()
-        let res = try await grpc.sendBlockItem(req).response.get()
+        let res = try await grpc.sendBlockItem(req)
         return try SubmittedTransaction(hash: .fromGRPC(res), client: self)
     }
 
     public func status(transaction: TransactionHash) async throws -> TransactionStatus {
-        let res = try await grpc.getBlockItemStatus(transaction.toGRPC()).response.get()
+        let res = try await grpc.getBlockItemStatus(transaction.toGRPC())
         return try .fromGRPC(res)
     }
+
+    public func finalizedBlocks() -> AsyncThrowingStream<FinalizedBlockInfo, Error> {
+        convertStream(to: FinalizedBlockInfo.self, for: grpc.getFinalizedBlocks(Concordium_V2_Empty()))
+    }
+
+    /// wait until finalization of transaction identified by the supplied ``TransactionHash``. This is kept private to encourage the use of timeouts through
+    /// the public overload version
+    private func waitUntilFinalized(transaction: TransactionHash) async throws -> (blockHash: BlockHash, summary: BlockItemSummary) {
+        func process(_ tx: TransactionStatus) -> (blockHash: BlockHash, summary: BlockItemSummary)? {
+            switch tx {
+            case let .finalized(outcome):
+                return outcome
+            default:
+                return nil
+            }
+        }
+
+        var tx = try await status(transaction: transaction)
+        if let outcome = process(tx) {
+            return outcome
+        } else {
+            for try await _ in finalizedBlocks() {
+                tx = try await status(transaction: transaction)
+                if let outcome = process(tx) {
+                    return outcome
+                }
+            }
+
+            throw CancellationError()
+        }
+    }
+
+    public func waitUntilFinalized(transaction: TransactionHash, timeoutSeconds: UInt? = nil) async throws -> (blockHash: BlockHash, summary: BlockItemSummary) {
+        let result = try await withThrowingTaskGroup(of: (blockHash: BlockHash, summary: BlockItemSummary).self) { group in
+            if let timeoutSeconds = timeoutSeconds {
+                group.addTask {
+                    let _ = try await Task.sleep(nanoseconds: UInt64(timeoutSeconds * 1_000_000_000))
+                    throw TimeoutError()
+                }
+            }
+
+            group.addTask {
+                try await self.waitUntilFinalized(transaction: transaction)
+            }
+
+            return try await group.next()!
+        }
+
+        return result
+    }
 }
+
+/// Signals that a timeout was hit prior to finishing a task.
+public struct TimeoutError: Error {}

@@ -106,6 +106,12 @@ extension TransactionHash: Codable {
     }
 }
 
+extension TransactionHash: CustomStringConvertible {
+    public var description: String {
+        value.hex
+    }
+}
+
 /// Represents a Concordium block hash
 public struct BlockHash: HashBytes, ToGRPC, FromGRPC, Equatable, Hashable {
     public let value: Data
@@ -135,6 +141,12 @@ extension BlockHash: Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(value.hex)
+    }
+}
+
+extension BlockHash: CustomStringConvertible {
+    public var description: String {
+        value.hex
     }
 }
 
@@ -184,6 +196,12 @@ public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGR
     /// - Throws: `ExactSizeError` if conversion could not be made
     static func fromGRPC(_ g: Concordium_V2_ModuleRef) throws -> Self {
         try Self(g.value)
+    }
+}
+
+extension ModuleReference: CustomStringConvertible {
+    public var description: String {
+        value.hex
     }
 }
 
@@ -399,6 +417,12 @@ public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGR
     }
 }
 
+extension ContractAddress: CustomStringConvertible {
+    public var description: String {
+        "<\(index),\(subindex)>"
+    }
+}
+
 /// An error thrown when data supplied to a wrapper does not meet size requirements
 public struct DataSizeError: Error {
     /// The size of the supplied data
@@ -457,6 +481,12 @@ extension Parameter: Codable {
     }
 }
 
+extension Parameter: CustomStringConvertible {
+    public var description: String {
+        value.hex
+    }
+}
+
 /// Wrapper around ``Data`` to register on chain
 public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC {
     typealias GRPC = Concordium_V2_RegisteredData
@@ -504,6 +534,12 @@ extension RegisteredData: Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(value.hex)
+    }
+}
+
+extension RegisteredData: CustomStringConvertible {
+    public var description: String {
+        value.hex
     }
 }
 
@@ -556,6 +592,12 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
 
     static func fromGRPC(_ gRPC: GRPC) throws -> Self {
         try Self(gRPC.value)
+    }
+}
+
+extension InitName: CustomStringConvertible {
+    public var description: String {
+        value
     }
 }
 
@@ -623,6 +665,12 @@ extension ContractName: Codable {
     }
 }
 
+extension ContractName: CustomStringConvertible {
+    public var description: String {
+        value
+    }
+}
+
 /// A wrapper around a contract entrypoint name, corresponding to the receive function in the contract without the contract name prefix
 public struct EntrypointName: Serialize, Deserialize, Equatable {
     public let value: String
@@ -665,6 +713,12 @@ extension EntrypointName: Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(value)
+    }
+}
+
+extension EntrypointName: CustomStringConvertible {
+    public var description: String {
+        value
     }
 }
 
@@ -722,6 +776,12 @@ extension ReceiveName: Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(value)
+    }
+}
+
+extension ReceiveName: CustomStringConvertible {
+    public var description: String {
+        value
     }
 }
 
@@ -853,6 +913,12 @@ extension ContractEvent: FromGRPC {
 
     static func fromGRPC(_ g: GRPC) throws -> ContractEvent {
         Self(g.value)
+    }
+}
+
+extension ContractEvent: CustomStringConvertible {
+    public var description: String {
+        data.hex
     }
 }
 

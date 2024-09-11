@@ -241,7 +241,8 @@ struct Root: AsyncParsableCommand {
                 let memo = memo.map { Data(CBOR.encode($0)) }
 
                 print("Fetching crypto parameters (for commitment key).")
-                let hash = try await withGRPCClient(rootCmd.opts) { client in
+
+                try await withGRPCClient(rootCmd.opts) { client in
                     let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
                     print("Deriving account address and keys.")
                     let account = try SeedBasedAccountDerivation(
@@ -258,7 +259,7 @@ struct Root: AsyncParsableCommand {
                     print("Resolved address \(account.address.base58Check) from credential \(credentialCounter) of identity \(walletCmd.identityProviderID):\(walletCmd.identityIndex).")
 
                     // Construct and send transaction.
-                    return try await transfer(
+                    let tx = try await transfer(
                         client: client,
                         sender: account,
                         receiver: receiver,
@@ -266,8 +267,11 @@ struct Root: AsyncParsableCommand {
                         memo: memo,
                         expiry: expiry
                     )
+                    print("Transaction with hash '\(tx.hash)' successfully submitted. Waiting for finalization.")
+
+                    let (blockHash, summary) = try await tx.waitUntilFinalized(timeoutSeconds: 10)
+                    print("Transaction finalized in block \(blockHash): \(summary)")
                 }
-                print("Transaction with hash '\(hash.hex)' successfully submitted.")
             }
         }
 
@@ -481,10 +485,13 @@ struct Root: AsyncParsableCommand {
                     print("Serializing credential deployment.")
                     let serializedTx = try signedTx.serialize()
                     print("Sending credential deployment.")
-                    let tx = try await withGRPCClient(rootCmd.opts) { client in
-                        try await client.send(deployment: serializedTx)
+                    try await withGRPCClient(rootCmd.opts) { client in
+                        let tx = try await client.send(deployment: serializedTx)
+                        print("Transaction with hash '\(tx.hash)' successfully submitted. Waiting for finalization.")
+
+                        let (blockHash, summary) = try await tx.waitUntilFinalized(timeoutSeconds: 10)
+                        print("Transaction finalized in block \(blockHash): \(summary)")
                     }
-                    print("Transaction with hash '\(tx.hash.hex)' successfully submitted.")
                 }
             }
         }
@@ -547,10 +554,13 @@ struct Root: AsyncParsableCommand {
                 let memo = memo.map { Data(CBOR.encode($0)) }
 
                 // Construct and send transaction.
-                let hash = try await withGRPCClient(rootCmd.opts) { client in
-                    try await transfer(client: client, sender: sender, receiver: receiver, amount: amount, memo: memo, expiry: expiry)
+                let (blockHash, summary) = try await withGRPCClient(rootCmd.opts) { client in
+                    let tx = try await transfer(client: client, sender: sender, receiver: receiver, amount: amount, memo: memo, expiry: expiry)
+                    print("Transaction with hash '\(tx.hash)' successfully submitted. Waiting for finalization.")
+                    return try await tx.waitUntilFinalized(timeoutSeconds: 10)
                 }
-                print("Transaction with hash '\(hash.hex)' successfully submitted.")
+
+                print("Transaction finalized in block \(blockHash): \(summary)")
             }
         }
     }
@@ -579,15 +589,17 @@ struct Root: AsyncParsableCommand {
         var rootCmd: Root
 
         func run() async throws {
-            let res = try await withGRPCClient(rootCmd.opts) { client in
-                try await client.anonymityRevokers(block: .lastFinal)
+            try await withGRPCClient(rootCmd.opts) { client in
+                let stream = client.anonymityRevokers(block: .lastFinal)
+                for try await v in stream {
+                    print(v)
+                }
             }
-            print(res)
         }
     }
 }
 
-func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amount: CCD, memo: Data?, expiry: TransactionTime) async throws -> TransactionHash {
+func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amount: CCD, memo: Data?, expiry: TransactionTime) async throws -> SubmittedTransaction {
     print("Attempting to send \(amount) uCCD from account '\(sender.address.base58Check)' to '\(receiver.base58Check)'...")
     print("Resolving next sequence number of sender account.")
     let next = try await client.nextAccountSequenceNumber(address: sender.address)
@@ -601,7 +613,7 @@ func transfer(client: NodeClient, sender: Account, receiver: AccountAddress, amo
         expiry: expiry
     )
     print("Sending transaction.")
-    return try await client.send(transaction: tx).hash
+    return try await client.send(transaction: tx)
 }
 
 func findIdentityProvider(walletProxy: WalletProxy, id: IdentityProviderID) async throws -> IdentityProviderJSON? {
