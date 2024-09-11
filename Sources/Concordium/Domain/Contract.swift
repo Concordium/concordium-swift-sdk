@@ -1,5 +1,6 @@
 import Foundation
 import NIO
+import ConcordiumWalletCrypto
 
 /// The max size of a `Parameter`
 let PARAMETER_SIZE_MAX: UInt16 = 65535
@@ -7,22 +8,25 @@ let PARAMETER_SIZE_MAX: UInt16 = 65535
 let FUNC_NAME_MAX: UInt8 = 100
 
 /// Error thrown when decoding/encoding data using ``ContractSchema``
-public struct SchemaError: Error {
-    public let message: String
-}
+public typealias SchemaError = ConcordiumWalletCrypto.SchemaError
 
 /// Represents a schema for a single type in a smart contract, i.e. one of:
 /// - ``Parameter``
 /// - ``ReturnValue``
 /// - ``ContractError``
 /// - ``ContractEvent``
-public struct TypeSchema: Equatable {
-    public let value: Data
-}
+public typealias TypeSchema = ConcordiumWalletCrypto.TypeSchema 
+
+/// Represents a schema of a specific version for a smart contract module.
+public typealias ModuleSchema = ConcordiumWalletCrypto.ModuleSchema 
 
 public extension TypeSchema {
+    init(base64: String) throws {
+        self.init(value: try Data(base64Encoded: base64) ?! SchemaError.ParseSchema(message: "Failed to construct schema from string value. Base64 string expected."))
+    }
+
     func decode(data: Data) throws -> String {
-        "" // FIXME: implementation missing
+        try deserializeTypeValue(value: data, schema: self)
     }
 
     func decode(value: any SchemaCodable) throws -> String {
@@ -30,7 +34,7 @@ public extension TypeSchema {
     }
 
     func encode(json: String) throws -> Data {
-        Data() // FIXME: implementation missing
+        try serializeTypeValue(json: json, schema: self)
     }
 
     func encode<T: SchemaCodable>(json: String, as _: T.Type) throws -> T {
@@ -38,30 +42,30 @@ public extension TypeSchema {
     }
 }
 
-public struct ModuleSchema: Equatable {
-    public let value: Data
-    public let version: ModuleSchemaVersion?
-}
-
 public extension ModuleSchema {
+    init(base64: String, version: ModuleSchemaVersion?) throws {
+        let val = try Data(base64Encoded: base64) ?! SchemaError.ParseSchema(message: "Failed to construct schema from string value. Base64 string expected.")
+        self.init(value: val, version: version)
+    }
+
     func initParameterSchema(contractName: ContractName) throws -> TypeSchema {
-        TypeSchema(value: Data()) // FIXME: implementation..
+        try getInitParameterSchema(schema: self, contractName: contractName.value)
     }
 
     func initErrorSchema(contractName: ContractName) throws -> TypeSchema {
-        TypeSchema(value: Data()) // FIXME: implementation..
+        try getInitErrorSchema(schema: self, contractName: contractName.value)
     }
 
-    func updateParameterSchema(receiveName: ReceiveName) throws -> TypeSchema {
-        TypeSchema(value: Data()) // FIXME: implementation..
+    func receiveParameterSchema(receiveName: ReceiveName) throws -> TypeSchema {
+        try getReceiveParameterSchema(schema: self, contractName: receiveName.contractName.value, functionName: receiveName.entrypointName.value)
     }
 
-    func updateReturnValueSchema(receiveName: ReceiveName) throws -> TypeSchema {
-        TypeSchema(value: Data()) // FIXME: implementation..
+    func receiveReturnValueSchema(receiveName: ReceiveName) throws -> TypeSchema {
+        try getReceiveReturnValueSchema(schema: self, contractName: receiveName.contractName.value, functionName: receiveName.entrypointName.value)
     }
 
-    func updateErrorSchema(receiveName: ReceiveName) throws -> TypeSchema {
-        TypeSchema(value: Data()) // FIXME: implementation..
+    func receiveErrorSchema(receiveName: ReceiveName) throws -> TypeSchema {
+        try getReceiveErrorSchema(schema: self, contractName: receiveName.contractName.value, functionName: receiveName.entrypointName.value)
     }
 }
 
@@ -81,10 +85,41 @@ public extension SchemaCodable {
     }
 }
 
-public enum ModuleSchemaVersion: UInt8, Codable {
-    case V0
-    case V1
-    case V2
+/// Describes the different versions of contract module schemas.
+public typealias ModuleSchemaVersion = ConcordiumWalletCrypto.ModuleSchemaVersion
+
+extension ModuleSchemaVersion: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(UInt8.self)
+
+        switch value {
+        case 0:
+            self = .v0
+        case 1:
+            self = .v1
+        case 2:
+            self = .v2
+        case 3:
+            self = .v3
+        default:
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Value \(value) is out of bounds for type ModuleSchemaVersion")
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .v0:
+            try container.encode(UInt8(0))
+        case .v1:
+            try container.encode(UInt8(1))
+        case .v2:
+            try container.encode(UInt8(2))
+        case .v3:
+            try container.encode(UInt8(3))
+        }
+    }
 }
 
 /// Represents a schema to be used for encoding/decoding smart contract types to/from it's corresponding JSON format.
@@ -168,12 +203,12 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC, Sc
     }
 
     public func decode(receiveName: ReceiveName, schema: ModuleSchema) throws -> String {
-        let schema = try schema.updateParameterSchema(receiveName: receiveName)
+        let schema = try schema.receiveParameterSchema(receiveName: receiveName)
         return try self.decode(schema: schema)
     }
 
     public init(json: String, receiveName: ReceiveName, schema: ModuleSchema) throws {
-        let schema = try schema.updateParameterSchema(receiveName: receiveName)
+        let schema = try schema.receiveParameterSchema(receiveName: receiveName)
         self = try .init(json: json, schema: schema)
     }
 }
@@ -206,7 +241,7 @@ public struct ReturnValue: Equatable, SchemaCodable {
     }
 
     public func decode(receiveName: ReceiveName, schema: ModuleSchema) throws -> String {
-        let schema = try schema.updateReturnValueSchema(receiveName: receiveName)
+        let schema = try schema.receiveReturnValueSchema(receiveName: receiveName)
         return try self.decode(schema: schema)
     }
 }
@@ -239,7 +274,7 @@ public struct ContractError: Equatable, SchemaCodable {
     }
 
     public func decode(receiveName: ReceiveName, schema: ModuleSchema) throws -> String {
-        let schema = try schema.updateErrorSchema(receiveName: receiveName)
+        let schema = try schema.receiveErrorSchema(receiveName: receiveName)
         return try self.decode(schema: schema)
     }
 }
@@ -349,8 +384,9 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     }
 
     public var contractName: ContractName { get {
-        let index = value.firstIndex(of: "_")! // We know this type always has this in the `init_` prefix
-        return ContractName(unchecked: String(value[...index]))
+        var index = value.firstIndex(of: "_")! // We know this type always has this in the `init_` prefix
+        index = value.index(after: index)
+        return ContractName(unchecked: String(value[index...]))
     }}
 }
 
@@ -524,6 +560,17 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC {
     static func fromGRPC(_ gRPC: GRPC) throws -> Self {
         try Self(gRPC.value)
     }
+
+    public var contractName: ContractName { get {
+        let index = value.firstIndex(of: ".")! // We know this type always has this as a separator between contract name and entrypoint name
+        return ContractName(unchecked: String(value[..<index]))
+    }}
+
+    public var entrypointName: EntrypointName { get {
+        var index = value.firstIndex(of: ".")! // We know this type always has this as a separator between contract name and entrypoint name
+        index = value.index(after: index)
+        return EntrypointName(unchecked: String(value[index...]))
+    }}
 }
 
 extension ReceiveName: Codable {

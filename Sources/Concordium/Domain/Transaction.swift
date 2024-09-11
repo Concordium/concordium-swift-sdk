@@ -889,7 +889,7 @@ extension AccountTransactionPayload {
 
             switch schema {
             case .module(let value):
-                typeSchema = try value.updateParameterSchema(receiveName: receiveName)
+                typeSchema = try value.receiveParameterSchema(receiveName: receiveName)
             case .type(let value):
                 typeSchema = value
             }
