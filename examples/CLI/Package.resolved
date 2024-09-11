@@ -50,8 +50,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Concordium/concordium-wallet-crypto-swift.git",
       "state" : {
-        "revision" : "6ad3c5ca83bd83ebd98f5ee9e8da44e07cee7179",
-        "version" : "3.1.1"
+        "revision" : "3d0660ded3949adf0590739a8d42f6f735a66c4d",
+        "version" : "4.0.0"
       }
     },
     {

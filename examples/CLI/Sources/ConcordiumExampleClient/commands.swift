@@ -700,7 +700,7 @@ struct Root: AsyncParsableCommand {
                     let seedHex = try Mnemonic.deterministicSeedString(from: walletCmd.seedPhrase)
                     let seed = try WalletSeed(seedHex: seedHex, network: walletCmd.network.network)
                     print("Preparing identity recovery request.")
-                    let identityProvider = ip.toSDKType()
+                    let identityProvider = try ip.toSDKType()
                     let req = try makeIdentityRecoveryRequest(
                         seed: seed,
                         cryptoParams: cryptoParams,

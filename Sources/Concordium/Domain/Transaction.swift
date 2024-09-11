@@ -500,7 +500,7 @@ public struct SecToPubTransferData: Equatable {
      * The serialized remaining amount after deducting the amount to transfer
      * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::EncryptedAmount`]
      */
-    public var remainingAmount: Bytes
+    public var remainingAmount: Data
     /**
      * The amount to transfer
      */
@@ -513,7 +513,7 @@ public struct SecToPubTransferData: Equatable {
      * The serialized proof that the transfer is correct.
      * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::SecToPubAmountTransferProof`]
      */
-    public var proof: Bytes
+    public var proof: Data
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -522,7 +522,7 @@ public struct SecToPubTransferData: Equatable {
          * The serialized remaining amount after deducting the amount to transfer
          * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::EncryptedAmount`]
          */
-        remainingAmount: Bytes,
+        remainingAmount: Data,
         /**
             * The amount to transfer
             */
@@ -535,7 +535,7 @@ public struct SecToPubTransferData: Equatable {
             * The serialized proof that the transfer is correct.
             * Serialized according to the [`Serial`] implementation of [`concordium_base::encrypted_transfers::types::SecToPubAmountTransferProof`]
             */
-        proof: Bytes
+        proof: Data
     ) {
         self.remainingAmount = remainingAmount
         self.transferAmount = transferAmount
@@ -1092,11 +1092,10 @@ public struct PreparedAccountCredentialDeployment {
 
     public var hash: Data {
         get throws {
-            let hex = try accountCredentialDeploymentHashHex(
+            try accountCredentialDeploymentHash(
                 credential: credential,
                 expiryUnixSecs: expiry
             )
-            return try Data(hex: hex)
         }
     }
 }
@@ -1116,14 +1115,14 @@ public struct SignedAccountCredentialDeployment {
     public func toCryptoType() -> SignedAccountCredential {
         .init(
             credential: deployment.credential,
-            signaturesHex: signatures.mapValues { $0.hex }
+            signatures: signatures
         )
     }
 
     /// Serializes the account credential deployment
     public func serialize() throws -> SerializedSignedAccountCredentialDeployment {
-        let hex = try accountCredentialDeploymentSignedPayloadHex(credential: toCryptoType())
-        return try .init(data: Data(hex: hex), expiry: deployment.expiry)
+        let data = try accountCredentialDeploymentSignedPayload(credential: toCryptoType())
+        return .init(data: data, expiry: deployment.expiry)
     }
 }
 
