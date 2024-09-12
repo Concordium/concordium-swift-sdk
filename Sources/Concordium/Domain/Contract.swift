@@ -118,6 +118,11 @@ public extension ModuleSchema {
         try getReceiveErrorSchema(schema: self, contractName: receiveName.contractName.value, functionName: receiveName.entrypointName.value)
     }
 
+    /// Gets schema for events emitted by the contract
+    func eventSchema(contractName: ContractName) throws -> TypeSchema {
+        try getEventSchema(schema: self, contractName: contractName.value)
+    }
+
     /// The base64 representation of the schema
     var base64: String {
         value.base64EncodedString()
