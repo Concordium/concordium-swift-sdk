@@ -4,6 +4,37 @@ import XCTest
 let TEST_CONTRACT_SCHEMA = "//8CAQAAAAwAAABUZXN0Q29udHJhY3QBBAIDAQAAABAAAAByZWNlaXZlX2Z1bmN0aW9uBgYIBw=="
 let TEST_CONTRACT_RECEIVE_ERROR_SCHEMA = "Bw==" // i16
 let TEST_CONTRACT_INIT_ERROR_SCHEMA = "Aw==" // u16
+
+let AUCTION_WITH_ERRORS_VIEW_RETURN_VALUE_SCHEMA_TEMPLATE = """
+{
+  "auction_state": {
+    "Enum": [
+      {
+        "NotSoldYet": []
+      },
+      {
+        "Sold": [
+          "<AccountAddress>"
+        ]
+      }
+    ]
+  },
+  "end": "<Timestamp (e.g. `2000-01-01T12:00:00Z`)>",
+  "highest_bidder": {
+    "Enum": [
+      {
+        "None": []
+      },
+      {
+        "Some": [
+          "<AccountAddress>"
+        ]
+      }
+    ]
+  },
+  "item": "<String>"
+}
+"""
 let AUCTION_WITH_ERRORS_VIEW_RETURN_VALUE_SCHEMA =
     "FAAEAAAADQAAAGF1Y3Rpb25fc3RhdGUVAgAAAAoAAABOb3RTb2xkWWV0AgQAAABTb2xkAQEAAAALDgAAAGhpZ2hlc3RfYmlkZGVyFQIAAAAEAAAATm9uZQIEAAAAU29tZQEBAAAACwQAAABpdGVtFgIDAAAAZW5kDQ=="
 
@@ -28,11 +59,8 @@ final class ContractTest: XCTestCase {
     }
 
     func testTypeSchemaTemplate() throws {
-        let expected = """
-        {"auction_state":{"Enum":[{"NotSoldYet":[]},{"Sold":["<AccountAddress>"]}]},"end":"<Timestamp (e.g. `2000-01-01T12:00:00Z`)>","highest_bidder":{"Enum":[{"None":[]},{"Some":["<AccountAddress>"]}]},"item":"<String>"}
-        """
         let schema = try TypeSchema(base64: AUCTION_WITH_ERRORS_VIEW_RETURN_VALUE_SCHEMA)
-        XCTAssertEqual(try schema.template, expected)
+        XCTAssertEqual(try schema.template, AUCTION_WITH_ERRORS_VIEW_RETURN_VALUE_SCHEMA_TEMPLATE)
     }
 
     func testSchemaEq() throws {
