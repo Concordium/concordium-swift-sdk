@@ -115,8 +115,8 @@ public class WalletSeed {
         )
     }
 
-    public func id(accountCredentialIndexes: AccountCredentialSeedIndexes, commitmentKey: Data) throws -> Data {
-        try accountCredentialId(
+    public func id(accountCredentialIndexes: AccountCredentialSeedIndexes, commitmentKey: Data) throws -> CredentialRegistrationID {
+        let data = try accountCredentialId(
             seed: seed,
             network: network.rawValue,
             identityProviderId: accountCredentialIndexes.identity.providerID,
@@ -124,6 +124,7 @@ public class WalletSeed {
             credentialCounter: accountCredentialIndexes.counter,
             commitmentKey: commitmentKey
         )
+        return try CredentialRegistrationID(data)
     }
 
     public func attributeCommitmentRandomness(accountCredentialIndexes: AccountCredentialSeedIndexes, attribute: UInt8) throws -> Data {
@@ -179,13 +180,12 @@ public class SeedBasedAccountDerivation {
     }
 
     public func deriveCredential(
-        seedIndexes: AccountCredentialSeedIndexes, // TODO: shouldn't identity know its own indexes?
+        seedIndexes: AccountCredentialSeedIndexes,
         identity: IdentityObject,
         provider: IdentityProvider,
         revealedAttributes: [UInt8] = [],
         threshold: SignatureThreshold
     ) throws -> AccountCredential {
-        // TODO: Must provide exactly the IP's ARs?
         let anonymityRevokers = provider.anonymityRevokers
         let idCredSec = try seed.credSec(identityIndexes: seedIndexes.identity)
         let prfKey = try seed.prfKey(identityIndexes: seedIndexes.identity)
@@ -231,8 +231,7 @@ public class SeedBasedAccountDerivation {
 
     public func deriveAccountAddress(firstCredential: AccountCredentialSeedIndexes) throws -> AccountAddress {
         let id = try seed.id(accountCredentialIndexes: firstCredential, commitmentKey: cryptoParams.onChainCommitmentKey)
-        let hash = SHA256.hash(data: id)
-        return AccountAddress(Data(hash))
+        return id.accountAddress
     }
 
     public func deriveKeys(credentials: [AccountCredentialSeedIndexes]) throws -> AccountKeysCurve25519 {

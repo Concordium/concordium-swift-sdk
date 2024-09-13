@@ -2,19 +2,6 @@ import ConcordiumWalletCrypto
 import Foundation
 import NIO
 
-protocol FromGRPC<GRPC> {
-    associatedtype GRPC
-    /// Initializes the type from the associated GRPC type
-    /// - Throws: `GRPCError` if conversion could not be made
-    static func fromGRPC(_ g: GRPC) throws -> Self
-}
-
-protocol ToGRPC<GRPC> {
-    associatedtype GRPC
-    /// Converts the type into the associated GRPC type
-    func toGRPC() -> GRPC
-}
-
 /// Energy is used to count exact execution cost.
 /// This cost is then converted to CCD amounts.
 public typealias Energy = UInt64
