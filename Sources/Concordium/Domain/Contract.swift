@@ -37,10 +37,22 @@ public struct SchemaJSONString: CustomStringConvertible {
     }
 }
 
+func base64RemovePadding(value: String) -> String {
+    value.trimmingCharacters(in: .init(charactersIn: "="))
+}
+
+func base64AddPadding(value: String) -> String {
+    if value.count % 4 == 0 {
+        return value
+    }
+    return value + String(repeating: "=", count: value.count % 4)
+}
+
 public extension TypeSchema {
     /// Init from base64 encoded string
     init(base64: String) throws {
-        try self.init(value: Data(base64Encoded: base64) ?! SchemaError.ParseSchema(message: "Failed to construct schema from string value. Base64 string expected."))
+        let padded = base64AddPadding(value: base64)
+        try self.init(value: Data(base64Encoded: padded) ?! SchemaError.ParseSchema(message: "Failed to construct schema from string value. Base64 string expected."))
     }
 
     /// Decode the ``Data`` into it's JSON representation
@@ -77,7 +89,7 @@ public extension TypeSchema {
 
     /// The base64 representation of the schema
     var base64: String {
-        value.base64EncodedString()
+        base64RemovePadding(value: value.base64EncodedString())
     }
 
     /// Display the template of the type schema. This is useful when figuring out how to represent the associated type in JSON format.
@@ -89,7 +101,8 @@ public extension TypeSchema {
 public extension ModuleSchema {
     /// Init from base64 encoded string
     init(base64: String, version: ModuleSchemaVersion? = nil) throws {
-        let val = try Data(base64Encoded: base64) ?! SchemaError.ParseSchema(message: "Failed to construct schema from string value. Base64 string expected.")
+        let padded = base64AddPadding(value: base64)
+        let val = try Data(base64Encoded: padded) ?! SchemaError.ParseSchema(message: "Failed to construct schema from string value. Base64 string expected.")
         self.init(value: val, version: version)
     }
 
@@ -125,7 +138,7 @@ public extension ModuleSchema {
 
     /// The base64 representation of the schema
     var base64: String {
-        value.base64EncodedString()
+        base64RemovePadding(value: value.base64EncodedString())
     }
 }
 
