@@ -841,6 +841,14 @@ public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize, Cod
     }
 }
 
+/// An error happened while decoding the parameter of a ``AccountTransactionPayload`` into a JSON string
+public enum ParameterJsonError: Error {
+    /// Transaction type has no parameter
+    case invalidTransactionType
+    /// Decoding the parameter failed. More information is available on the inner ``SchemaError``
+    case decodingFailed(error: SchemaError)
+}
+
 /// The payload for an account transaction. Only contains payloads valid from protocol version 7
 public enum AccountTransactionPayload: Equatable {
     case deployModule(_ module: WasmModule)
@@ -854,6 +862,43 @@ public enum AccountTransactionPayload: Equatable {
     case registerData(_ data: RegisteredData)
     case configureBaker(_ data: ConfigureBakerPayload)
     case configureDelegation(_ data: ConfigureDelegationPayload)
+}
+
+public extension AccountTransactionPayload {
+    /// Gives a JSON representation of a ``Parameter`` associated with the transaction decoded with the given ``ContractSchema``
+    ///
+    /// - Parameter schema: The schema to use for decoding the ``Parameter``
+    /// - Throws: if this is invoked for any other variant than ``.initContract`` or ``.updateContract``.
+    /// - Returns: A JSON string representation of the associated ``Parameter``
+    func jsonParameter(schema: ContractSchema) throws -> SchemaJSONString {
+        var typeSchema: TypeSchema
+        var parameter: Parameter
+
+        switch self {
+        case let .initContract(_, _, initName, param):
+            parameter = param
+
+            switch schema {
+            case let .module(value):
+                typeSchema = try value.initParameterSchema(contractName: initName.contractName)
+            case let .type(value):
+                typeSchema = value
+            }
+        case let .updateContract(_, _, receiveName, param):
+            parameter = param
+
+            switch schema {
+            case let .module(value):
+                typeSchema = try value.receiveParameterSchema(receiveName: receiveName)
+            case let .type(value):
+                typeSchema = value
+            }
+        default:
+            throw ParameterJsonError.invalidTransactionType
+        }
+
+        return try typeSchema.decode(value: parameter)
+    }
 }
 
 extension AccountTransactionPayload: Serialize, Deserialize {

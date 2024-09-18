@@ -83,39 +83,6 @@ public enum WalletConnectTransactionPayload: Equatable {
     case registerData(_ data: RegisteredData)
 }
 
-/// Represents a schema to be used for decoding the received parameter for either update/init contract transaction requests.
-public enum WalletConnectSchema: Equatable {
-    case parameter(value: String)
-    case module(value: String, version: ModuleSchemaVersion?)
-}
-
-extension WalletConnectSchema: Decodable {
-    private enum SchemaType: String, Codable {
-        case parameter
-        case module
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case type
-        case value
-        case version
-    }
-
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: Self.CodingKeys.self)
-        let type = try container.decode(SchemaType.self, forKey: Self.CodingKeys.type)
-        let value = try container.decode(String.self, forKey: Self.CodingKeys.value)
-
-        switch type {
-        case .parameter:
-            self = .parameter(value: value)
-        case .module:
-            let version = try container.decodeIfPresent(ModuleSchemaVersion.self, forKey: Self.CodingKeys.version)
-            self = .module(value: value, version: version)
-        }
-    }
-}
-
 /// Describes parameter supplied to a walletconnect "sign_and_send_transaction" request
 /// as produced by the NPM package `@concordium/wallet-connectors`.
 ///
@@ -124,9 +91,9 @@ public struct WalletConnectSendTransactionParam: Equatable {
     public let type: TransactionType
     public let sender: AccountAddress
     public let payload: WalletConnectTransactionPayload
-    public let schema: WalletConnectSchema?
+    public let schema: ContractSchema?
 
-    init(type: TransactionType, sender: AccountAddress, payload: WalletConnectTransactionPayload, schema: WalletConnectSchema? = nil) {
+    init(type: TransactionType, sender: AccountAddress, payload: WalletConnectTransactionPayload, schema: ContractSchema? = nil) {
         self.type = type
         self.sender = sender
         self.payload = payload
@@ -176,7 +143,7 @@ extension WalletConnectSendTransactionParam: Decodable {
         let container = try decoder.container(keyedBy: Self.CodingKeys.self)
         type = try container.decode(TransactionType.self, forKey: Self.CodingKeys.type)
         sender = try container.decode(AccountAddress.self, forKey: Self.CodingKeys.sender)
-        schema = try container.decodeIfPresent(WalletConnectSchema.self, forKey: Self.CodingKeys.schema)
+        schema = try container.decodeIfPresent(ContractSchema.self, forKey: Self.CodingKeys.schema)
 
         switch type {
         case .deployModule:
