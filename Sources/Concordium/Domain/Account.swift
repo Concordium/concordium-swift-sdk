@@ -95,7 +95,7 @@ public typealias SignatureThreshold = UInt8
 public typealias RevocationThreshold = UInt8
 
 /// Amount of uCCD.
-public typealias MicroCCDAmount = UInt64
+public typealias MicroCCDAmount = ConcordiumWalletCrypto.MicroCCDAmount
 
 public typealias EncryptedAmount = Data
 
@@ -405,7 +405,7 @@ extension VerifyKey: Codable {
     }
 }
 
-extension VerifyKey: CustomStringConvertible {
+extension VerifyKey: @retroactive CustomStringConvertible {
     public var description: String { "\(key.hex)" }
 }
 

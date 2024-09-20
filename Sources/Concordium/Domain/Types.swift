@@ -614,3 +614,36 @@ extension Address: FromGRPC, ToGRPC {
         return g
     }
 }
+
+public struct Versioned<V> {
+    public var version: UInt32
+    public var value: V
+
+    enum CodingKeys: CodingKey {
+        case v
+        case value
+    }
+
+    public init(version: UInt32, value: V) {
+        self.version = version
+        self.value = value
+    }
+}
+
+extension Versioned: Decodable where V: Decodable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            version: container.decode(UInt32.self, forKey: .v),
+            value: container.decode(V.self, forKey: .value)
+        )
+    }
+}
+
+extension Versioned: Encodable where V: Encodable {
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(version, forKey: .v)
+        try container.encode(value, forKey: .value)
+    }
+}

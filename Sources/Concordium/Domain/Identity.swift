@@ -43,7 +43,7 @@ extension AnonymityRevokerInfo: FromGRPC {
     }
 }
 
-extension IdentityObject: Decodable {
+extension IdentityObject: @retroactive Decodable {
     enum CodingKeys: CodingKey {
         case preIdentityObject
         case attributeList
@@ -60,7 +60,7 @@ extension IdentityObject: Decodable {
     }
 }
 
-extension PreIdentityObject: Decodable {
+extension PreIdentityObject: @retroactive Decodable {
     enum CodingKeys: CodingKey {
         case idCredPub
         case ipArData
@@ -90,7 +90,7 @@ extension PreIdentityObject: Decodable {
     }
 }
 
-extension AnonymityRevokerData: Decodable {
+extension AnonymityRevokerData: @retroactive Decodable {
     enum CodingKeys: CodingKey {
         case encPrfKeyShare
         case proofComEncEq
@@ -105,7 +105,7 @@ extension AnonymityRevokerData: Decodable {
     }
 }
 
-extension ChoiceArParameters: Decodable {
+extension ChoiceArParameters: @retroactive Decodable {
     enum CodingKeys: CodingKey {
         case arIdentities
         case threshold
@@ -120,7 +120,7 @@ extension ChoiceArParameters: Decodable {
     }
 }
 
-extension AttributeList: Decodable {
+extension AttributeList: @retroactive Decodable {
     enum CodingKeys: CodingKey {
         case validTo
         case createdAt
@@ -145,7 +145,7 @@ extension Description: FromGRPC {
     }
 }
 
-extension Description: Decodable {
+extension Description: @retroactive Decodable {
     /// Fields used in Wallet Proxy response.
     enum CodingKeys: CodingKey {
         case name
