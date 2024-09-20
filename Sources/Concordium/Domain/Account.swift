@@ -1,5 +1,6 @@
 import Base58Check
 import ConcordiumWalletCrypto
+import CryptoKit
 import Foundation
 import NIO
 
@@ -56,6 +57,14 @@ public struct CredentialRegistrationID: Serialize, Deserialize, FromGRPC, ToGRPC
         guard let value = data.read(num: SIZE) else { return nil }
         return try? Self(value)
     }
+
+    /// Get the ``AccountAddress`` corresonding to the credential registration ID.
+    public var accountAddress: AccountAddress {
+        let hash = SHA256.hash(data: value)
+        return AccountAddress(Data(hash))
+    }
+
+    public var hex: String { value.hex }
 }
 
 extension CredentialRegistrationID: Codable {
@@ -164,6 +173,11 @@ public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC
     /// Construct address directly from a 32-byte data buffer.
     public init(_ data: Data) {
         self.data = data
+    }
+
+    /// Construct the account address from a ``CredentialRegistrationID``
+    public init(regId: CredentialRegistrationID) {
+        self = regId.accountAddress
     }
 
     /// Construct address from the standard representation (Base58Check).
