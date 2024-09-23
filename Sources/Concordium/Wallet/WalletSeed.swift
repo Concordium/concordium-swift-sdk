@@ -55,8 +55,8 @@ public struct VerifiableCredentialSeedIndexes {
 
 /// Class for deterministically deriving cryptographic values related to credentials from a seed.
 public class WalletSeed {
-    private let seed: Data
-    private let network: Network
+    let seed: Data
+    let network: Network
 
     public init(seed: Data, network: Network) {
         self.seed = seed

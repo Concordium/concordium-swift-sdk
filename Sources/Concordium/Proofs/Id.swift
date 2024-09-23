@@ -112,7 +112,7 @@ public struct Statement<Tag, Value: Hashable> {
     public var statements: [AtomicStatement<Tag, Value>]
 }
 
-extension Statement: Codable where Tag: Codable, Value: Codable  {
+extension Statement: Codable where Tag: Codable, Value: Codable {
     public init(from decoder: any Decoder) throws {
         var container = try decoder.unkeyedContainer()
         let statements = try container.decode([AtomicStatement<Tag, Value>].self)
@@ -124,6 +124,42 @@ extension Statement: Codable where Tag: Codable, Value: Codable  {
         for atomic in statements {
             try container.encode(atomic)
         }
+    }
+}
+
+public extension Statement where Tag == AttributeTag, Value == String {
+    /// Construct a proof corresponding to the statement for the identity in the given context
+    /// - Parameters:
+    ///   - wallet: The wallet to use when constructing the proof
+    ///   - global: The cryptographic parameters of the chain
+    ///   - ipInfo: The info related to the identity provider of the identity
+    ///   - identityIndex: The index of the identity the statement should be proven for
+    ///   - credentialIndex: The index of the credential used for the for the proof of identity
+    ///   - identityObject: The identity object corresponding to the identity the statement should be proven for
+    ///   - challenge: A 32 byte challenge used, which is needed when verifying the proof
+    ///
+    /// - Throws: If the proof could not be successfully constructed given the context
+    /// - Returns: A (versioned) proof of the statement for the identity in the given context
+    func prove(
+        wallet: WalletSeed,
+        global: GlobalContext,
+        ipInfo: IdentityProviderInfo,
+        identityIndex: UInt32,
+        credentialIndex: UInt8,
+        identityObject: IdentityObject,
+        challenge: Data
+    ) throws -> Versioned<Proof<Tag>> {
+        try proveStatementV1(
+            seed: wallet.seed,
+            net: wallet.network.rawValue,
+            globalContext: global,
+            ipInfo: ipInfo,
+            identityIndex: identityIndex,
+            credentialIndex: credentialIndex,
+            identityObject: identityObject,
+            statement: StatementV1(statement: self),
+            challenge: challenge
+        ).toSDK()
     }
 }
 
@@ -237,13 +273,13 @@ extension Proof: Codable where Tag: Codable {}
 extension ProofV1 {
     /// Used internally to convert from crypto lib outpub type to SDK type
     func toSDK() throws -> Proof<AttributeTag> {
-        try Proof(proofs: self.proofs.map {try $0.toSDK()})
+        try Proof(proofs: proofs.map { try $0.toSDK() })
     }
 }
 
 extension VersionedProofV1 {
     /// Used internally to convert from crypto lib outpub type to SDK type
     func toSDK() throws -> Versioned<Proof<AttributeTag>> {
-        Versioned(version: self.version, value: try self.value.toSDK())
+        try Versioned(version: version, value: value.toSDK())
     }
 }
