@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with the necessary variants, and corresponding constructor functions for `AccountTransaction`.
 - `WalletConnectSendTransactionParam` and `WalletConnectSignMessageParam` for decoding parameters received with walletconnect requests.
 - `ContractSchema`, `TypeSchema`, and `ModuleSchema` for encoding/decoding data from/to the corresponding JSON representation
+- `WalletSeed.encryptionKeys` to get the encryption keys for a credential index
+- `decryptAmount` and `combineEncryptedAmounts` to handle encrypted amounts
+- `Statement` and `Proof` types for constructing ID statements and their corresponding proofs
 
 #### GRPC client
 - `NodeClient.status` to query transaction status.

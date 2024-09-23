@@ -918,6 +918,9 @@ extension CredentialType: FromGRPC {
     }
 }
 
+/// Details of an account creation. These transactions are free, and we only
+/// ever get a response for them if the account is created, hence no failure
+/// cases.
 public struct AccountCreationDetails {
     /// Whether this is an initial or normal account.
     public let credentialType: CredentialType
@@ -936,4 +939,21 @@ extension AccountCreationDetails: FromGRPC {
         let regId = try CredentialRegistrationID.fromGRPC(g.regID)
         return Self(credentialType: credentialType, address: address, regId: regId)
     }
+}
+
+/// Encryption keypair for an account, used to handle the encrypted amount associated with a specific account.
+public typealias EncryptionKeys = ConcordiumWalletCrypto.EncryptionKeys
+
+/// Decrypt a single encrypted amount using the secret key corresponding to the public key used for the encryption.
+public func decryptAmount(encryptedAmount: Data, encryptionSecretKey: Data) throws -> CCD {
+    let amount = try ConcordiumWalletCrypto.decryptAmount(encryptedAmount: encryptedAmount, encryptionSecretKey: encryptionSecretKey)
+    return CCD(microCCD: amount)
+}
+
+/// Combine two encrypted amounts into one.
+///
+/// This is only meaningful if both encrypted amounts are encrypted with the
+/// same public key, otherwise the result is meaningless.
+public func combineEncryptedAmounts(left: Data, right: Data) throws -> Data {
+    try ConcordiumWalletCrypto.combineEncryptedAmounts(left: left, right: right)
 }

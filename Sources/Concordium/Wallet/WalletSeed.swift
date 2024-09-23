@@ -115,6 +115,11 @@ public class WalletSeed {
         )
     }
 
+    public func encryptionKeys(globalContext: CryptographicParameters, accountCredentialIndexes: AccountCredentialSeedIndexes) throws -> EncryptionKeys {
+        let prfKey = try prfKey(identityIndexes: accountCredentialIndexes.identity)
+        return try getEncryptionKeys(globalContext: globalContext, prfKey: prfKey, credentialIndex: accountCredentialIndexes.counter)
+    }
+
     public func id(accountCredentialIndexes: AccountCredentialSeedIndexes, commitmentKey: Data) throws -> CredentialRegistrationID {
         let data = try accountCredentialId(
             seed: seed,
