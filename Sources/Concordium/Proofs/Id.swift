@@ -3,7 +3,7 @@ import Foundation
 
 /// Statements are composed of one or more atomic statements.
 /// This type defines the different types of atomic statements.
-public enum AtomicStatement<Tag, Value: Hashable> {
+public enum AtomicStatement<Tag: Equatable, Value: Hashable & Equatable>: Equatable {
     /// For the case where the verifier wants the user to show the value of an
     /// attribute and prove that it is indeed the value inside the on-chain
     /// commitment. Since the verifier does not know the attribute value before
@@ -107,23 +107,21 @@ extension AtomicStatementV1 {
 }
 
 /// A statement is a list of atomic statements.
-public struct Statement<Tag, Value: Hashable> {
+public struct Statement<Tag: Equatable, Value: Hashable & Equatable>: Equatable {
     /// The list of atomic statements
     public var statements: [AtomicStatement<Tag, Value>]
 }
 
 extension Statement: Codable where Tag: Codable, Value: Codable {
     public init(from decoder: any Decoder) throws {
-        var container = try decoder.unkeyedContainer()
+        let container = try decoder.singleValueContainer()
         let statements = try container.decode([AtomicStatement<Tag, Value>].self)
         self = Self(statements: statements)
     }
 
     public func encode(to encoder: any Encoder) throws {
-        var container = encoder.unkeyedContainer()
-        for atomic in statements {
-            try container.encode(atomic)
-        }
+        var container = encoder.singleValueContainer()
+        try container.encode(statements)
     }
 }
 
@@ -132,20 +130,16 @@ public extension Statement where Tag == AttributeTag, Value == String {
     /// - Parameters:
     ///   - wallet: The wallet to use when constructing the proof
     ///   - global: The cryptographic parameters of the chain
-    ///   - ipInfo: The info related to the identity provider of the identity
-    ///   - identityIndex: The index of the identity the statement should be proven for
-    ///   - credentialIndex: The index of the credential used for the for the proof of identity
+    ///   - credentialIndices: The indices used in the wallet seed for the credential used for the for the proof of identity
     ///   - identityObject: The identity object corresponding to the identity the statement should be proven for
-    ///   - challenge: A 32 byte challenge used, which is needed when verifying the proof
+    ///   - challenge: A challenge used, which is needed when verifying the proof
     ///
     /// - Throws: If the proof could not be successfully constructed given the context
     /// - Returns: A (versioned) proof of the statement for the identity in the given context
     func prove(
         wallet: WalletSeed,
-        global: GlobalContext,
-        ipInfo: IdentityProviderInfo,
-        identityIndex: UInt32,
-        credentialIndex: UInt8,
+        global: CryptographicParameters,
+        credentialIndices: AccountCredentialSeedIndexes,
         identityObject: IdentityObject,
         challenge: Data
     ) throws -> Versioned<Proof<Tag>> {
@@ -153,9 +147,9 @@ public extension Statement where Tag == AttributeTag, Value == String {
             seed: wallet.seed,
             net: wallet.network.rawValue,
             globalContext: global,
-            ipInfo: ipInfo,
-            identityIndex: identityIndex,
-            credentialIndex: credentialIndex,
+            ipIndex: credentialIndices.identity.providerID,
+            identityIndex: credentialIndices.identity.index,
+            credentialIndex: credentialIndices.counter,
             identityObject: identityObject,
             statement: StatementV1(statement: self),
             challenge: challenge
@@ -171,7 +165,7 @@ extension StatementV1 {
 }
 
 /// The different types of proofs, corresponding to the statements above.
-public enum AtomicProof<Tag> {
+public enum AtomicProof<Tag: Equatable>: Equatable {
     /// Revealing an attribute and a proof that it equals the attribute value
     /// inside the attribute commitment.
     case revealAttribute(attribute: Tag, proof: Data)
@@ -233,13 +227,13 @@ extension AtomicProof: Codable where Tag: Codable {
         switch self {
         case let .revealAttribute(attributeTag, proof):
             try container.encode(attributeTag, forKey: .attributeTag)
-            try container.encode(proof, forKey: .proof)
+            try container.encode(proof.hex, forKey: .proof)
         case let .attributeInSet(proof):
-            try container.encode(proof, forKey: .proof)
+            try container.encode(proof.hex, forKey: .proof)
         case let .attributeNotInSet(proof):
-            try container.encode(proof, forKey: .proof)
+            try container.encode(proof.hex, forKey: .proof)
         case let .attributeInRange(proof):
-            try container.encode(proof, forKey: .proof)
+            try container.encode(proof.hex, forKey: .proof)
         }
     }
 }
@@ -263,7 +257,7 @@ extension AtomicProofV1 {
 }
 
 /// A proof of a statement, composed of one or more atomic proofs.
-public struct Proof<Tag> {
+public struct Proof<Tag: Equatable>: Equatable {
     /// The list of atomic proofs
     public let proofs: [AtomicProof<Tag>]
 }

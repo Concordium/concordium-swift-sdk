@@ -283,7 +283,7 @@ public struct IdentityRecoveryError: Decodable, Error {
 /// Use the appropriate initializer of this type to convert it.
 /// All attribute values are strings of 31 bytes or less. The expected format of the values is documented
 /// [here](https://docs.google.com/spreadsheets/d/1CxpFvtAoUcylHQyeBtRBaRt1zsibtpmQOVsk7bsHPGA/edit).
-public enum AttributeTag: UInt8, CustomStringConvertible, CaseIterable {
+public enum AttributeTag: UInt8, CustomStringConvertible, CaseIterable, Equatable {
     /// First name (format: string up to 31 bytes).
     case firstName = 0
     /// Last name (format: string up to 31 bytes).
@@ -370,6 +370,19 @@ public enum AttributeTag: UInt8, CustomStringConvertible, CaseIterable {
         case .taxIdNo: return "taxIdNo"
         case .legalEntityId: return "lei"
         }
+    }
+}
+
+extension AttributeTag: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+        self = try .init(value) ?! DecodingError.dataCorruptedError(in: container, debugDescription: "Unexpected value \(value) when decoding 'AttributeTag'")
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(description)
     }
 }
 

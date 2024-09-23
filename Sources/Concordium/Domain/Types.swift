@@ -630,6 +630,8 @@ public struct Versioned<V> {
     }
 }
 
+extension Versioned: Equatable where V: Equatable {}
+
 extension Versioned: Decodable where V: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
