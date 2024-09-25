@@ -83,6 +83,6 @@ final class IdTest: XCTestCase {
         let proof = try value.prove(wallet: WALLET, global: GLOBAL, credentialIndices: CRED_INDICES, identityObject: identityObject, challenge: challenge).value
 
         // Test that we can properly encode/decode proofs
-        XCTAssertEqual(try decoder.decode(Proof<AttributeTag>.self, from: encoder.encode(proof)), proof)
+        XCTAssertEqual(try decoder.decode(Proof<String>.self, from: encoder.encode(proof)), proof)
     }
 }

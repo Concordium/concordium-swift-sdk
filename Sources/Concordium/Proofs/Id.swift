@@ -95,7 +95,7 @@ extension AtomicStatementV1 {
     init(statement: AtomicStatement<AttributeTag, String>) {
         switch statement {
         case let .revealAttribute(attributeTag):
-            self = .revealAttribute(statement: RevealAttributeStatementV1(attributeTag: attributeTag.description))
+            self = .revealAttribute(statement: RevealAttributeStatement(attributeTag: attributeTag.description))
         case let .attributeInSet(attributeTag, set):
             self = .attributeInSet(statement: AttributeInSetStatementV1(attributeTag: attributeTag.description, set: [String](set)))
         case let .attributeNotInSet(attributeTag, set):
@@ -142,7 +142,7 @@ public extension Statement where Tag == AttributeTag, Value == String {
         credentialIndices: AccountCredentialSeedIndexes,
         identityObject: IdentityObject,
         challenge: Data
-    ) throws -> Versioned<Proof<Tag>> {
+    ) throws -> Versioned<Proof<Value>> {
         try proveStatementV1(
             seed: wallet.seed,
             net: wallet.network.rawValue,
@@ -165,10 +165,10 @@ extension StatementV1 {
 }
 
 /// The different types of proofs, corresponding to the statements above.
-public enum AtomicProof<Tag: Equatable>: Equatable {
+public enum AtomicProof<Value: Equatable>: Equatable {
     /// Revealing an attribute and a proof that it equals the attribute value
     /// inside the attribute commitment.
-    case revealAttribute(attribute: Tag, proof: Data)
+    case revealAttribute(attribute: Value, proof: Data)
     /// A proof that an attribute is in a set
     case attributeInSet(proof: Data)
     /// A proof that an attribute is not in a set
@@ -177,7 +177,7 @@ public enum AtomicProof<Tag: Equatable>: Equatable {
     case attributeInRange(proof: Data)
 }
 
-extension AtomicProof: Codable where Tag: Codable {
+extension AtomicProof: Codable where Value: Codable {
     enum TypeValue: String {
         case revealAttribute = "RevealAttribute"
         case attributeInSet = "AttributeInSet"
@@ -207,7 +207,7 @@ extension AtomicProof: Codable where Tag: Codable {
 
         switch type {
         case TypeValue.revealAttribute.rawValue:
-            let attribute = try container.decode(Tag.self, forKey: .attributeTag)
+            let attribute = try container.decode(Value.self, forKey: .attributeTag)
             self = .revealAttribute(attribute: attribute, proof: proof)
         case TypeValue.attributeInSet.rawValue:
             self = .attributeInSet(proof: proof)
@@ -246,9 +246,9 @@ public struct InvalidAttributeTagError: Error {
 
 extension AtomicProofV1 {
     /// Used internally to convert from crypto lib outpub type to SDK type
-    func toSDK() throws -> AtomicProof<AttributeTag> {
+    func toSDK() -> AtomicProof<String> {
         switch self {
-        case let .revealAttribute(attribute, proof): return try .revealAttribute(attribute: AttributeTag(attribute) ?! InvalidAttributeTagError(tag: attribute), proof: proof)
+        case let .revealAttribute(attribute, proof): return .revealAttribute(attribute: attribute, proof: proof)
         case let .attributeInSet(proof): return .attributeInSet(proof: proof)
         case let .attributeNotInSet(proof): return .attributeNotInSet(proof: proof)
         case let .attributeInRange(proof): return .attributeInRange(proof: proof)
@@ -266,14 +266,14 @@ extension Proof: Codable where Tag: Codable {}
 
 extension ProofV1 {
     /// Used internally to convert from crypto lib outpub type to SDK type
-    func toSDK() throws -> Proof<AttributeTag> {
-        try Proof(proofs: proofs.map { try $0.toSDK() })
+    func toSDK() -> Proof<String> {
+        Proof(proofs: proofs.map { $0.toSDK() })
     }
 }
 
 extension VersionedProofV1 {
     /// Used internally to convert from crypto lib outpub type to SDK type
-    func toSDK() throws -> Versioned<Proof<AttributeTag>> {
-        try Versioned(version: version, value: value.toSDK())
+    func toSDK() -> Versioned<Proof<String>> {
+        Versioned(version: version, value: value.toSDK())
     }
 }

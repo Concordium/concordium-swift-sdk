@@ -377,13 +377,22 @@ extension ScheduledTransfer: FromGRPC {
 }
 
 /// Represents a contract address on chain
-public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, Codable {
-    public var index: UInt64
-    public var subindex: UInt64
+public typealias ContractAddress = ConcordiumWalletCrypto.ContractAddress
 
-    public init(index: UInt64, subindex: UInt64) {
-        self.index = index
-        self.subindex = subindex
+extension ContractAddress: Serialize, Deserialize, FromGRPC, ToGRPC, @retroactive Codable {
+    public func encode(to encoder: any Encoder) throws {
+        try JSON(index: index, subindex: subindex).encode(to: encoder)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(JSON.self)
+        self = .init(index: value.index, subindex: value.subindex)
+    }
+
+    struct JSON: Codable {
+        var index: UInt64
+        var subindex: UInt64
     }
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
@@ -408,7 +417,7 @@ public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGR
     }
 }
 
-extension ContractAddress: CustomStringConvertible {
+extension ContractAddress: @retroactive CustomStringConvertible {
     public var description: String {
         "<\(index),\(subindex)>"
     }
