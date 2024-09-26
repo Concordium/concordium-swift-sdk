@@ -1,9 +1,8 @@
 import ConcordiumWalletCrypto
 import Foundation
 
-/// Statements are composed of one or more atomic statements.
-/// This type defines the different types of atomic statements.
-public enum AtomicStatement<Tag: Equatable, Value: Hashable & Equatable>: Equatable {
+/// This is only used internally to deduplicate `Codable` implementations
+enum AtomicStatement<Tag: Equatable, Value: Hashable & Equatable>: Equatable {
     /// For the case where the verifier wants the user to show the value of an
     /// attribute and prove that it is indeed the value inside the on-chain
     /// commitment. Since the verifier does not know the attribute value before
@@ -46,7 +45,7 @@ extension AtomicStatement: Codable where Tag: Codable, Value: Codable {
         }
     }
 
-    public init(from decoder: any Decoder) throws {
+    init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let type = try container.decode(String.self, forKey: .type)
         let attributeTag = try container.decode(Tag.self, forKey: .attributeTag)
@@ -69,7 +68,7 @@ extension AtomicStatement: Codable where Tag: Codable, Value: Codable {
         }
     }
 
-    public func encode(to encoder: any Encoder) throws {
+    func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(type, forKey: .type)
 
@@ -90,42 +89,55 @@ extension AtomicStatement: Codable where Tag: Codable, Value: Codable {
     }
 }
 
+public typealias RevealAttributeStatementV1 = ConcordiumWalletCrypto.RevealAttributeStatementV1
+public typealias AttributeInSetStatementV1 = ConcordiumWalletCrypto.AttributeInSetStatementV1
+public typealias AttributeNotInSetStatementV1 = ConcordiumWalletCrypto.AttributeNotInSetStatementV1
+public typealias AttributeInRangeStatementV1 = ConcordiumWalletCrypto.AttributeInRangeStatementV1
+/// Statements are composed of one or more atomic statements.
+/// This type defines the different types of atomic statements.
+public typealias AtomicStatementV1 = ConcordiumWalletCrypto.AtomicStatementV1
+
 extension AtomicStatementV1 {
     /// Used internally to convert from SDK type to crypto lib input
-    init(statement: AtomicStatement<AttributeTag, String>) {
-        switch statement {
+    init(sdkType: AtomicStatement<AttributeTag, String>) {
+        switch sdkType {
         case let .revealAttribute(attributeTag):
-            self = .revealAttribute(statement: RevealAttributeStatement(attributeTag: attributeTag.description))
+            self = .revealAttribute(statement: RevealAttributeStatementV1(attributeTag: attributeTag))
         case let .attributeInSet(attributeTag, set):
-            self = .attributeInSet(statement: AttributeInSetStatementV1(attributeTag: attributeTag.description, set: [String](set)))
+            self = .attributeInSet(statement: AttributeInSetStatementV1(attributeTag: attributeTag, set: [String](set)))
         case let .attributeNotInSet(attributeTag, set):
-            self = .attributeNotInSet(statement: AttributeNotInSetStatementV1(attributeTag: attributeTag.description, set: [String](set)))
+            self = .attributeNotInSet(statement: AttributeNotInSetStatementV1(attributeTag: attributeTag, set: [String](set)))
         case let .attributeInRange(attributeTag, lower, upper):
-            self = .attributeInRange(statement: AttributeInRangeStatementV1(attributeTag: attributeTag.description, lower: lower, upper: upper))
+            self = .attributeInRange(statement: AttributeInRangeStatementV1(attributeTag: attributeTag, lower: lower, upper: upper))
+        }
+    }
+
+    /// Used internally to convert from crypto lib outpub type to SDK type
+    func toSDK() -> AtomicStatement<AttributeTag, String> {
+        switch self {
+        case let .revealAttribute(statement): return .revealAttribute(attributeTag: statement.attributeTag)
+        case let .attributeInSet(statement): return .attributeInSet(attributeTag: statement.attributeTag, set: Set(statement.set))
+        case let .attributeNotInSet(statement): return .attributeNotInSet(attributeTag: statement.attributeTag, set: Set(statement.set))
+        case let .attributeInRange(statement): return .attributeInRange(attributeTag: statement.attributeTag, lower: statement.lower, upper: statement.upper)
         }
     }
 }
 
-/// A statement is a list of atomic statements.
-public struct Statement<Tag: Equatable, Value: Hashable & Equatable>: Equatable {
-    /// The list of atomic statements
-    public var statements: [AtomicStatement<Tag, Value>]
-}
-
-extension Statement: Codable where Tag: Codable, Value: Codable {
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let statements = try container.decode([AtomicStatement<Tag, Value>].self)
-        self = Self(statements: statements)
-    }
-
+extension AtomicStatementV1: @retroactive Codable {
     public func encode(to encoder: any Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(statements)
+        var container = encoder.unkeyedContainer()
+        try container.encode(toSDK())
+    }
+
+    public init(from decoder: any Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        self = try .init(sdkType: container.decode(AtomicStatement<AttributeTag, String>.self))
     }
 }
 
-public extension Statement where Tag == AttributeTag, Value == String {
+public typealias StatementV1 = ConcordiumWalletCrypto.StatementV1
+
+public extension StatementV1 {
     /// Construct a proof corresponding to the statement for the identity in the given context
     /// - Parameters:
     ///   - wallet: The wallet to use when constructing the proof
@@ -142,30 +154,36 @@ public extension Statement where Tag == AttributeTag, Value == String {
         credentialIndices: AccountCredentialSeedIndexes,
         identityObject: IdentityObject,
         challenge: Data
-    ) throws -> Versioned<Proof<Value>> {
+    ) throws -> VersionedProofV1 {
         try proveStatementV1(
             seed: wallet.seed,
-            net: wallet.network.rawValue,
+            net: wallet.network,
             globalContext: global,
             ipIndex: credentialIndices.identity.providerID,
             identityIndex: credentialIndices.identity.index,
             credentialIndex: credentialIndices.counter,
             identityObject: identityObject,
-            statement: StatementV1(statement: self),
+            statement: self,
             challenge: challenge
-        ).toSDK()
+        )
     }
 }
 
-extension StatementV1 {
-    /// Used internally to convert from SDK type to crypto lib input
-    init(statement: Statement<AttributeTag, String>) {
-        self = .init(statements: statement.statements.map { AtomicStatementV1(statement: $0) })
+extension StatementV1: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let statements = try container.decode([AtomicStatementV1].self)
+        self = Self(statements: statements)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(statements)
     }
 }
 
-/// The different types of proofs, corresponding to the statements above.
-public enum AtomicProof<Value: Equatable>: Equatable {
+/// This is only used internally to deduplicate `Codable` implementations
+enum AtomicProof<Value: Equatable>: Equatable {
     /// Revealing an attribute and a proof that it equals the attribute value
     /// inside the attribute commitment.
     case revealAttribute(attribute: Value, proof: Data)
@@ -200,7 +218,7 @@ extension AtomicProof: Codable where Value: Codable {
         }
     }
 
-    public init(from decoder: any Decoder) throws {
+    init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let type = try container.decode(String.self, forKey: .type)
         let proof = try Data(hex: container.decode(String.self, forKey: .proof))
@@ -220,7 +238,7 @@ extension AtomicProof: Codable where Value: Codable {
         }
     }
 
-    public func encode(to encoder: any Encoder) throws {
+    func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(type, forKey: .type)
 
@@ -238,13 +256,24 @@ extension AtomicProof: Codable where Value: Codable {
     }
 }
 
-/// Represents an error happening while trying to convert ``String`` to ``AttributeTag``
-public struct InvalidAttributeTagError: Error {
-    /// The invalid tag used
-    public let tag: String
-}
+/// The different types of proofs, corresponding to the statements above.
+public typealias AtomicProofV1 = ConcordiumWalletCrypto.AtomicProofV1
 
 extension AtomicProofV1 {
+    /// Used internally to convert from SDK type to crypto lib input
+    init(sdkType: AtomicProof<String>) {
+        switch sdkType {
+        case let .revealAttribute(attribute, proof):
+            self = .revealAttribute(attribute: attribute, proof: proof)
+        case let .attributeInSet(proof):
+            self = .attributeInSet(proof: proof)
+        case let .attributeNotInSet(proof):
+            self = .attributeNotInSet(proof: proof)
+        case let .attributeInRange(proof):
+            self = .attributeInRange(proof: proof)
+        }
+    }
+
     /// Used internally to convert from crypto lib outpub type to SDK type
     func toSDK() -> AtomicProof<String> {
         switch self {
@@ -256,24 +285,50 @@ extension AtomicProofV1 {
     }
 }
 
-/// A proof of a statement, composed of one or more atomic proofs.
-public struct Proof<Tag: Equatable>: Equatable {
-    /// The list of atomic proofs
-    public let proofs: [AtomicProof<Tag>]
-}
+extension AtomicProofV1: @retroactive Codable {
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(toSDK())
+    }
 
-extension Proof: Codable where Tag: Codable {}
-
-extension ProofV1 {
-    /// Used internally to convert from crypto lib outpub type to SDK type
-    func toSDK() -> Proof<String> {
-        Proof(proofs: proofs.map { $0.toSDK() })
+    public init(from decoder: any Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        self = try .init(sdkType: container.decode(AtomicProof<String>.self))
     }
 }
 
-extension VersionedProofV1 {
-    /// Used internally to convert from crypto lib outpub type to SDK type
-    func toSDK() -> Versioned<Proof<String>> {
-        Versioned(version: version, value: value.toSDK())
+public typealias ProofV1 = ConcordiumWalletCrypto.ProofV1
+
+extension ProofV1: @retroactive Codable {
+    private struct JSON: Codable {
+        let proofs: [AtomicProofV1]
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(JSON(proofs: proofs))
+    }
+
+    public init(from decoder: any Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        let value = try container.decode(JSON.self)
+        self = .init(proofs: value.proofs)
+    }
+}
+
+public typealias VersionedProofV1 = ConcordiumWalletCrypto.VersionedProofV1
+
+extension VersionedProofV1: @retroactive Codable {
+    private typealias JSON = Versioned<ProofV1>
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(JSON(version: version, value: value))
+    }
+
+    public init(from decoder: any Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        let value = try container.decode(JSON.self)
+        self = .init(version: value.version, value: value.value)
     }
 }

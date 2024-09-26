@@ -8,9 +8,30 @@ public typealias IssuerIndex = UInt64
 public typealias IssuerSubindex = UInt64
 public typealias VerifiableCredentialIndex = UInt32
 
-public enum Network: String {
-    case mainnet = "Mainnet"
-    case testnet = "Testnet"
+public typealias Network = ConcordiumWalletCrypto.Network
+
+extension Network: @retroactive Codable {
+    private enum JSON: String, Codable {
+        case mainnet
+        case testnet
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .mainnet: try container.encode(JSON.mainnet)
+        case .testnet: try container.encode(JSON.testnet)
+        }
+    }
+
+    public init(from decoder: any Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        let value = try container.decode(JSON.self)
+        switch value {
+        case .testnet: self = .testnet
+        case .mainnet: self = .mainnet
+        }
+    }
 }
 
 public struct IdentitySeedIndexes {
@@ -71,7 +92,7 @@ public class WalletSeed {
     public func credSec(identityIndexes: IdentitySeedIndexes) throws -> Data {
         try identityCredSec(
             seed: seed,
-            network: network.rawValue,
+            network: network,
             identityProviderId: identityIndexes.providerID,
             identityIndex: identityIndexes.index
         )
@@ -80,7 +101,7 @@ public class WalletSeed {
     public func prfKey(identityIndexes: IdentitySeedIndexes) throws -> Data {
         try identityPrfKey(
             seed: seed,
-            network: network.rawValue,
+            network: network,
             identityProviderId: identityIndexes.providerID,
             identityIndex: identityIndexes.index
         )
@@ -89,7 +110,7 @@ public class WalletSeed {
     public func signatureBlindingRandomness(identityIndexes: IdentitySeedIndexes) throws -> Data {
         try identityAttributesSignatureBlindingRandomness(
             seed: seed,
-            network: network.rawValue,
+            network: network,
             identityProviderId: identityIndexes.providerID,
             identityIndex: identityIndexes.index
         )
@@ -98,7 +119,7 @@ public class WalletSeed {
     public func signingKey(accountCredentialIndexes: AccountCredentialSeedIndexes) throws -> Data {
         try accountCredentialSigningKey(
             seed: seed,
-            network: network.rawValue,
+            network: network,
             identityProviderId: accountCredentialIndexes.identity.providerID,
             identityIndex: accountCredentialIndexes.identity.index,
             credentialCounter: accountCredentialIndexes.counter
@@ -108,7 +129,7 @@ public class WalletSeed {
     public func publicKey(accountCredentialIndexes: AccountCredentialSeedIndexes) throws -> Data {
         try accountCredentialPublicKey(
             seed: seed,
-            network: network.rawValue,
+            network: network,
             identityProviderId: accountCredentialIndexes.identity.providerID,
             identityIndex: accountCredentialIndexes.identity.index,
             credentialCounter: accountCredentialIndexes.counter
@@ -123,7 +144,7 @@ public class WalletSeed {
     public func id(accountCredentialIndexes: AccountCredentialSeedIndexes, commitmentKey: Data) throws -> CredentialRegistrationID {
         let data = try accountCredentialId(
             seed: seed,
-            network: network.rawValue,
+            network: network,
             identityProviderId: accountCredentialIndexes.identity.providerID,
             identityIndex: accountCredentialIndexes.identity.index,
             credentialCounter: accountCredentialIndexes.counter,
@@ -135,7 +156,7 @@ public class WalletSeed {
     public func attributeCommitmentRandomness(accountCredentialIndexes: AccountCredentialSeedIndexes, attribute: UInt8) throws -> Data {
         try accountCredentialAttributeCommitmentRandomness(
             seed: seed,
-            network: network.rawValue,
+            network: network,
             identityProviderId: accountCredentialIndexes.identity.providerID,
             identityIndex: accountCredentialIndexes.identity.index,
             credentialCounter: accountCredentialIndexes.counter,
@@ -146,7 +167,7 @@ public class WalletSeed {
     public func signingKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes) throws -> Data {
         try verifiableCredentialSigningKey(
             seed: seed,
-            network: network.rawValue,
+            network: network,
             issuerIndex: verifiableCredentialIndexes.issuer.index,
             issuerSubindex: verifiableCredentialIndexes.issuer.subindex,
             verifiableCredentialIndex: verifiableCredentialIndexes.index
@@ -156,7 +177,7 @@ public class WalletSeed {
     public func publicKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes) throws -> Data {
         try verifiableCredentialPublicKey(
             seed: seed,
-            network: network.rawValue,
+            network: network,
             issuerIndex: verifiableCredentialIndexes.issuer.index,
             issuerSubindex: verifiableCredentialIndexes.issuer.subindex,
             verifiableCredentialIndex: verifiableCredentialIndexes.index
@@ -166,7 +187,7 @@ public class WalletSeed {
     public func verifiableCredentialBackupEncryptionKey() throws -> Data {
         try ConcordiumWalletCrypto.verifiableCredentialBackupEncryptionKey(
             seed: seed,
-            network: network.rawValue
+            network: network
         )
     }
 }
