@@ -209,7 +209,7 @@ public class SeedBasedAccountDerivation {
         seedIndexes: AccountCredentialSeedIndexes,
         identity: IdentityObject,
         provider: IdentityProvider,
-        revealedAttributes: [UInt8] = [],
+        revealedAttributes: [AttributeTag] = [],
         threshold: SignatureThreshold
     ) throws -> AccountCredential {
         let anonymityRevokers = provider.anonymityRevokers
@@ -217,7 +217,7 @@ public class SeedBasedAccountDerivation {
         let prfKey = try seed.prfKey(identityIndexes: seedIndexes.identity)
         let blindingRandomness = try seed.signatureBlindingRandomness(identityIndexes: seedIndexes.identity)
         let attributeRandomness = try AttributeTag.allCases.reduce(into: [:]) { res, attr in
-            res["\(attr)"] = try seed.attributeCommitmentRandomness(
+            res[attr] = try seed.attributeCommitmentRandomness(
                 accountCredentialIndexes: seedIndexes,
                 attribute: attr.rawValue
             )

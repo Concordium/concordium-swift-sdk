@@ -66,7 +66,12 @@ let CRED_INDICES = AccountCredentialSeedIndexes(identity: IdentitySeedIndexes(pr
 final class IdTest: XCTestCase {
     func testProveStatement() throws {
         let json = """
-        [{"attributeTag":"countryOfResidence","type":"AttributeInSet","set":["LT","FI","SI","RO","CZ","BG","FR","GR","LU","IE","NL","SE","AT","DE"," LV","DK","BE","PT","CY","HR","SK","ES","EE","IT","HU","PL","MT"]},{"type":"AttributeInSet","attributeTag":"nationality","set":["BE","LU","FR","DE","NL","AT","CZ","BG","DK","SE","SK","PL","ES","MT","IT","GR","IE","RO","LT","EE","CY","SI","HU","HR","LV","PT","FI"]},{"upper":"20060924","type":"AttributeInRange","attributeTag":"dob","lower":"18000101"},{"type":"AttributeInRange","upper":"99990101","lower":"20200101","attributeTag":"idDocExpiresAt"},{"type":"AttributeInSet","set":["1"],"attributeTag":"idDocType"}]
+        [
+            {"attributeTag":"countryOfResidence","type":"AttributeInSet","set":["LT","FI","SI","RO","CZ","BG","FR","GR","LU","IE","NL","SE","AT","DE"," LV","DK","BE","PT","CY","HR","SK","ES","EE","IT","HU","PL","MT"]},
+            {"type":"AttributeInSet","attributeTag":"nationality","set":["BE","LU","FR","DE","NL","AT","CZ","BG","DK","SE","SK","PL","ES","MT","IT","GR","IE","RO","LT","EE","CY","SI","HU","HR","LV","PT","FI"]},
+            {"upper":"20060924","type":"AttributeInRange","attributeTag":"dob","lower":"18000101"},{"type":"AttributeInRange","upper":"99990101","lower":"20200101","attributeTag":"idDocExpiresAt"},
+            {"type":"AttributeInSet","set":["1"],"attributeTag":"idDocType"}
+        ]
         """.data(using: .utf8)!
 
         let decoder = JSONDecoder()
@@ -75,14 +80,14 @@ final class IdTest: XCTestCase {
         let identityObject = try decoder.decode(IdentityObject.self, from: IDENTITY_OBJECT)
 
         // Test that we encode/decode statements properly
-        let value = try decoder.decode(Statement<AttributeTag, String>.self, from: json)
-        XCTAssertEqual(try decoder.decode(Statement<AttributeTag, String>.self, from: encoder.encode(value)), value)
+        let value = try decoder.decode(StatementV1.self, from: json)
+        let _ = try decoder.decode(StatementV1.self, from: encoder.encode(value))
 
         // Test that constructing the proof succeeds
         let challenge = try Data(hex: "aabbcc")
         let proof = try value.prove(wallet: WALLET, global: GLOBAL, credentialIndices: CRED_INDICES, identityObject: identityObject, challenge: challenge).value
 
         // Test that we can properly encode/decode proofs
-        XCTAssertEqual(try decoder.decode(Proof<String>.self, from: encoder.encode(proof)), proof)
+        XCTAssertEqual(try decoder.decode(ProofV1.self, from: encoder.encode(proof)), proof)
     }
 }

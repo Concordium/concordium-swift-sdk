@@ -134,6 +134,19 @@ extension SignedCommitments: @retroactive Codable {
     }
 }
 
+extension ConcordiumWalletCrypto.Did: @retroactive Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+        self = try parseDidMethod(value: value)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(didMethodAsString(did: self))
+    }
+}
+
 /**
  * A proof corresponding to one `VerifiableCredentialStatement`. This contains almost
  * all the information needed to verify it, except the issuer's public key in
@@ -141,57 +154,234 @@ extension SignedCommitments: @retroactive Codable {
  * `Account` proof.
  */
 public typealias VerifiableCredentialProof = ConcordiumWalletCrypto.VerifiableCredentialProof
-extension VerifiableCredentialProof: @retroactive Codable {}
+extension VerifiableCredentialProof: @retroactive Codable {
+    private enum CodingKeys: CodingKey {
+        case credentialSubject
+        case type
+        case issuer
+    }
+
+    static let CCD_TYPE = ["VerifiableCredential", "ConcordiumVerifiableCredential"]
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let issuer = try container.decode(DID.self, forKey: .issuer)
+        let credType = try container.decode([String].self, forKey: .type).filter { !Self.CCD_TYPE.contains($0)}
+
+        switch issuer.idType {
+        case let .idp(idpIdentity):
+            let credSub = try container.decode(CredentialSubjectAccountJSON.self, forKey: .credentialSubject)
+
+            var credId: Data
+            switch credSub.id.idType {
+            case let .credential(c): credId = c
+            default: 
+                throw DecodingError.dataCorruptedError(forKey: .credentialSubject, in: container, debugDescription: "Only valid 'id' for IDP issued subject is .credential")
+            }
+
+            let statement = credSub.statement
+            let proof = credSub.proof.proofValue
+            guard statement.count == proof.count else {
+                throw DecodingError.dataCorruptedError(forKey: .credentialSubject, in: container, debugDescription: "Expected equal number of statements and proofs in subject")
+            }
+            let proofs = zip(statement, proof).reduce(into: []) { acc, pair in
+                acc.append(AccountStatementWithProof(statement: pair.0, proof: pair.1))
+            }
+
+            self = .account(created: credSub.proof.created, network: credSub.id.network, credId: credId, issuer: idpIdentity, proofs: proofs)
+        case let .contractData(address, _, _):
+            let credSub = try container.decode(CredentialSubjectWeb3IdJSON.self, forKey: .credentialSubject)
+
+            let statement = credSub.statement
+            let proof = credSub.proof.proofValue
+            guard statement.count == proof.count else {
+                throw DecodingError.dataCorruptedError(forKey: .credentialSubject, in: container, debugDescription: "Expected equal number of statements and proofs in subject")
+            }
+            let proofs = zip(statement, proof).reduce(into: []) { acc, pair in
+                acc.append(Web3IdStatementWithProof(statement: pair.0, proof: pair.1))
+            }
+
+            var holderId: Data
+            switch credSub.id.idType {
+            case let .publicKey(key):
+                holderId = key
+            default:
+                throw DecodingError.dataCorruptedError(forKey: .credentialSubject, in: container, debugDescription: "Only valid 'id' for IDP issued subject is .credential")
+            }
+
+            self = .web3Id(created: credSub.proof.created, holderId: holderId, network: credSub.id.network, contract: address, credType: credType, commitments: credSub.proof.commitments, proofs: proofs)
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .issuer, in: container, debugDescription: "The only valid variants for 'issuer' of verifiable credential are either .idp or .contractData")
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case let .account(created, network, credId, issuer, proofs):
+            let (statements, proofs) = proofs.reduce(into: ([AtomicStatementV1](), [AtomicProofV1]())) { acc, proof in
+                acc.0.append(proof.statement)
+                acc.1.append(proof.proof)
+            }
+            let proof = StatementProofAccountJSON(created: created, proofValue: proofs)
+            let id = DID(network: network, idType: IdentifierType.credential(credId: credId))
+            let credSub = CredentialSubjectAccountJSON(id: id, proof: proof, statement: statements)
+            let issuer = DID(network: network, idType: IdentifierType.idp(idpIdentity: issuer))
+            let json = JSON(credentialSubject: credSub, issuer: issuer)
+            try container.encode(json)
+        case let .web3Id(created, holderId, network, contract, credType, commitments, proofs):
+            let (statements, proofs) = proofs.reduce(into: ([AtomicStatementV2](), [AtomicProofV2]())) { acc, proof in
+                acc.0.append(proof.statement)
+                acc.1.append(proof.proof)
+            }
+            let proof = StatementProofWeb3IdJSON(created: created, proofValue: proofs, commitments: commitments)
+            let id = DID(network: network, idType: IdentifierType.publicKey(key: holderId))
+            let credSub = CredentialSubjectWeb3IdJSON(id: id, proof: proof, statement: statements)
+            let issuer = DID(network: network, idType: IdentifierType.contractData(address: contract, entrypoint: "credentialEntry", parameter: holderId))
+            let json = JSON(credentialSubject: credSub, issuer: issuer, additionalType: credType)
+            try container.encode(json)
+        }
+    }
+
+    private typealias DID = ConcordiumWalletCrypto.Did
+
+    private struct JSON<CredentialSubject: Codable>: Codable {
+        let credentialSubject: CredentialSubject
+        let issuer: DID
+        /// ["VerifiableCredential", "ConcordiumVerifiableCredential", ...]
+        var type: [String]
+
+        init(credentialSubject: CredentialSubject, issuer: DID, additionalType: [String]? = nil) {
+            self.credentialSubject = credentialSubject
+            self.issuer = issuer
+            type = CCD_TYPE
+            if let type = additionalType {
+                self.type.append(contentsOf: type)
+            }
+        }
+    }
+
+    private struct CredentialSubjectJSON<Statement: Codable, Proof: Codable>: Codable {
+        let id: DID
+        let proof: Proof
+        let statement: [Statement]
+    }
+
+    private struct StatementProofAccountJSON: Codable {
+        let created: Date
+        let proofValue: [AtomicProofV1]
+        let type: String // "ConcordiumZKProofV3"
+
+        init(created: Date, proofValue: [AtomicProofV1]) {
+            self.created = created
+            self.proofValue = proofValue
+            type = "ConcordiumZKProofV3"
+        }
+    }
+
+    private struct StatementProofWeb3IdJSON: Codable {
+        let created: Date
+        let proofValue: [AtomicProofV2]
+        let commitments: SignedCommitments
+        let type: String // "ConcordiumZKProofV3"
+
+        init(created: Date, proofValue: [AtomicProofV2], commitments: SignedCommitments) {
+            self.created = created
+            self.proofValue = proofValue
+            self.commitments = commitments
+            type = "ConcordiumZKProofV3"
+        }
+    }
+
+    private typealias CredentialSubjectAccountJSON = CredentialSubjectJSON<AtomicStatementV1, StatementProofAccountJSON>
+    private typealias CredentialSubjectWeb3IdJSON = CredentialSubjectJSON<AtomicStatementV2, StatementProofWeb3IdJSON>
+}
 
 /// A proof that establishes that the owner of the credential has indeed created
 /// the presentation. At present this is a list of signatures.
 public typealias LinkingProof = ConcordiumWalletCrypto.LinkingProof
 
-extension LinkingProof: @retroactive Codable {}
+extension LinkingProof: @retroactive Codable {
+    private struct JSON: Codable {
+        /// Always "ConcordiumWeakLinkingProofV1"
+        let type: String
+        let created: Date
+        /// Hex formatted strings
+        let proofValue: [String]
+
+        init(created: Date, proofValue: [String]) {
+            self.created = created
+            self.proofValue = proofValue
+            type = "ConcordiumWeakLinkingProofV1"
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        let json = JSON(created: created, proofValue: proofValue.map(\.hex))
+        try container.encode(json)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let json = try container.decode(JSON.self)
+        self = try .init(created: json.created, proofValue: json.proofValue.map { try Data(hex: $0) })
+    }
+}
 
 /// A presentation is the response to a `VerifiableCredentialRequest`. It contains proofs for
 /// statements, ownership proof for all Web3 credentials, and a context. The
 /// only missing part to verify the proof are the public commitments.
 public typealias VerifiablePresentation = ConcordiumWalletCrypto.VerifiablePresentation
 
-extension VerifiablePresentation: @retroactive Codable {}
+extension VerifiablePresentation: @retroactive Codable {
+    private struct JSON: Codable {
+        /// Always "VerifiablePresentation"
+        let type: String
+        /// The challenge used for the presentation
+        let presentationContext: Data
+        let verifiableCredential: [VerifiableCredentialProof]
+        let proof: LinkingProof
 
-// TODO: maybe this can be removed??
-extension ConcordiumWalletCrypto.AtomicStatementV2 {
-    /// Used internally to convert from SDK type to crypto lib input
-    init(statement: AtomicStatement<String, Web3IdAttribute>) {
-        switch statement {
-        case let .revealAttribute(attributeTag):
-            self = .revealAttribute(statement: RevealAttributeStatementV2(attributeTag: attributeTag.description))
-        case let .attributeInSet(attributeTag, set):
-            self = .attributeInSet(statement: AttributeInSetStatementV2(attributeTag: attributeTag.description, set: [Web3IdAttribute](set)))
-        case let .attributeNotInSet(attributeTag, set):
-            self = .attributeNotInSet(statement: AttributeNotInSetStatementV2(attributeTag: attributeTag.description, set: [Web3IdAttribute](set)))
-        case let .attributeInRange(attributeTag, lower, upper):
-            self = .attributeInRange(statement: AttributeInRangeStatementV2(attributeTag: attributeTag.description, lower: lower, upper: upper))
+        init(presentationContext: Data, verifiableCredential: [VerifiableCredentialProof], proof: LinkingProof) {
+            type = "VerifiablePresentation"
+            self.presentationContext = presentationContext
+            self.verifiableCredential = verifiableCredential
+            self.proof = proof
         }
     }
 
-    /// Used internally to convert from crypto lib outpub type to SDK type
-    func toSDK() -> AtomicStatement<String, Web3IdAttribute> {
-        switch self {
-        case let .revealAttribute(statement):
-            return .revealAttribute(attributeTag: statement.attributeTag)
-        case let .attributeInSet(statement):
-            return .attributeInSet(attributeTag: statement.attributeTag, set: Set(statement.set))
-        case let .attributeNotInSet(statement):
-            return .attributeNotInSet(attributeTag: statement.attributeTag, set: Set(statement.set))
-        case let .attributeInRange(statement):
-            return .attributeInRange(attributeTag: statement.attributeTag, lower: statement.lower, upper: statement.upper)
-        }
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        let json = JSON(presentationContext: presentationContext, verifiableCredential: verifiableCredential, proof: linkingProof)
+        try container.encode(json)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let json = try container.decode(JSON.self)
+        self = .init(presentationContext: json.presentationContext, verifiableCredential: json.verifiableCredential, linkingProof: json.proof)
     }
 }
 
 /// The different types of proofs, corresponding to the statements above.
 public typealias AtomicProofV2 = ConcordiumWalletCrypto.AtomicProofV2
 
-// TODO: maybe this can be removed??
-extension ConcordiumWalletCrypto.AtomicProofV2 {
+extension AtomicProofV2 {
+    /// Used internally to convert from SDK type to crypto lib input
+    init(sdkType: AtomicProof<Web3IdAttribute>) {
+        switch sdkType {
+        case let .revealAttribute(attribute, proof):
+            self = .revealAttribute(attribute: attribute, proof: proof)
+        case let .attributeInSet(proof):
+            self = .attributeInSet(proof: proof)
+        case let .attributeNotInSet(proof):
+            self = .attributeNotInSet(proof: proof)
+        case let .attributeInRange(proof):
+            self = .attributeInRange(proof: proof)
+        }
+    }
+
     /// Used internally to convert from crypto lib outpub type to SDK type
     func toSDK() -> AtomicProof<Web3IdAttribute> {
         switch self {
@@ -200,5 +390,17 @@ extension ConcordiumWalletCrypto.AtomicProofV2 {
         case let .attributeNotInSet(proof): return .attributeNotInSet(proof: proof)
         case let .attributeInRange(proof): return .attributeInRange(proof: proof)
         }
+    }
+}
+
+extension AtomicProofV2: @retroactive Codable {
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(toSDK())
+    }
+
+    public init(from decoder: any Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        self = try .init(sdkType: container.decode(AtomicProof<Web3IdAttribute>.self))
     }
 }

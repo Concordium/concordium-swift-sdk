@@ -130,12 +130,14 @@ extension AttributeList: @retroactive Decodable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        print("TEST")
         try self.init(
             validToYearMonth: container.decode(String.self, forKey: .validTo),
             createdAtYearMonth: container.decode(String.self, forKey: .createdAt),
             maxAccounts: container.decode(UInt8.self, forKey: .maxAccounts),
-            chosenAttributes: container.decode([String: String].self, forKey: .chosenAttributes)
+            chosenAttributes: container.decode([AttributeTag: String].self, forKey: .chosenAttributes)
         )
+        print("TEST POST")
     }
 }
 
@@ -285,7 +287,38 @@ public struct IdentityRecoveryError: Decodable, Error {
 /// [here](https://docs.google.com/spreadsheets/d/1CxpFvtAoUcylHQyeBtRBaRt1zsibtpmQOVsk7bsHPGA/edit).
 public typealias AttributeTag = ConcordiumWalletCrypto.AttributeTag
 
-extension AttributeTag: @retroactive CustomStringConvertible, @retroactive CaseIterable {
+extension AttributeTag: @retroactive CustomStringConvertible, @retroactive CaseIterable, @retroactive CodingKeyRepresentable {
+    public enum CodingKeys: CodingKey {
+        case firstName
+        case lastName
+        case sex
+        case dob
+        case countryOfResidence
+        case nationality
+        case idDocType
+        case idDocNo
+        case idDocIssuer
+        case idDocIssuedAt
+        case idDocExpiresAt
+        case nationalIdNo
+        case taxIdNo
+        case lei
+        case legalName
+        case legalCountry
+        case businessNumber
+        case registrationAuth
+    }
+
+    public var codingKey: any CodingKey {
+        print(description)
+        return CodingKeys(stringValue: description)!
+    }
+
+    public init?<T>(codingKey: T) where T: CodingKey {
+        guard let value = Self.init(codingKey.stringValue) else { return nil }
+        self = value
+    }
+
     public static var allCases: [AttributeTag] = [.firstName, .lastName, .sex, .dateOfBirth, .countryOfResidence, .nationality, .idDocType, .idDocNo, .idDocIssuer, .idDocIssuedAt, .idDocExpiresAt, .nationalIdNo, .taxIdNo, .legalEntityId, .legalName, .legalCountry, .businessNumber, .registrationAuth]
 
     public init?(_ description: String) {
@@ -308,6 +341,30 @@ extension AttributeTag: @retroactive CustomStringConvertible, @retroactive CaseI
         case "legalCountry": self = .legalCountry
         case "businessNumber": self = .businessNumber
         case "registrationAuth": self = .registrationAuth
+        default: return nil
+        }
+    }
+
+    init?(rawValue: UInt8) {
+        switch rawValue {
+        case 0: self = .firstName
+        case 1: self = .lastName
+        case 2: self = .sex
+        case 3: self = .dateOfBirth
+        case 4: self = .countryOfResidence
+        case 5: self = .nationality
+        case 6: self = .idDocType
+        case 7: self = .idDocNo
+        case 8: self = .idDocIssuer
+        case 9: self = .idDocIssuedAt
+        case 10: self = .idDocExpiresAt
+        case 11: self = .nationalIdNo
+        case 12: self = .taxIdNo
+        case 13: self = .legalEntityId
+        case 14: self = .legalName
+        case 15: self = .legalCountry
+        case 16: self = .businessNumber
+        case 17: self = .registrationAuth
         default: return nil
         }
     }

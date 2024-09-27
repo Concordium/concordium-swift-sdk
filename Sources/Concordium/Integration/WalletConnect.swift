@@ -196,3 +196,13 @@ extension WalletConnectSignMessageParam: Decodable {
         }
     }
 }
+
+/// Describes wallet connect requests commonly supported
+/// as produced by the NPM package `@concordium/wallet-connectors`
+public enum WalletConnectRequest {
+    case signMessage(param: WalletConnectSignMessageParam)
+    case sendTransaction(param: WalletConnectSendTransactionParam)
+    case requestVerifiableCredential(param: String) // TODO: add param
+}
+
+extension WalletConnectRequest: Decodable {} // TODO: add custom decode functionality to match what is produces by frontend couterpart

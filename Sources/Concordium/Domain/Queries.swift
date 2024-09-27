@@ -1002,7 +1002,7 @@ extension Baker: FromGRPC {
     typealias GRPC = Concordium_V2_ElectionInfo.Baker
 
     static func fromGRPC(_ g: GRPC) throws -> Baker {
-        Self(bakerId: g.baker.value, bakerLotteryPower: g.lotteryPower, bakerAccount: .fromGRPC(g.account))
+        Self(bakerId: g.baker.value, bakerLotteryPower: g.lotteryPower, bakerAccount: try .fromGRPC(g.account))
     }
 }
 

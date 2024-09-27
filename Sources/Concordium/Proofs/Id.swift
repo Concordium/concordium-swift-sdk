@@ -125,12 +125,12 @@ extension AtomicStatementV1 {
 
 extension AtomicStatementV1: @retroactive Codable {
     public func encode(to encoder: any Encoder) throws {
-        var container = encoder.unkeyedContainer()
+        var container = encoder.singleValueContainer()
         try container.encode(toSDK())
     }
 
     public init(from decoder: any Decoder) throws {
-        var container = try decoder.unkeyedContainer()
+        let container = try decoder.singleValueContainer()
         self = try .init(sdkType: container.decode(AtomicStatement<AttributeTag, String>.self))
     }
 }
@@ -170,9 +170,11 @@ public extension StatementV1 {
 }
 
 extension StatementV1: Codable {
+    private typealias JSON = [AtomicStatementV1]
+
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
-        let statements = try container.decode([AtomicStatementV1].self)
+        let statements = try container.decode(JSON.self)
         self = Self(statements: statements)
     }
 
@@ -305,12 +307,12 @@ extension ProofV1: @retroactive Codable {
     }
 
     public func encode(to encoder: any Encoder) throws {
-        var container = encoder.unkeyedContainer()
+        var container = encoder.singleValueContainer()
         try container.encode(JSON(proofs: proofs))
     }
 
     public init(from decoder: any Decoder) throws {
-        var container = try decoder.unkeyedContainer()
+        let container = try decoder.singleValueContainer()
         let value = try container.decode(JSON.self)
         self = .init(proofs: value.proofs)
     }
@@ -322,12 +324,12 @@ extension VersionedProofV1: @retroactive Codable {
     private typealias JSON = Versioned<ProofV1>
 
     public func encode(to encoder: any Encoder) throws {
-        var container = encoder.unkeyedContainer()
+        var container = encoder.singleValueContainer()
         try container.encode(JSON(version: version, value: value))
     }
 
     public init(from decoder: any Decoder) throws {
-        var container = try decoder.unkeyedContainer()
+        let container = try decoder.singleValueContainer()
         let value = try container.decode(JSON.self)
         self = .init(version: value.version, value: value.value)
     }
