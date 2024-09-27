@@ -197,12 +197,78 @@ extension WalletConnectSignMessageParam: Decodable {
     }
 }
 
+/// Describes parameter supplied to a walletconnect "sign_message" request
+/// as produced by the NPM package `@concordium/wallet-connectors`
+public struct WalletConnectRequestVerifiablePresentationParam: Decodable {
+    let challenge: Data
+    let credentialStatements: [CredentialStatement]
+
+    public enum CredentialStatement {
+        case account(issuers: [UInt32], statement: [AtomicStatementV1])
+        case web3id(issuers: [ContractAddress], statement: [AtomicStatementV2])
+    }
+}
+
+extension WalletConnectRequestVerifiablePresentationParam.CredentialStatement: Decodable {
+    private enum TypeValue: String, Codable {
+        case sci
+        case cred
+    }
+
+    private enum NestedKeys: CodingKey {
+        case type
+        case issuers
+    }
+
+    private enum CodingKeys: CodingKey {
+        case idQualifier
+        case statement
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let nested = try container.nestedContainer(keyedBy: NestedKeys.self, forKey: .statement)
+        let type = try nested.decode(TypeValue.self, forKey: .type)
+        switch type {
+        case .sci: 
+            let issuers = try nested.decode([UInt32].self, forKey: .issuers)
+            let statement = try container.decode([AtomicStatementV1].self, forKey: .statement)
+            self = .account(issuers: issuers, statement: statement)
+        case .cred: 
+            let issuers = try nested.decode([ContractAddress].self, forKey: .issuers)
+            let statement = try container.decode([AtomicStatementV2].self, forKey: .statement)
+            self = .web3id(issuers: issuers, statement: statement)
+        }
+    }
+}
+
 /// Describes wallet connect requests commonly supported
 /// as produced by the NPM package `@concordium/wallet-connectors`
 public enum WalletConnectRequest {
     case signMessage(param: WalletConnectSignMessageParam)
     case sendTransaction(param: WalletConnectSendTransactionParam)
-    case requestVerifiableCredential(param: String) // TODO: add param
+    case requestVerifiableCredential(param: WalletConnectRequestVerifiablePresentationParam)
 }
 
-extension WalletConnectRequest: Decodable {} // TODO: add custom decode functionality to match what is produces by frontend couterpart
+extension WalletConnectRequest: Decodable {
+    public enum Method: String, Codable {
+        case signAndSendTransaction = "sign_and_send_transaction"
+        case signMessage = "sign_message"
+        case requestVerifiablePresentation = "request_verifiable_presentation"
+    }
+
+    private enum CodingKeys: CodingKey {
+        case method
+        case params
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let method = try container.decode(Method.self, forKey: .method)
+        switch method {
+        case .signMessage: self = .signMessage(param: try container.decode(WalletConnectSignMessageParam.self, forKey: .params))
+        case .signAndSendTransaction: self = .sendTransaction(param: try container.decode(WalletConnectSendTransactionParam.self, forKey: .params))
+        case .requestVerifiablePresentation: self = .requestVerifiableCredential(param: try container.decode(WalletConnectRequestVerifiablePresentationParam.self, forKey: .params))
+        }
+    }
+}
