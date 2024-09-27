@@ -13,7 +13,7 @@ let expiry = TransactionTime(9_999_999_999)
 
 /// Perform a transfer based on the inputs above.
 func transfer(client: NodeClient) async throws {
-    let seed = try decodeSeed(seedPhrase, network)
+    let seed = try await decodeSeed(seedPhrase, network)
 
     // Derive seed based account from the given coordinates of the given seed.
     let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
@@ -26,7 +26,7 @@ func transfer(client: NodeClient) async throws {
 
     // Construct, sign, and send transfer transaction.
     let nextSeq = try await client.nextAccountSequenceNumber(address: account.address)
-    let signed = try makeTransfer(account, amount, receiver, nextSeq.sequenceNumber, expiry)
+    let signed = try await makeTransfer(account, amount, receiver, nextSeq.sequenceNumber, expiry)
     let submitted = try await client.send(transaction: signed)
     print("Transaction with hash '\(submitted.hash.hex)' successfully submitted.")
 }

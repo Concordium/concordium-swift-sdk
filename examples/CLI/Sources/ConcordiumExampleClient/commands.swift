@@ -30,7 +30,7 @@ struct WalletProxyOptions: ParsableArguments {
     }
 }
 
-extension BlockIdentifier: ExpressibleByArgument {
+extension BlockIdentifier: @retroactive ExpressibleByArgument {
     public init?(argument: String) {
         do {
             self = try .hash(BlockHash(fromHex: argument))
@@ -40,7 +40,7 @@ extension BlockIdentifier: ExpressibleByArgument {
     }
 }
 
-extension AccountAddress: ExpressibleByArgument {
+extension AccountAddress: @retroactive ExpressibleByArgument {
     public init?(argument: String) {
         do {
             try self.init(base58Check: argument)
@@ -50,7 +50,7 @@ extension AccountAddress: ExpressibleByArgument {
     }
 }
 
-extension ModuleReference: ExpressibleByArgument {
+extension ModuleReference: @retroactive ExpressibleByArgument {
     public init?(argument: String) {
         do {
             try self.init(Data(hex: argument))
@@ -60,7 +60,7 @@ extension ModuleReference: ExpressibleByArgument {
     }
 }
 
-extension ReceiveName: ExpressibleByArgument {
+extension ReceiveName: @retroactive ExpressibleByArgument {
     public init?(argument: String) {
         do {
             try self.init(argument)
@@ -70,7 +70,7 @@ extension ReceiveName: ExpressibleByArgument {
     }
 }
 
-extension CCD: ExpressibleByArgument {
+extension CCD: @retroactive ExpressibleByArgument {
     public init?(argument: String) {
         do {
             try self.init(argument, decimalSeparator: ".")

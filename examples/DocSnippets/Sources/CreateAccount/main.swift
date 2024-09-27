@@ -13,7 +13,7 @@ let expiry = TransactionTime(9_999_999_999)
 
 /// Perform account creation (on recovered identity) based on the inputs above.
 func createAccount(client: NodeClient) async throws {
-    let seed = try decodeSeed(seedPhrase, network)
+    let seed = try await decodeSeed(seedPhrase, network)
     let walletProxy = WalletProxy(baseURL: walletProxyBaseURL)
     let identityProvider = try await findIdentityProvider(walletProxy, identityProviderID)!
 

@@ -315,7 +315,7 @@ extension AttributeTag: @retroactive CustomStringConvertible, @retroactive CaseI
     }
 
     public init?<T>(codingKey: T) where T: CodingKey {
-        guard let value = Self.init(codingKey.stringValue) else { return nil }
+        guard let value = Self(codingKey.stringValue) else { return nil }
         self = value
     }
 

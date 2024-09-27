@@ -8,32 +8,6 @@ public typealias IssuerIndex = UInt64
 public typealias IssuerSubindex = UInt64
 public typealias VerifiableCredentialIndex = UInt32
 
-public typealias Network = ConcordiumWalletCrypto.Network
-
-extension Network: @retroactive Codable {
-    private enum JSON: String, Codable {
-        case mainnet
-        case testnet
-    }
-
-    public func encode(to encoder: any Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case .mainnet: try container.encode(JSON.mainnet)
-        case .testnet: try container.encode(JSON.testnet)
-        }
-    }
-
-    public init(from decoder: any Decoder) throws {
-        var container = try decoder.unkeyedContainer()
-        let value = try container.decode(JSON.self)
-        switch value {
-        case .testnet: self = .testnet
-        case .mainnet: self = .mainnet
-        }
-    }
-}
-
 public struct IdentitySeedIndexes {
     public var providerID: IdentityProviderID
     public var index: IdentityIndex

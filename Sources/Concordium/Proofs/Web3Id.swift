@@ -162,11 +162,11 @@ extension VerifiableCredentialProof: @retroactive Codable {
     }
 
     static let CCD_TYPE = ["VerifiableCredential", "ConcordiumVerifiableCredential"]
-    
+
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let issuer = try container.decode(DID.self, forKey: .issuer)
-        let credType = try container.decode([String].self, forKey: .type).filter { !Self.CCD_TYPE.contains($0)}
+        let credType = try container.decode([String].self, forKey: .type).filter { !Self.CCD_TYPE.contains($0) }
 
         switch issuer.idType {
         case let .idp(idpIdentity):
@@ -175,7 +175,7 @@ extension VerifiableCredentialProof: @retroactive Codable {
             var credId: Data
             switch credSub.id.idType {
             case let .credential(c): credId = c
-            default: 
+            default:
                 throw DecodingError.dataCorruptedError(forKey: .credentialSubject, in: container, debugDescription: "Only valid 'id' for IDP issued subject is .credential")
             }
 

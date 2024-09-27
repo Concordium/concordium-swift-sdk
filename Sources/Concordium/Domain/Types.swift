@@ -2,6 +2,40 @@ import ConcordiumWalletCrypto
 import Foundation
 import NIO
 
+public typealias Network = ConcordiumWalletCrypto.Network
+
+extension Network: @retroactive Codable {
+    private enum JSON: String, Codable {
+        case mainnet
+        case testnet
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .mainnet: try container.encode(JSON.mainnet)
+        case .testnet: try container.encode(JSON.testnet)
+        }
+    }
+
+    public init(from decoder: any Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        let value = try container.decode(JSON.self)
+        switch value {
+        case .testnet: self = .testnet
+        case .mainnet: self = .mainnet
+        }
+    }
+
+    public init?(rawValue: String) {
+        switch rawValue {
+        case JSON.mainnet.rawValue: self = .mainnet
+        case JSON.testnet.rawValue: self = .testnet
+        default: return nil
+        }
+    }
+}
+
 /// Energy is used to count exact execution cost.
 /// This cost is then converted to CCD amounts.
 public typealias Energy = UInt64
@@ -607,7 +641,7 @@ extension Address: FromGRPC, ToGRPC {
     static func fromGRPC(_ g: GRPC) throws -> Address {
         let address = try g.type ?! GRPCError.missingRequiredValue("type")
         switch address {
-        case let .account(v): return .account(try .fromGRPC(v))
+        case let .account(v): return try .account(.fromGRPC(v))
         case let .contract(v): return .contract(.fromGRPC(v))
         }
     }
