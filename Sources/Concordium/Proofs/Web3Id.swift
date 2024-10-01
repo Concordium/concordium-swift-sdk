@@ -189,7 +189,13 @@ extension VerifiableCredentialProof: @retroactive Codable {
             }
 
             self = .account(created: credSub.proof.created, network: credSub.id.network, credId: credId, issuer: idpIdentity, proofs: proofs)
-        case let .contractData(address, _, _):
+        case let .contractData(address, entrypoint, param):
+            guard entrypoint == "issuer" else {
+                throw DecodingError.dataCorruptedError(forKey: .issuer, in: container, debugDescription: "Expected 'issuer' entrypont in smart contract issuer DID")
+            }
+            guard param.count == 0 else {
+                throw DecodingError.dataCorruptedError(forKey: .issuer, in: container, debugDescription: "Expected empty parameter in smart contract issuer DID")
+            }
             let credSub = try container.decode(CredentialSubjectWeb3IdJSON.self, forKey: .credentialSubject)
 
             let statement = credSub.statement
@@ -237,7 +243,7 @@ extension VerifiableCredentialProof: @retroactive Codable {
             let proof = StatementProofWeb3IdJSON(created: created, proofValue: proofs, commitments: commitments)
             let id = DID(network: network, idType: IdentifierType.publicKey(key: holderId))
             let credSub = CredentialSubjectWeb3IdJSON(id: id, proof: proof, statement: statements)
-            let issuer = DID(network: network, idType: IdentifierType.contractData(address: contract, entrypoint: "credentialEntry", parameter: holderId))
+            let issuer = DID(network: network, idType: IdentifierType.contractData(address: contract, entrypoint: "issuer", parameter: Data()))
             let json = JSON(credentialSubject: credSub, issuer: issuer, additionalType: credType)
             try container.encode(json)
         }
@@ -334,18 +340,32 @@ extension LinkingProof: @retroactive Codable {
 /// only missing part to verify the proof are the public commitments.
 public typealias VerifiablePresentation = ConcordiumWalletCrypto.VerifiablePresentation
 
+extension VerifiablePresentation {
+    /// Creates a verifiable presentation from:
+    ///
+    /// - Parameters:
+    ///   - request: a set of verifiable credential statements + challenge (``VerifiablePresentationRequest``)
+    ///   - global: the global context of the blockchain
+    ///   - commitmentInputs: commitment inputs corresponding to the statements
+    ///
+    /// - Throws: if the presentation could not be successfully created.
+    public static func create(request: VerifiablePresentationRequest, global: CryptographicParameters, commitmentInputs: [VerifiableCredentialCommitmentInputs]) throws -> Self {
+        try createVerifiablePresentation(request: request, global: global, commitmentInputs: commitmentInputs)
+    }
+}
+
 extension VerifiablePresentation: @retroactive Codable {
     private struct JSON: Codable {
         /// Always "VerifiablePresentation"
         let type: String
-        /// The challenge used for the presentation
-        let presentationContext: Data
+        /// The challenge used for the presentation, hex formatted
+        let presentationContext: String
         let verifiableCredential: [VerifiableCredentialProof]
         let proof: LinkingProof
 
         init(presentationContext: Data, verifiableCredential: [VerifiableCredentialProof], proof: LinkingProof) {
             type = "VerifiablePresentation"
-            self.presentationContext = presentationContext
+            self.presentationContext = presentationContext.hex
             self.verifiableCredential = verifiableCredential
             self.proof = proof
         }
@@ -360,7 +380,7 @@ extension VerifiablePresentation: @retroactive Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         let json = try container.decode(JSON.self)
-        self = .init(presentationContext: json.presentationContext, verifiableCredential: json.verifiableCredential, linkingProof: json.proof)
+        self = .init(presentationContext: try Data(hex: json.presentationContext), verifiableCredential: json.verifiableCredential, linkingProof: json.proof)
     }
 }
 

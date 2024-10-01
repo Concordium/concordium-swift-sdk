@@ -130,14 +130,12 @@ extension AttributeList: @retroactive Decodable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        print("TEST")
         try self.init(
             validToYearMonth: container.decode(String.self, forKey: .validTo),
             createdAtYearMonth: container.decode(String.self, forKey: .createdAt),
             maxAccounts: container.decode(UInt8.self, forKey: .maxAccounts),
             chosenAttributes: container.decode([AttributeTag: String].self, forKey: .chosenAttributes)
         )
-        print("TEST POST")
     }
 }
 
@@ -310,7 +308,6 @@ extension AttributeTag: @retroactive CustomStringConvertible, @retroactive CaseI
     }
 
     public var codingKey: any CodingKey {
-        print(description)
         return CodingKeys(stringValue: description)!
     }
 
