@@ -79,6 +79,15 @@ extension AtomicStatementV2 {
         case let .attributeInRange(statement): return .attributeInRange(attributeTag: statement.attributeTag, lower: statement.lower, upper: statement.upper)
         }
     }
+
+    public var attributeTag: String {
+        switch self {
+        case let .revealAttribute(statement): return statement.attributeTag
+        case let .attributeInSet(statement): return statement.attributeTag
+        case let .attributeNotInSet(statement): return statement.attributeTag
+        case let .attributeInRange(statement): return statement.attributeTag
+        }
+    }
 }
 
 extension AtomicStatementV2: @retroactive Codable {
@@ -150,8 +159,8 @@ extension ConcordiumWalletCrypto.Did: @retroactive Codable {
 }
 
 func getDateFormatter() -> ISO8601DateFormatter {
-let dateFormatter = ISO8601DateFormatter()
-dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let dateFormatter = ISO8601DateFormatter()
+    dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     return dateFormatter
 }
 
@@ -196,7 +205,6 @@ extension VerifiableCredentialProof: @retroactive Codable {
                 acc.append(AccountStatementWithProof(statement: pair.0, proof: pair.1))
             }
             let created = try getDateFormatter().date(from: credSub.proof.created) ?! DecodingError.dataCorruptedError(forKey: .credentialSubject, in: container, debugDescription: "Expected ISO8601 formatted string for 'created' timestamp")
-
 
             self = .account(created: created, network: credSub.id.network, credId: credId, issuer: idpIdentity, proofs: proofs)
         case let .contractData(address, entrypoint, param):
@@ -359,7 +367,7 @@ extension LinkingProof: @retroactive Codable {
 /// only missing part to verify the proof are the public commitments.
 public typealias VerifiablePresentation = ConcordiumWalletCrypto.VerifiablePresentation
 
-extension VerifiablePresentation {
+public extension VerifiablePresentation {
     /// Creates a verifiable presentation from:
     ///
     /// - Parameters:
@@ -368,7 +376,7 @@ extension VerifiablePresentation {
     ///   - commitmentInputs: commitment inputs corresponding to the statements
     ///
     /// - Throws: if the presentation could not be successfully created.
-    public static func create(request: VerifiablePresentationRequest, global: CryptographicParameters, commitmentInputs: [VerifiableCredentialCommitmentInputs]) throws -> Self {
+    static func create(request: VerifiablePresentationRequest, global: CryptographicParameters, commitmentInputs: [VerifiableCredentialCommitmentInputs]) throws -> Self {
         try createVerifiablePresentation(request: request, global: global, commitmentInputs: commitmentInputs)
     }
 }
@@ -399,7 +407,68 @@ extension VerifiablePresentation: @retroactive Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         let json = try container.decode(JSON.self)
-        self = .init(presentationContext: try Data(hex: json.presentationContext), verifiableCredential: json.verifiableCredential, linkingProof: json.proof)
+        self = try .init(presentationContext: Data(hex: json.presentationContext), verifiableCredential: json.verifiableCredential, linkingProof: json.proof)
+    }
+}
+
+/// A full verifiable credential for Web3 ID credentials, including secrets.
+public typealias Web3IdCredential = ConcordiumWalletCrypto.Web3IdCredential
+
+// TODO: doc..
+public enum VerifiablePresentationBuilderError: Error {
+    case missingValue(tag: String)
+    case missingRandomness(tag: String)
+}
+
+// TODO: doc..
+public struct VerifiablePresentationBuilder {
+    let challenge: Data
+    let network: Network
+    private var statements: [(VerifiableCredentialStatement, VerifiableCredentialCommitmentInputs)] = []
+
+    public init(challenge: Data, network: Network) {
+        self.challenge = challenge
+        self.network = network
+    }
+
+    public mutating func verify(_ statement: [AtomicStatementV1], for idObject: IdentityObject, cred: AccountCredentialWithRandomness, issuer: UInt32) throws {
+        try verify(statement, for: idObject, credId: CredentialRegistrationID(cred.credential.credId), randomness: cred.randomness, issuer: issuer)
+    }
+
+    public mutating func verify(_ statement: [AtomicStatementV1], for idObject: IdentityObject, credId: CredentialRegistrationID, randomness: Randomness, issuer: UInt32) throws {
+        let attributes = statement.map(\.attributeTag)
+        let (values, randomness) = try attributes.reduce(into: ([AttributeTag: String](), [AttributeTag: Data]())) { acc, tag in
+            acc.0[tag] = try idObject.attributeList.chosenAttributes[tag] ?! VerifiablePresentationBuilderError.missingValue(tag: tag.description)
+            acc.1[tag] = try randomness.attributesRand[tag] ?! VerifiablePresentationBuilderError.missingRandomness(tag: tag.description)
+        }
+        let verifiableStatement = VerifiableCredentialStatement.account(network: network, credId: credId.value, statement: statement)
+        let commitmentInputs = VerifiableCredentialCommitmentInputs.account(issuer: issuer, values: values, randomness: randomness)
+        statements.append((verifiableStatement, commitmentInputs))
+    }
+
+    public mutating func verify(_ statement: [AtomicStatementV2], for cred: Web3IdCredential, wallet: WalletSeed, credIndex: UInt32) throws {
+        let signer = try wallet.signingKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes(issuer: IssuerSeedIndexes(index: cred.registry.index, subindex: cred.registry.subindex), index: credIndex))
+        return try verify(statement, for: cred, signer: signer)
+    }
+
+    public mutating func verify(_ statement: [AtomicStatementV2], for cred: Web3IdCredential, signer: Data) throws {
+        let attributes = statement.map(\.attributeTag)
+        let (values, randomness) = try attributes.reduce(into: ([String: Web3IdAttribute](), [String: Data]())) { acc, tag in
+            acc.0[tag] = try cred.values[tag] ?! VerifiablePresentationBuilderError.missingValue(tag: tag.description)
+            acc.1[tag] = try cred.randomness[tag] ?! VerifiablePresentationBuilderError.missingRandomness(tag: tag.description)
+        }
+        let verifiableStatement = VerifiableCredentialStatement.web3Id(credType: cred.credentialType, network: network, contract: cred.registry, holderId: cred.holderId, statement: statement)
+        let commitmentInputs = VerifiableCredentialCommitmentInputs.web3Issuer(signature: cred.signature, signer: signer, values: values, randomness: randomness)
+        statements.append((verifiableStatement, commitmentInputs))
+    }
+
+    public func finalize(global: CryptographicParameters) throws -> VerifiablePresentation {
+        let (statements, commitmentInputs) = self.statements.reduce(into: ([VerifiableCredentialStatement](), [VerifiableCredentialCommitmentInputs]())) { acc, row in
+            acc.0.append(row.0)
+            acc.1.append(row.1)
+        }
+        let request = VerifiablePresentationRequest(challenge: challenge, statements: statements)
+        return try VerifiablePresentation.create(request: request, global: global, commitmentInputs: commitmentInputs)
     }
 }
 

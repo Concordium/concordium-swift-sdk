@@ -200,8 +200,8 @@ extension WalletConnectSignMessageParam: Decodable {
 /// Describes parameter supplied to a walletconnect "sign_message" request
 /// as produced by the NPM package `@concordium/wallet-connectors`
 public struct WalletConnectRequestVerifiablePresentationParam: Decodable {
-    let challenge: Data
-    let credentialStatements: [CredentialStatement]
+    public let challenge: Data
+    public let credentialStatements: [CredentialStatement]
 
     public enum CredentialStatement {
         case account(issuers: [UInt32], statement: [AtomicStatementV1])
@@ -230,11 +230,11 @@ extension WalletConnectRequestVerifiablePresentationParam.CredentialStatement: D
         let nested = try container.nestedContainer(keyedBy: NestedKeys.self, forKey: .statement)
         let type = try nested.decode(TypeValue.self, forKey: .type)
         switch type {
-        case .sci: 
+        case .sci:
             let issuers = try nested.decode([UInt32].self, forKey: .issuers)
             let statement = try container.decode([AtomicStatementV1].self, forKey: .statement)
             self = .account(issuers: issuers, statement: statement)
-        case .cred: 
+        case .cred:
             let issuers = try nested.decode([ContractAddress].self, forKey: .issuers)
             let statement = try container.decode([AtomicStatementV2].self, forKey: .statement)
             self = .web3id(issuers: issuers, statement: statement)
@@ -266,9 +266,9 @@ extension WalletConnectRequest: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let method = try container.decode(Method.self, forKey: .method)
         switch method {
-        case .signMessage: self = .signMessage(param: try container.decode(WalletConnectSignMessageParam.self, forKey: .params))
-        case .signAndSendTransaction: self = .sendTransaction(param: try container.decode(WalletConnectSendTransactionParam.self, forKey: .params))
-        case .requestVerifiablePresentation: self = .requestVerifiableCredential(param: try container.decode(WalletConnectRequestVerifiablePresentationParam.self, forKey: .params))
+        case .signMessage: self = try .signMessage(param: container.decode(WalletConnectSignMessageParam.self, forKey: .params))
+        case .signAndSendTransaction: self = try .sendTransaction(param: container.decode(WalletConnectSendTransactionParam.self, forKey: .params))
+        case .requestVerifiablePresentation: self = try .requestVerifiableCredential(param: container.decode(WalletConnectRequestVerifiablePresentationParam.self, forKey: .params))
         }
     }
 }

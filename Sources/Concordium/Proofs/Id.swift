@@ -121,6 +121,15 @@ extension AtomicStatementV1 {
         case let .attributeInRange(statement): return .attributeInRange(attributeTag: statement.attributeTag, lower: statement.lower, upper: statement.upper)
         }
     }
+
+    public var attributeTag: AttributeTag {
+        switch self {
+        case let .revealAttribute(statement): return statement.attributeTag
+        case let .attributeInSet(statement): return statement.attributeTag
+        case let .attributeNotInSet(statement): return statement.attributeTag
+        case let .attributeInRange(statement): return statement.attributeTag
+        }
+    }
 }
 
 extension AtomicStatementV1: @retroactive Codable {

@@ -185,7 +185,7 @@ public class SeedBasedAccountDerivation {
         provider: IdentityProvider,
         revealedAttributes: [AttributeTag] = [],
         threshold: SignatureThreshold
-    ) throws -> AccountCredential {
+    ) throws -> AccountCredentialWithRandomness {
         let anonymityRevokers = provider.anonymityRevokers
         let idCredSec = try seed.credSec(identityIndexes: seedIndexes.identity)
         let prfKey = try seed.prfKey(identityIndexes: seedIndexes.identity)
@@ -201,7 +201,7 @@ public class SeedBasedAccountDerivation {
             keys: [KeyIndex(0): VerifyKey(ed25519Key: key)],
             threshold: threshold
         )
-        let res = try accountCredential(
+        return try accountCredential(
             params: AccountCredentialParameters(
                 ipInfo: provider.info,
                 globalContext: cryptoParams,
@@ -216,7 +216,6 @@ public class SeedBasedAccountDerivation {
                 credentialPublicKeys: credentialPublicKeys
             )
         )
-        return res.credential
     }
 
     public func deriveAccount(credentials: [AccountCredentialSeedIndexes]) throws -> Account {

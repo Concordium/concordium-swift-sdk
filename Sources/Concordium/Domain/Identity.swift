@@ -308,7 +308,7 @@ extension AttributeTag: @retroactive CustomStringConvertible, @retroactive CaseI
     }
 
     public var codingKey: any CodingKey {
-        return CodingKeys(stringValue: description)!
+        CodingKeys(stringValue: description)!
     }
 
     public init?<T>(codingKey: T) where T: CodingKey {

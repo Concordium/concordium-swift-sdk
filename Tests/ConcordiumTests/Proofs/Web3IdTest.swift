@@ -9,35 +9,35 @@ private let GLOBAL = CryptographicParameters(
 
 final class Web3IdTest: XCTestCase {
     func testProveAccountStatement() throws {
-        let statements = [
+        let statements = try [
             VerifiableCredentialStatement.account(
                 network: .testnet,
-                credId: try Data(hex: "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100df4cac5e161fb81aebe3a04300e63f086d0d8"),
+                credId: Data(hex: "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100df4cac5e161fb81aebe3a04300e63f086d0d8"),
                 statement: [
                     .attributeInRange(statement: AttributeInRangeStatementV1(attributeTag: .dateOfBirth, lower: "81", upper: "1231")),
-                    .revealAttribute(statement: RevealAttributeStatementV1(attributeTag: .firstName))
+                    .revealAttribute(statement: RevealAttributeStatementV1(attributeTag: .firstName)),
                 ]
-            )
+            ),
         ]
         let challenge = try Data(hex: "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100dAAAA")
         let request = VerifiablePresentationRequest(challenge: challenge, statements: statements)
 
-        let commitmentInputs = [
+        let commitmentInputs = try [
             VerifiableCredentialCommitmentInputs.account(
                 issuer: 1,
-                values: [.dateOfBirth : "0", .firstName : "a"],
+                values: [.dateOfBirth: "0", .firstName: "a"],
                 randomness: [
-                    .dateOfBirth : try Data(hex: "575851a4e0558d589a57544a4a9f5ad1bd8467126c1b6767d32f633ea03380e6"),
-                    .firstName : try Data(hex: "575851a4e0558d589a57544a4a9f5ad1bd8467126c1b6767d32f633ea03380e6")
+                    .dateOfBirth: Data(hex: "575851a4e0558d589a57544a4a9f5ad1bd8467126c1b6767d32f633ea03380e6"),
+                    .firstName: Data(hex: "575851a4e0558d589a57544a4a9f5ad1bd8467126c1b6767d32f633ea03380e6"),
                 ]
-            )
+            ),
         ]
         let presentation = try VerifiablePresentation.create(request: request, global: GLOBAL, commitmentInputs: commitmentInputs)
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
 
-        //print(String(data: try encoder.encode(presentation), encoding: .utf8)!)
+        // print(String(data: try encoder.encode(presentation), encoding: .utf8)!)
     }
 
     func testProveWeb3IdStatement() throws {
@@ -54,13 +54,13 @@ final class Web3IdTest: XCTestCase {
                 holderId: holderId,
                 statement: [
                     AtomicStatementV2.attributeInSet(statement: AttributeInSetStatementV2(attributeTag: "degreeType", set: [Web3IdAttribute.string(value: "BachelorDegree"), Web3IdAttribute.string(value: "MasterDegree")])),
-                    AtomicStatementV2.revealAttribute(statement: RevealAttributeStatementV2(attributeTag: "degreeName"))
+                    AtomicStatementV2.revealAttribute(statement: RevealAttributeStatementV2(attributeTag: "degreeName")),
                 ]
-            )
+            ),
         ]
         let request = VerifiablePresentationRequest(challenge: challenge, statements: statements)
 
-        let commitmentInputs = [try VerifiableCredentialCommitmentInputs.web3Issuer(
+        let commitmentInputs = try [VerifiableCredentialCommitmentInputs.web3Issuer(
             signature: Data(hex: "40ced1f01109c7a307fffabdbea7eb37ac015226939eddc05562b7e8a29d4a2cf32ab33b2f76dd879ce69fab7ff3752a73800c9ce41da6d38b189dccffa45906"),
             signer: signer,
             values: [
@@ -68,7 +68,7 @@ final class Web3IdTest: XCTestCase {
                 "degreeType": Web3IdAttribute.string(value: "BachelorDegree"),
                 "graduationDate": Web3IdAttribute.string(value: "2010-06-01T00:00:00Z"),
             ],
-            randomness: try [
+            randomness: [
                 "degreeName": Data(hex: "3917917065f8178e99c954017886f83984247ca16a22b065286de89b54d04610"),
                 "degreeType": Data(hex: "53573aac0039a54affd939be0ad0c49df6e5a854ce448a73abb2b0534a0a62ba"),
                 "graduationDate": Data(hex: "0f5a299aeba0cdc16fbaa98f21cab57cfa6dd50f0a2b039393686df7c7ae1561"),
@@ -80,7 +80,7 @@ final class Web3IdTest: XCTestCase {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
 
-        //print(String(data: try encoder.encode(presentation), encoding: .utf8)!)
+        // print(String(data: try encoder.encode(presentation), encoding: .utf8)!)
     }
 
     func testEncodeVerifiablePresentation() throws {
