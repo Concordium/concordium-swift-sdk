@@ -35,9 +35,9 @@ final class Web3IdTest: XCTestCase {
         let presentation = try VerifiablePresentation.create(request: request, global: GLOBAL, commitmentInputs: commitmentInputs)
 
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
 
-        print(String(data: try encoder.encode(presentation), encoding: .utf8)!)
+        //print(String(data: try encoder.encode(presentation), encoding: .utf8)!)
     }
 
     func testProveWeb3IdStatement() throws {
@@ -78,15 +78,17 @@ final class Web3IdTest: XCTestCase {
         let presentation = try VerifiablePresentation.create(request: request, global: GLOBAL, commitmentInputs: commitmentInputs)
 
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
 
-        print(String(data: try encoder.encode(presentation), encoding: .utf8)!)
+        //print(String(data: try encoder.encode(presentation), encoding: .utf8)!)
     }
 
     func testEncodeVerifiablePresentation() throws {
         let encoder = JSONEncoder()
+        encoder.outputFormatting = [.withoutEscapingSlashes]
         let decoder = JSONDecoder()
 
+        /// Generated with the rust SDK
         var json = """
         {
           "presentationContext": "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100daaaa",
@@ -129,8 +131,10 @@ final class Web3IdTest: XCTestCase {
         }
         """.data(using: .utf8)!
         var value = try decoder.decode(VerifiablePresentation.self, from: json)
-        let _ = try decoder.decode(VerifiablePresentation.self, from: encoder.encode(value))
+        var idCheck = try decoder.decode(VerifiablePresentation.self, from: encoder.encode(value))
+        XCTAssertEqual(value, idCheck)
 
+        /// Generated with the rust SDK
         json = """
         {
           "presentationContext": "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100daaaa",
@@ -191,6 +195,7 @@ final class Web3IdTest: XCTestCase {
         }
         """.data(using: .utf8)!
         value = try decoder.decode(VerifiablePresentation.self, from: json)
-        let _ = try decoder.decode(VerifiablePresentation.self, from: encoder.encode(value))
+        idCheck = try decoder.decode(VerifiablePresentation.self, from: encoder.encode(value))
+        XCTAssertEqual(value, idCheck)
     }
 }

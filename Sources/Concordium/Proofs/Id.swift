@@ -10,10 +10,10 @@ enum AtomicStatement<Tag: Equatable, Value: Hashable & Equatable>: Equatable {
     case revealAttribute(attributeTag: Tag)
     /// For the case where the verifier wants the user to prove that an attribute is
     /// in a set of attributes.
-    case attributeInSet(attributeTag: Tag, set: Set<Value>)
+    case attributeInSet(attributeTag: Tag, set: [Value])
     /// For the case where the verifier wants the user to prove that an attribute is
     /// not in a set of attributes.
-    case attributeNotInSet(attributeTag: Tag, set: Set<Value>)
+    case attributeNotInSet(attributeTag: Tag, set: [Value])
     /// For the case where the verifier wants the user to prove that an attribute is
     /// in a range. The statement is that the attribute value lies in `[lower,
     /// upper)` in the scalar field.
@@ -54,10 +54,10 @@ extension AtomicStatement: Codable where Tag: Codable, Value: Codable {
         case TypeValue.revealAttribute.rawValue:
             self = .revealAttribute(attributeTag: attributeTag)
         case TypeValue.attributeInSet.rawValue:
-            let set = try container.decode(Set<Value>.self, forKey: .set)
+            let set = try container.decode([Value].self, forKey: .set)
             self = .attributeInSet(attributeTag: attributeTag, set: set)
         case TypeValue.attributeNotInSet.rawValue:
-            let set = try container.decode(Set<Value>.self, forKey: .set)
+            let set = try container.decode([Value].self, forKey: .set)
             self = .attributeNotInSet(attributeTag: attributeTag, set: set)
         case TypeValue.attributeInRange.rawValue:
             let lower = try container.decode(Value.self, forKey: .lower)
@@ -104,9 +104,9 @@ extension AtomicStatementV1 {
         case let .revealAttribute(attributeTag):
             self = .revealAttribute(statement: RevealAttributeStatementV1(attributeTag: attributeTag))
         case let .attributeInSet(attributeTag, set):
-            self = .attributeInSet(statement: AttributeInSetStatementV1(attributeTag: attributeTag, set: [String](set)))
+            self = .attributeInSet(statement: AttributeInSetStatementV1(attributeTag: attributeTag, set: set))
         case let .attributeNotInSet(attributeTag, set):
-            self = .attributeNotInSet(statement: AttributeNotInSetStatementV1(attributeTag: attributeTag, set: [String](set)))
+            self = .attributeNotInSet(statement: AttributeNotInSetStatementV1(attributeTag: attributeTag, set: set))
         case let .attributeInRange(attributeTag, lower, upper):
             self = .attributeInRange(statement: AttributeInRangeStatementV1(attributeTag: attributeTag, lower: lower, upper: upper))
         }
@@ -116,8 +116,8 @@ extension AtomicStatementV1 {
     func toSDK() -> AtomicStatement<AttributeTag, String> {
         switch self {
         case let .revealAttribute(statement): return .revealAttribute(attributeTag: statement.attributeTag)
-        case let .attributeInSet(statement): return .attributeInSet(attributeTag: statement.attributeTag, set: Set(statement.set))
-        case let .attributeNotInSet(statement): return .attributeNotInSet(attributeTag: statement.attributeTag, set: Set(statement.set))
+        case let .attributeInSet(statement): return .attributeInSet(attributeTag: statement.attributeTag, set: statement.set)
+        case let .attributeNotInSet(statement): return .attributeNotInSet(attributeTag: statement.attributeTag, set: statement.set)
         case let .attributeInRange(statement): return .attributeInRange(attributeTag: statement.attributeTag, lower: statement.lower, upper: statement.upper)
         }
     }
@@ -207,7 +207,7 @@ extension AtomicProof: Codable where Value: Codable {
 
     enum CodingKeys: CodingKey {
         case type
-        case attributeTag
+        case attribute
         case proof
     }
 
@@ -227,7 +227,7 @@ extension AtomicProof: Codable where Value: Codable {
 
         switch type {
         case TypeValue.revealAttribute.rawValue:
-            let attribute = try container.decode(Value.self, forKey: .attributeTag)
+            let attribute = try container.decode(Value.self, forKey: .attribute)
             self = .revealAttribute(attribute: attribute, proof: proof)
         case TypeValue.attributeInSet.rawValue:
             self = .attributeInSet(proof: proof)
@@ -245,8 +245,8 @@ extension AtomicProof: Codable where Value: Codable {
         try container.encode(type, forKey: .type)
 
         switch self {
-        case let .revealAttribute(attributeTag, proof):
-            try container.encode(attributeTag, forKey: .attributeTag)
+        case let .revealAttribute(attribute, proof):
+            try container.encode(attribute, forKey: .attribute)
             try container.encode(proof.hex, forKey: .proof)
         case let .attributeInSet(proof):
             try container.encode(proof.hex, forKey: .proof)
@@ -289,12 +289,12 @@ extension AtomicProofV1 {
 
 extension AtomicProofV1: @retroactive Codable {
     public func encode(to encoder: any Encoder) throws {
-        var container = encoder.unkeyedContainer()
+        var container = encoder.singleValueContainer()
         try container.encode(toSDK())
     }
 
     public init(from decoder: any Decoder) throws {
-        var container = try decoder.unkeyedContainer()
+        let container = try decoder.singleValueContainer()
         self = try .init(sdkType: container.decode(AtomicProof<String>.self))
     }
 }

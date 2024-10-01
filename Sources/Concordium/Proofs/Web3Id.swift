@@ -36,9 +36,11 @@ extension Web3IdAttribute: @retroactive Codable {
         let container = try decoder.singleValueContainer()
         if let value = try? container.decode(String.self) {
             self = .string(value: value)
+            return
         }
         if let value = try? container.decode(UInt64.self) {
             self = .numeric(value: value)
+            return
         }
         let value = try container.decode(TimestampJSON.self) ?! DecodingError.dataCorruptedError(in: container, debugDescription: "Failed to decode 'Web3IdAttribute'")
         self = .timestamp(value: value.timestamp)
@@ -60,9 +62,9 @@ extension AtomicStatementV2 {
         case let .revealAttribute(attributeTag):
             self = .revealAttribute(statement: RevealAttributeStatementV2(attributeTag: attributeTag))
         case let .attributeInSet(attributeTag, set):
-            self = .attributeInSet(statement: AttributeInSetStatementV2(attributeTag: attributeTag, set: [Web3IdAttribute](set)))
+            self = .attributeInSet(statement: AttributeInSetStatementV2(attributeTag: attributeTag, set: set))
         case let .attributeNotInSet(attributeTag, set):
-            self = .attributeNotInSet(statement: AttributeNotInSetStatementV2(attributeTag: attributeTag, set: [Web3IdAttribute](set)))
+            self = .attributeNotInSet(statement: AttributeNotInSetStatementV2(attributeTag: attributeTag, set: set))
         case let .attributeInRange(attributeTag, lower, upper):
             self = .attributeInRange(statement: AttributeInRangeStatementV2(attributeTag: attributeTag, lower: lower, upper: upper))
         }
@@ -72,8 +74,8 @@ extension AtomicStatementV2 {
     func toSDK() -> AtomicStatement<String, Web3IdAttribute> {
         switch self {
         case let .revealAttribute(statement): return .revealAttribute(attributeTag: statement.attributeTag)
-        case let .attributeInSet(statement): return .attributeInSet(attributeTag: statement.attributeTag, set: Set(statement.set))
-        case let .attributeNotInSet(statement): return .attributeNotInSet(attributeTag: statement.attributeTag, set: Set(statement.set))
+        case let .attributeInSet(statement): return .attributeInSet(attributeTag: statement.attributeTag, set: statement.set)
+        case let .attributeNotInSet(statement): return .attributeNotInSet(attributeTag: statement.attributeTag, set: statement.set)
         case let .attributeInRange(statement): return .attributeInRange(attributeTag: statement.attributeTag, lower: statement.lower, upper: statement.upper)
         }
     }
@@ -81,12 +83,12 @@ extension AtomicStatementV2 {
 
 extension AtomicStatementV2: @retroactive Codable {
     public func encode(to encoder: any Encoder) throws {
-        var container = encoder.unkeyedContainer()
+        var container = encoder.singleValueContainer()
         try container.encode(toSDK())
     }
 
     public init(from decoder: any Decoder) throws {
-        var container = try decoder.unkeyedContainer()
+        let container = try decoder.singleValueContainer()
         self = try .init(sdkType: container.decode(AtomicStatement<String, Web3IdAttribute>.self))
     }
 }
@@ -147,6 +149,12 @@ extension ConcordiumWalletCrypto.Did: @retroactive Codable {
     }
 }
 
+func getDateFormatter() -> ISO8601DateFormatter {
+let dateFormatter = ISO8601DateFormatter()
+dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return dateFormatter
+}
+
 /**
  * A proof corresponding to one `VerifiableCredentialStatement`. This contains almost
  * all the information needed to verify it, except the issuer's public key in
@@ -187,8 +195,10 @@ extension VerifiableCredentialProof: @retroactive Codable {
             let proofs = zip(statement, proof).reduce(into: []) { acc, pair in
                 acc.append(AccountStatementWithProof(statement: pair.0, proof: pair.1))
             }
+            let created = try getDateFormatter().date(from: credSub.proof.created) ?! DecodingError.dataCorruptedError(forKey: .credentialSubject, in: container, debugDescription: "Expected ISO8601 formatted string for 'created' timestamp")
 
-            self = .account(created: credSub.proof.created, network: credSub.id.network, credId: credId, issuer: idpIdentity, proofs: proofs)
+
+            self = .account(created: created, network: credSub.id.network, credId: credId, issuer: idpIdentity, proofs: proofs)
         case let .contractData(address, entrypoint, param):
             guard entrypoint == "issuer" else {
                 throw DecodingError.dataCorruptedError(forKey: .issuer, in: container, debugDescription: "Expected 'issuer' entrypont in smart contract issuer DID")
@@ -214,8 +224,9 @@ extension VerifiableCredentialProof: @retroactive Codable {
             default:
                 throw DecodingError.dataCorruptedError(forKey: .credentialSubject, in: container, debugDescription: "Only valid 'id' for IDP issued subject is .credential")
             }
+            let created = try getDateFormatter().date(from: credSub.proof.created) ?! DecodingError.dataCorruptedError(forKey: .credentialSubject, in: container, debugDescription: "Expected ISO8601 formatted string for 'created' timestamp")
 
-            self = .web3Id(created: credSub.proof.created, holderId: holderId, network: credSub.id.network, contract: address, credType: credType, commitments: credSub.proof.commitments, proofs: proofs)
+            self = .web3Id(created: created, holderId: holderId, network: credSub.id.network, contract: address, credType: credType, commitments: credSub.proof.commitments, proofs: proofs)
         default:
             throw DecodingError.dataCorruptedError(forKey: .issuer, in: container, debugDescription: "The only valid variants for 'issuer' of verifiable credential are either .idp or .contractData")
         }
@@ -224,8 +235,8 @@ extension VerifiableCredentialProof: @retroactive Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
-        case let .account(created, network, credId, issuer, proofs):
-            let (statements, proofs) = proofs.reduce(into: ([AtomicStatementV1](), [AtomicProofV1]())) { acc, proof in
+        case let .account(created, network, credId, issuer, proofsWithStatement):
+            let (statements, proofs) = proofsWithStatement.reduce(into: ([AtomicStatementV1](), [AtomicProofV1]())) { acc, proof in
                 acc.0.append(proof.statement)
                 acc.1.append(proof.proof)
             }
@@ -235,8 +246,8 @@ extension VerifiableCredentialProof: @retroactive Codable {
             let issuer = DID(network: network, idType: IdentifierType.idp(idpIdentity: issuer))
             let json = JSON(credentialSubject: credSub, issuer: issuer)
             try container.encode(json)
-        case let .web3Id(created, holderId, network, contract, credType, commitments, proofs):
-            let (statements, proofs) = proofs.reduce(into: ([AtomicStatementV2](), [AtomicProofV2]())) { acc, proof in
+        case let .web3Id(created, holderId, network, contract, credType, commitments, proofsWithStatement):
+            let (statements, proofs) = proofsWithStatement.reduce(into: ([AtomicStatementV2](), [AtomicProofV2]())) { acc, proof in
                 acc.0.append(proof.statement)
                 acc.1.append(proof.proof)
             }
@@ -274,25 +285,27 @@ extension VerifiableCredentialProof: @retroactive Codable {
     }
 
     private struct StatementProofAccountJSON: Codable {
-        let created: Date
+        /// ISO8601
+        let created: String
         let proofValue: [AtomicProofV1]
         let type: String // "ConcordiumZKProofV3"
 
         init(created: Date, proofValue: [AtomicProofV1]) {
-            self.created = created
+            self.created = getDateFormatter().string(from: created)
             self.proofValue = proofValue
             type = "ConcordiumZKProofV3"
         }
     }
 
     private struct StatementProofWeb3IdJSON: Codable {
-        let created: Date
+        /// ISO8601
+        let created: String
         let proofValue: [AtomicProofV2]
         let commitments: SignedCommitments
         let type: String // "ConcordiumZKProofV3"
 
         init(created: Date, proofValue: [AtomicProofV2], commitments: SignedCommitments) {
-            self.created = created
+            self.created = getDateFormatter().string(from: created)
             self.proofValue = proofValue
             self.commitments = commitments
             type = "ConcordiumZKProofV3"
@@ -311,27 +324,33 @@ extension LinkingProof: @retroactive Codable {
     private struct JSON: Codable {
         /// Always "ConcordiumWeakLinkingProofV1"
         let type: String
-        let created: Date
+        /// ISO8601
+        let created: String
         /// Hex formatted strings
         let proofValue: [String]
 
-        init(created: Date, proofValue: [String]) {
+        init(created: String, proofValue: [String]) {
             self.created = created
             self.proofValue = proofValue
             type = "ConcordiumWeakLinkingProofV1"
+        }
+
+        init(createdDate: Date, proofValue: [String]) {
+            self = .init(created: getDateFormatter().string(from: createdDate), proofValue: proofValue)
         }
     }
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
-        let json = JSON(created: created, proofValue: proofValue.map(\.hex))
+        let json = JSON(createdDate: created, proofValue: proofValue.map(\.hex))
         try container.encode(json)
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         let json = try container.decode(JSON.self)
-        self = try .init(created: json.created, proofValue: json.proofValue.map { try Data(hex: $0) })
+        let created = try getDateFormatter().date(from: json.created) ?! DecodingError.dataCorruptedError(in: container, debugDescription: "Expected ISO8601 formatted string for 'created' timestamp")
+        self = try .init(created: created, proofValue: json.proofValue.map { try Data(hex: $0) })
     }
 }
 
@@ -415,12 +434,12 @@ extension AtomicProofV2 {
 
 extension AtomicProofV2: @retroactive Codable {
     public func encode(to encoder: any Encoder) throws {
-        var container = encoder.unkeyedContainer()
+        var container = encoder.singleValueContainer()
         try container.encode(toSDK())
     }
 
     public init(from decoder: any Decoder) throws {
-        var container = try decoder.unkeyedContainer()
+        let container = try decoder.singleValueContainer()
         self = try .init(sdkType: container.decode(AtomicProof<Web3IdAttribute>.self))
     }
 }
