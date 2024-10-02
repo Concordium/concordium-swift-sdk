@@ -32,12 +32,7 @@ final class Web3IdTest: XCTestCase {
                 ]
             ),
         ]
-        let presentation = try VerifiablePresentation.create(request: request, global: GLOBAL, commitmentInputs: commitmentInputs)
-
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
-
-        // print(String(data: try encoder.encode(presentation), encoding: .utf8)!)
+        let _ = try VerifiablePresentation.create(request: request, global: GLOBAL, commitmentInputs: commitmentInputs)
     }
 
     func testProveWeb3IdStatement() throws {
@@ -75,12 +70,7 @@ final class Web3IdTest: XCTestCase {
             ]
         )]
 
-        let presentation = try VerifiablePresentation.create(request: request, global: GLOBAL, commitmentInputs: commitmentInputs)
-
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
-
-        // print(String(data: try encoder.encode(presentation), encoding: .utf8)!)
+        let _ = try VerifiablePresentation.create(request: request, global: GLOBAL, commitmentInputs: commitmentInputs)
     }
 
     func testEncodeVerifiablePresentation() throws {
@@ -197,5 +187,51 @@ final class Web3IdTest: XCTestCase {
         value = try decoder.decode(VerifiablePresentation.self, from: json)
         idCheck = try decoder.decode(VerifiablePresentation.self, from: encoder.encode(value))
         XCTAssertEqual(value, idCheck)
+    }
+
+    /// Test that ``Web3IdCredential`` properly encodes/decodes as a verifiable credential
+    func testEncodeWeb3IdCredential() throws {
+        let json = """
+        {
+          "credentialSchema": {
+            "id": "http://link/to/schema",
+            "type": "JsonSchema2023"
+          },
+          "credentialSubject": {
+            "attributes": {
+              "0": 1234,
+              "17": "World",
+              "3": "Hello"
+            },
+            "id": "did:ccd:testnet:pkc:9438069e56e05e04adcb3dba21f0092548c2e149ff772df4f89c481993014251"
+          },
+          "id": "did:ccd:testnet:sci:3:17/credentialEntry/9438069e56e05e04adcb3dba21f0092548c2e149ff772df4f89c481993014251",
+          "issuer": "did:ccd:testnet:sci:3:17/issuer/",
+          "proof": {
+            "proofPurpose": "assertionMethod",
+            "proofValue": "4a37728ac1140235e96fd4cd1e6fcd1294275aa962a3f2b1475fb6ac6b5747a5e92e380a1d2e77a19f66175c5af38e0db2427d562fe2b7111267b7fac4260001",
+            "type": "Ed25519Signature2020",
+            "verificationMethod": "did:ccd:testnet:pkc:53004b70adfac05ce33776e59ef2248d5b6af911f90b1cf03d2667dbdb146b8f"
+          },
+          "randomness": {
+            "0": "489e66684cc66a7a11a42fb59716e2d193d33cdce61b98c28085994a785cbac8",
+            "17": "372a9230b7e27621dd82f0bce8671657e6640e877d3c1581d59abcde87198656",
+            "3": "457856263e6ad7968ed02a11c272b96a98e372679acfdc10677bed3b54fc006f"
+          },
+          "type": [
+            "ConcordiumVerifiableCredential",
+            "UniversityDegreeCredential",
+            "VerifiableCredential"
+          ],
+          "validFrom": "1970-01-01T00:00:00.017Z",
+          "validUntil": "1970-01-01T00:00:12.345Z"
+        }
+        """.data(using: .utf8)!
+        let decoder = JSONDecoder()
+        let encoder = JSONEncoder()
+
+        let parsed = try decoder.decode(Web3IdCredential.self, from: json)
+        XCTAssertEqual(parsed, try decoder.decode(Web3IdCredential.self, from: encoder.encode(parsed)))
+
     }
 }

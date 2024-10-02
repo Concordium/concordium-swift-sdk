@@ -145,7 +145,10 @@ extension SignedCommitments: @retroactive Codable {
     }
 }
 
-extension ConcordiumWalletCrypto.Did: @retroactive Codable {
+/// Describes the differnet decentralized identifier variants
+public typealias DID = ConcordiumWalletCrypto.Did
+
+extension DID: @retroactive Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         let value = try container.decode(String.self)
@@ -267,8 +270,6 @@ extension VerifiableCredentialProof: @retroactive Codable {
             try container.encode(json)
         }
     }
-
-    private typealias DID = ConcordiumWalletCrypto.Did
 
     private struct JSON<CredentialSubject: Codable>: Codable {
         let credentialSubject: CredentialSubject
@@ -414,6 +415,140 @@ extension VerifiablePresentation: @retroactive Codable {
 /// A full verifiable credential for Web3 ID credentials, including secrets.
 public typealias Web3IdCredential = ConcordiumWalletCrypto.Web3IdCredential
 
+extension Web3IdCredential: Codable {
+    private struct JSON: Codable {
+        let credentialSchema: CredentialSchema
+        let credentialSubject: CredentialSubject
+        let id: DID // .contractData
+        let issuer: DID // .contractData
+        let proof: Proof
+        let randomness: [String: String] // [String: Hex]
+        let type: [String]
+        let validFrom: String // ISO8601 date
+        let validUntil: String? // ISO8601 date
+
+        struct CredentialSchema: Codable {
+            let id: String
+            let type: String // "JsonSchema2023"
+
+            init(id: String) {
+                self.id = id
+                self.type = "JsonSchema2023"
+            }
+        }
+
+        struct CredentialSubject: Codable {
+            let attributes: [String: Web3IdAttribute]
+            let id: DID // .publickKey
+        }
+
+        struct Proof: Codable {
+            let proofPurpose: String // "assertionMethod"
+            /// Hex encoded ``Data``
+            let proofValue: String
+            let type: String // "Ed25519Signature2020"
+            let verificationMethod: DID // .publicKey
+
+            init(proofValue: Data, verificationMethod: DID) {
+                self.proofPurpose = "assertionMethod"
+                self.proofValue = proofValue.hex
+                self.type = "Ed25519Signature2020"
+                self.verificationMethod = verificationMethod
+            }
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        let dateFormatter = getDateFormatter()
+
+        let schema = JSON.CredentialSchema(id: self.credentialSchema)
+        let subject = JSON.CredentialSubject(attributes: self.values, id: DID(network: self.network, idType: IdentifierType.publicKey(key: self.holderId)))
+        let id = DID(network: self.network, idType: .contractData(address: self.registry, entrypoint: "credentialEntry", parameter: self.holderId))
+        let issuer = DID(network: self.network, idType: .contractData(address: self.registry, entrypoint: "issuer", parameter: Data()))
+        let proof = JSON.Proof(proofValue: self.signature, verificationMethod: DID(network: self.network, idType: .publicKey(key: self.issuerKey)))
+        let json = JSON(
+            credentialSchema: schema,
+            credentialSubject: subject,
+            id: id,
+            issuer: issuer,
+            proof: proof,
+            randomness: self.randomness.mapValues(\.hex),
+            type: self.credentialType,
+            validFrom: dateFormatter.string(from: self.validFrom),
+            validUntil: self.validUntil.map { dateFormatter.string(from: $0) }
+        )
+        try container.encode(json)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let json = try container.decode(JSON.self)
+        let dateFormatter = getDateFormatter()
+
+        let validFrom = try dateFormatter.date(from: json.validFrom) ?! DecodingError.dataCorruptedError(in: container, debugDescription: "Expected 'validFrom' to contain ISO8601 formatted date")
+        let validUntil = try json.validUntil.map {
+             try dateFormatter.date(from: $0) ?! DecodingError.dataCorruptedError(in: container, debugDescription: "Expected 'validFrom' to contain ISO8601 formatted date")
+        }
+        let signature = try Data(hex: json.proof.proofValue)
+
+        guard [json.id.network, json.credentialSubject.id.network, json.issuer.network, json.proof.verificationMethod.network].allSatisfy({ $0 == json.id.network }) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Network specified in all DID's must match")
+        }
+        let network = json.id.network
+
+        let holderId: Data
+        switch json.credentialSubject.id.idType {
+        case .publicKey(let key): holderId = key
+        default:
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Field 'id' must be smart contract DID with entrypoint 'credentialEntry'")
+        }
+
+        let issuerKey: Data
+        switch json.proof.verificationMethod.idType {
+        case .publicKey(let key): issuerKey = key
+        default:
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Field 'id' must be smart contract DID with entrypoint 'credentialEntry'")
+        }
+
+        let registry: ContractAddress
+        switch json.id.idType {
+        case .contractData(let address, entrypoint: "credentialEntry", let parameter):
+            guard parameter == holderId else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Field 'id' parameter substring must contain match the public key of the 'credentialSubject'")
+            }
+            registry = address
+        default:
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Field 'id' must be smart contract DID with entrypoint 'credentialEntry'")
+        }
+
+        switch json.issuer.idType {
+        case .contractData(let address, entrypoint: "issuer", parameter: Data()):
+            guard address == registry else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Field 'issuer' must be smart contract DID with an address that matches the address specififed in the DID of the 'id' field")
+            }
+        default:
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Field 'issuer' must be smart contract DID with entrypoint 'issuer' and an empty parameter")
+        }
+
+        let randomness = try json.randomness.mapValues { try Data(hex: $0) }
+
+        self = .init(
+            holderId: holderId,
+            network: network,
+            registry: registry,
+            credentialType: json.type,
+            credentialSchema: json.credentialSchema.id,
+            issuerKey: issuerKey,
+            validFrom: validFrom,
+            validUntil: validUntil,
+            values: json.credentialSubject.attributes,
+            randomness: randomness,
+            signature: signature
+        )
+    }
+}
+
 // TODO: doc..
 public enum VerifiablePresentationBuilderError: Error {
     case missingValue(tag: String)
@@ -422,13 +557,18 @@ public enum VerifiablePresentationBuilderError: Error {
 
 // TODO: doc..
 public struct VerifiablePresentationBuilder {
-    let challenge: Data
-    let network: Network
-    private var statements: [(VerifiableCredentialStatement, VerifiableCredentialCommitmentInputs)] = []
+    public let challenge: Data
+    public let network: Network
+    private var statements: Set<PresentationInput> = Set()
 
     public init(challenge: Data, network: Network) {
         self.challenge = challenge
         self.network = network
+    }
+
+    private struct PresentationInput: Hashable {
+        let statement: VerifiableCredentialStatement
+        let commitmentInputs: VerifiableCredentialCommitmentInputs
     }
 
     public mutating func verify(_ statement: [AtomicStatementV1], for idObject: IdentityObject, cred: AccountCredentialWithRandomness, issuer: UInt32) throws {
@@ -443,7 +583,7 @@ public struct VerifiablePresentationBuilder {
         }
         let verifiableStatement = VerifiableCredentialStatement.account(network: network, credId: credId.value, statement: statement)
         let commitmentInputs = VerifiableCredentialCommitmentInputs.account(issuer: issuer, values: values, randomness: randomness)
-        statements.append((verifiableStatement, commitmentInputs))
+        statements.insert(PresentationInput(statement: verifiableStatement, commitmentInputs: commitmentInputs))
     }
 
     public mutating func verify(_ statement: [AtomicStatementV2], for cred: Web3IdCredential, wallet: WalletSeed, credIndex: UInt32) throws {
@@ -459,13 +599,13 @@ public struct VerifiablePresentationBuilder {
         }
         let verifiableStatement = VerifiableCredentialStatement.web3Id(credType: cred.credentialType, network: network, contract: cred.registry, holderId: cred.holderId, statement: statement)
         let commitmentInputs = VerifiableCredentialCommitmentInputs.web3Issuer(signature: cred.signature, signer: signer, values: values, randomness: randomness)
-        statements.append((verifiableStatement, commitmentInputs))
+        statements.insert(PresentationInput(statement: verifiableStatement, commitmentInputs: commitmentInputs))
     }
 
     public func finalize(global: CryptographicParameters) throws -> VerifiablePresentation {
         let (statements, commitmentInputs) = self.statements.reduce(into: ([VerifiableCredentialStatement](), [VerifiableCredentialCommitmentInputs]())) { acc, row in
-            acc.0.append(row.0)
-            acc.1.append(row.1)
+            acc.0.append(row.statement)
+            acc.1.append(row.commitmentInputs)
         }
         let request = VerifiablePresentationRequest(challenge: challenge, statements: statements)
         return try VerifiablePresentation.create(request: request, global: global, commitmentInputs: commitmentInputs)
