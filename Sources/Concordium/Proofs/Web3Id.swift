@@ -433,7 +433,7 @@ extension Web3IdCredential: Codable {
 
             init(id: String) {
                 self.id = id
-                self.type = "JsonSchema2023"
+                type = "JsonSchema2023"
             }
         }
 
@@ -450,9 +450,9 @@ extension Web3IdCredential: Codable {
             let verificationMethod: DID // .publicKey
 
             init(proofValue: Data, verificationMethod: DID) {
-                self.proofPurpose = "assertionMethod"
+                proofPurpose = "assertionMethod"
                 self.proofValue = proofValue.hex
-                self.type = "Ed25519Signature2020"
+                type = "Ed25519Signature2020"
                 self.verificationMethod = verificationMethod
             }
         }
@@ -462,21 +462,21 @@ extension Web3IdCredential: Codable {
         var container = encoder.singleValueContainer()
         let dateFormatter = getDateFormatter()
 
-        let schema = JSON.CredentialSchema(id: self.credentialSchema)
-        let subject = JSON.CredentialSubject(attributes: self.values, id: DID(network: self.network, idType: IdentifierType.publicKey(key: self.holderId)))
-        let id = DID(network: self.network, idType: .contractData(address: self.registry, entrypoint: "credentialEntry", parameter: self.holderId))
-        let issuer = DID(network: self.network, idType: .contractData(address: self.registry, entrypoint: "issuer", parameter: Data()))
-        let proof = JSON.Proof(proofValue: self.signature, verificationMethod: DID(network: self.network, idType: .publicKey(key: self.issuerKey)))
+        let schema = JSON.CredentialSchema(id: credentialSchema)
+        let subject = JSON.CredentialSubject(attributes: values, id: DID(network: network, idType: IdentifierType.publicKey(key: holderId)))
+        let id = DID(network: network, idType: .contractData(address: registry, entrypoint: "credentialEntry", parameter: holderId))
+        let issuer = DID(network: network, idType: .contractData(address: registry, entrypoint: "issuer", parameter: Data()))
+        let proof = JSON.Proof(proofValue: signature, verificationMethod: DID(network: network, idType: .publicKey(key: issuerKey)))
         let json = JSON(
             credentialSchema: schema,
             credentialSubject: subject,
             id: id,
             issuer: issuer,
             proof: proof,
-            randomness: self.randomness.mapValues(\.hex),
-            type: self.credentialType,
-            validFrom: dateFormatter.string(from: self.validFrom),
-            validUntil: self.validUntil.map { dateFormatter.string(from: $0) }
+            randomness: randomness.mapValues(\.hex),
+            type: credentialType,
+            validFrom: dateFormatter.string(from: validFrom),
+            validUntil: validUntil.map { dateFormatter.string(from: $0) }
         )
         try container.encode(json)
     }
@@ -488,7 +488,7 @@ extension Web3IdCredential: Codable {
 
         let validFrom = try dateFormatter.date(from: json.validFrom) ?! DecodingError.dataCorruptedError(in: container, debugDescription: "Expected 'validFrom' to contain ISO8601 formatted date")
         let validUntil = try json.validUntil.map {
-             try dateFormatter.date(from: $0) ?! DecodingError.dataCorruptedError(in: container, debugDescription: "Expected 'validFrom' to contain ISO8601 formatted date")
+            try dateFormatter.date(from: $0) ?! DecodingError.dataCorruptedError(in: container, debugDescription: "Expected 'validFrom' to contain ISO8601 formatted date")
         }
         let signature = try Data(hex: json.proof.proofValue)
 
@@ -499,14 +499,14 @@ extension Web3IdCredential: Codable {
 
         let holderId: Data
         switch json.credentialSubject.id.idType {
-        case .publicKey(let key): holderId = key
+        case let .publicKey(key): holderId = key
         default:
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Field 'id' must be smart contract DID with entrypoint 'credentialEntry'")
         }
 
         let issuerKey: Data
         switch json.proof.verificationMethod.idType {
-        case .publicKey(let key): issuerKey = key
+        case let .publicKey(key): issuerKey = key
         default:
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Field 'id' must be smart contract DID with entrypoint 'credentialEntry'")
         }
@@ -572,15 +572,29 @@ public struct VerifiablePresentationBuilder {
     }
 
     public mutating func verify(_ statement: [AtomicStatementV1], for idObject: IdentityObject, cred: AccountCredentialWithRandomness, issuer: UInt32) throws {
-        try verify(statement, for: idObject, credId: CredentialRegistrationID(cred.credential.credId), randomness: cred.randomness, issuer: issuer)
+        try verify(statement, values: idObject.attributeList.chosenAttributes, randomness: cred.randomness.attributesRand, credId: CredentialRegistrationID(cred.credential.credId), issuer: issuer)
     }
 
     public mutating func verify(_ statement: [AtomicStatementV1], for idObject: IdentityObject, credId: CredentialRegistrationID, randomness: Randomness, issuer: UInt32) throws {
+        try verify(statement, values: idObject.attributeList.chosenAttributes, randomness: randomness.attributesRand, credId: credId, issuer: issuer)
+    }
+
+    public mutating func verify(_ statement: [AtomicStatementV1], for values: [AttributeTag: String], wallet: WalletSeed, credIndices: AccountCredentialSeedIndexes, global: CryptographicParameters) throws {
+        let attributes = statement.map(\.attributeTag)
+        let randomness = try attributes.reduce(into: [AttributeTag: Data]()) { acc, tag in
+            acc[tag] = try wallet.attributeCommitmentRandomness(accountCredentialIndexes: credIndices, attribute: tag.rawValue)
+        }
+        let credId = try wallet.id(accountCredentialIndexes: credIndices, commitmentKey: global.onChainCommitmentKey)
+        try verify(statement, values: values, randomness: randomness, credId: credId, issuer: credIndices.identity.providerID)
+    }
+
+    public mutating func verify(_ statement: [AtomicStatementV1], values: [AttributeTag: String], randomness: [AttributeTag: Data], credId: CredentialRegistrationID, issuer: UInt32) throws {
         let attributes = statement.map(\.attributeTag)
         let (values, randomness) = try attributes.reduce(into: ([AttributeTag: String](), [AttributeTag: Data]())) { acc, tag in
-            acc.0[tag] = try idObject.attributeList.chosenAttributes[tag] ?! VerifiablePresentationBuilderError.missingValue(tag: tag.description)
-            acc.1[tag] = try randomness.attributesRand[tag] ?! VerifiablePresentationBuilderError.missingRandomness(tag: tag.description)
+            acc.0[tag] = try values[tag] ?! VerifiablePresentationBuilderError.missingValue(tag: tag.description)
+            acc.1[tag] = try randomness[tag] ?! VerifiablePresentationBuilderError.missingRandomness(tag: tag.description)
         }
+
         let verifiableStatement = VerifiableCredentialStatement.account(network: network, credId: credId.value, statement: statement)
         let commitmentInputs = VerifiableCredentialCommitmentInputs.account(issuer: issuer, values: values, randomness: randomness)
         statements.insert(PresentationInput(statement: verifiableStatement, commitmentInputs: commitmentInputs))

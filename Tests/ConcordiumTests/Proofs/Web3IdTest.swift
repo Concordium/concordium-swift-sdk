@@ -232,6 +232,60 @@ final class Web3IdTest: XCTestCase {
 
         let parsed = try decoder.decode(Web3IdCredential.self, from: json)
         XCTAssertEqual(parsed, try decoder.decode(Web3IdCredential.self, from: encoder.encode(parsed)))
+    }
 
+    // Cryptographic values have been generated with the rust SDK.
+    func testProveStatement() throws {
+        let network = Network.testnet
+        let challenge = try Data(hex: "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100dAAAA")
+
+        let accountStatements = [
+            AtomicStatementV1.attributeInSet(statement: AttributeInSetStatementV1(attributeTag: .nationality, set: ["DK", "NO", "SE", "FI"])),
+            AtomicStatementV1.attributeInRange(statement: AttributeInRangeStatementV1(attributeTag: .dateOfBirth, lower: "16000101", upper: "20000101")),
+        ]
+        let web3IdStatements = [
+            AtomicStatementV2.attributeNotInSet(statement: AttributeNotInSetStatementV2(attributeTag: "tag", set: [.numeric(value: 0), .numeric(value: 1), .numeric(value: 2)])),
+            AtomicStatementV2.attributeInRange(statement: AttributeInRangeStatementV2(attributeTag: "other", lower: .timestamp(value: .init(timeIntervalSince1970: 1_000_000_000)), upper: .timestamp(value: .init(timeIntervalSince1970: 1_727_870_991)))),
+        ]
+
+        let idValues: [AttributeTag: String] = [
+            .nationality: "DK",
+            .dateOfBirth: "18000101",
+        ]
+        let idRand: [AttributeTag: Data] = try [
+            .dateOfBirth: Data(hex: "237205f67b5dd0b87a3f45bea51e55de0dda64af6082dceafc43855a317249d6"),
+            .nationality: Data(hex: "25de8bfad4a90ca67d7c0be368355b3401f24dc2172f05b610001299d3c84898"),
+        ]
+        let credId = try CredentialRegistrationID(Data(hex: "94b55cf320993917927c77c1e8037b868e279ca7a97905115516c8366d8ad1fc27bbe5fd9c87e1ac27d7166216f6afbc"))
+        let issuer = UInt32(17)
+
+        let web3Values: [String: Web3IdAttribute] = [
+            "tag": .numeric(value: 3),
+            "other": .timestamp(value: .init(timeIntervalSince1970: 1_727_870_891)),
+        ]
+        let web3Rand: [String: Data] = try [
+            "other": Data(hex: "2a989b5b483bcb7adcf070617c83c8daea8536282946b616bb78db179ed606aa"),
+            "tag": Data(hex: "6a0951d214b82be6a26f6f5abadff0f22788f6b5bf5c08f1799d65addcc464e4"),
+        ]
+
+        let web3IdCred = try Web3IdCredential(
+            holderId: Data(hex: "1dce1025acbc8002ee9403f635073b49f1b93cb43cf9509fefc43d14bedb6834"),
+            network: Network.testnet,
+            registry: ContractAddress(index: 1337, subindex: 42),
+            credentialType: ["VerifiableCredential", "TestCredential", "ConcordiumVerifiableCredential"],
+            credentialSchema: "N/A",
+            issuerKey: Data(hex: "c954ee1e182b2ff7cdefd25bfab25437d184e45c20df0a94b9e8f60143929575"),
+            validFrom: Date(),
+            validUntil: nil,
+            values: web3Values,
+            randomness: web3Rand,
+            signature: Data(hex: "7013df1d6d7a260b2a6c4a2eabe62ab2595cf01a65be0a846cf54d0f24464ad181d47f41ebe1f3fb3b7d78208ba4dc56b8930d0b6218d35d608ddc0a773dbf0c")
+        )
+        let signer = try Data(hex: "cfd166ecd740d2aefab053c1dca27e01ad55d3c4a730bced4e3a8ed476ff2fbc")
+
+        var builder = VerifiablePresentationBuilder(challenge: challenge, network: network)
+        try builder.verify(accountStatements, values: idValues, randomness: idRand, credId: credId, issuer: issuer)
+        try builder.verify(web3IdStatements, for: web3IdCred, signer: signer)
+        let _ = try builder.finalize(global: GLOBAL)
     }
 }
