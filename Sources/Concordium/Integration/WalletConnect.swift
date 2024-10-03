@@ -172,28 +172,31 @@ extension WalletConnectSendTransactionParam: Decodable {
 
 /// Describes parameter supplied to a walletconnect "sign_message" request
 /// as produced by the NPM package `@concordium/wallet-connectors`
-public enum WalletConnectSignMessageParam {
+public enum WalletConnectSignMessageParam: Equatable {
     case string(message: String)
-    case binary(message: Data, schema: Data)
+    case binary(data: Data, schema: Data)
 }
 
 extension WalletConnectSignMessageParam: Decodable {
     private enum CodingKeys: String, CodingKey {
         case message
-        case schema
+    }
+    private struct DataJSON: Decodable {
+        /// Hex
+        let data: String
+        /// Hex
+        let schema: String
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: Self.CodingKeys.self)
-        let message = try container.decode(String.self, forKey: .message)
-        let schema = try container.decodeIfPresent(String.self, forKey: .schema).map { try Data(hex: $0) }
-
-        if let schema = schema {
-            let binaryMessage = try Data(hex: message) ?! DecodingError.dataCorruptedError(forKey: Self.CodingKeys.message, in: container, debugDescription: "Expected message to be a hex string")
-            self = .binary(message: binaryMessage, schema: schema)
-        } else {
+        if let message = try? container.decode(String.self, forKey: .message) {
             self = .string(message: message)
+            return
         }
+
+        let message = try container.decode(DataJSON.self, forKey: .message) ?! DecodingError.dataCorruptedError(forKey: .message, in: container, debugDescription: "Expected either 'String' or '{data: String, schema: String}'")
+        self = try .binary(data: Data(hex: message.data), schema: Data(hex: message.schema))
     }
 }
 
@@ -267,7 +270,7 @@ extension WalletConnectRequestVerifiablePresentationParam.CredentialStatement: D
 
 /// Describes wallet connect requests commonly supported
 /// as produced by the NPM package `@concordium/wallet-connectors`
-public enum WalletConnectRequest {
+public enum WalletConnectRequest: Equatable {
     case signMessage(param: WalletConnectSignMessageParam)
     case sendTransaction(param: WalletConnectSendTransactionParam)
     case requestVerifiableCredential(param: WalletConnectRequestVerifiablePresentationParam)

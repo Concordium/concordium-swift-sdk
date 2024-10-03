@@ -140,6 +140,58 @@ final class WalletConnectTest: XCTestCase {
         XCTAssertEqual(decoded, expected)
     }
 
+    func testWalletConnectRequestDecode() throws {
+        let decoder = JSONDecoder()
+
+        var json = """
+        {
+            "method": "request_verifiable_presentation",
+            "params": {
+                "challenge": "010203",
+                "credentialStatements": [{
+                    "idQualifier": {"type": "cred", "issuers": [0]},
+                    "statement": [
+                        {"type": "RevealAttribute", "attributeTag": "firstName"},
+                    ]
+                }]
+            }
+        }
+        """.data(using: .utf8)!
+        let _ = try decoder.decode(WalletConnectRequest.self, from: json)
+
+        json = """
+        {
+            "method": "sign_message",
+            "params": {
+                "message": "This is the message"
+            }
+        }
+        """.data(using: .utf8)!
+        let _ = try decoder.decode(WalletConnectRequest.self, from: json)
+
+        json = """
+        {
+            "method": "sign_message",
+            "params": {
+                "message": {"schema": "0103", "data": "02020202"}
+            }
+        }
+        """.data(using: .utf8)!
+        let _ = try decoder.decode(WalletConnectRequest.self, from: json)
+
+        json = """
+        {
+            "method": "sign_and_send_transaction",
+            "params": {
+                "type": "\(TransactionTypeString.registerData)",
+                "sender": "\(account)",
+                "payload": {"data":"010203"},
+            }
+        }
+        """.data(using: .utf8)!
+        let _ = try decoder.decode(WalletConnectRequest.self, from: json)
+    }
+
     func testRequestVerifiablePresentationDecode() throws {
         let decoder = JSONDecoder()
 
