@@ -1175,6 +1175,15 @@ public enum InstanceInfo {
     case v1(_ info: InstanceInfoV1)
 }
 
+extension InstanceInfo {
+    public var name: ContractName {
+        switch self {
+        case let .v0(info): info.name.contractName
+        case let .v1(info): info.name.contractName
+        }
+    }
+}
+
 extension InstanceInfo: FromGRPC {
     typealias GRPC = Concordium_V2_InstanceInfo
 

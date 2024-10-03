@@ -159,6 +159,11 @@ public extension SchemaCodable {
     init(json: String, schema: TypeSchema) throws {
         self = try schema.encode(json: json, as: Self.self)
     }
+
+    /// Initialize from a ``Codable`` and a corresponding ``TypeSchema``
+    init(json: any Codable, schema: TypeSchema) throws {
+        self = try schema.encode(json: String(data: JSONEncoder().encode(json), encoding: .utf8)!, as: Self.self)
+    }
 }
 
 /// Describes the different versions of contract module schemas.
@@ -251,6 +256,11 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC, Sc
         self.init(unchecked: value)
     }
 
+    /// Initialize from a type which conforms to ``Serialize``
+    public init(serializable: any Serialize) throws {
+        try self.init(serializable.serialize())
+    }
+
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(UInt16(value.count)) + buffer.writeData(value)
     }
@@ -276,6 +286,11 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC, Sc
         return try decode(schema: schema)
     }
 
+    /// Init from from a JSON string for a parameter meant for a contract init function
+    /// - Parameters:
+    ///   - json: the JSON string
+    ///   - contractName: the name of the contract to inititalize with the parameter
+    ///   - schema: the module schema of the contract module
     public init(json: String, contractName: ContractName, schema: ModuleSchema) throws {
         let schema = try schema.initParameterSchema(contractName: contractName)
         self = try .init(json: json, schema: schema)
@@ -287,6 +302,11 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC, Sc
         return try decode(schema: schema)
     }
 
+    /// Init from from a JSON string for a parameter meant for a specific entrypoint.
+    /// - Parameters:
+    ///   - json: the JSON string
+    ///   - receiveName: the receive name of the contract
+    ///   - schema: the module schema of the contract module
     public init(json: String, receiveName: ReceiveName, schema: ModuleSchema) throws {
         let schema = try schema.receiveParameterSchema(receiveName: receiveName)
         self = try .init(json: json, schema: schema)
@@ -324,6 +344,11 @@ public struct ReturnValue: Equatable, SchemaCodable {
         let schema = try schema.receiveReturnValueSchema(receiveName: receiveName)
         return try decode(schema: schema)
     }
+
+    /// Deserialize into the given type
+    public func deserialize<D: Deserialize>(_: D.Type) throws -> D {
+        try D.deserialize(self.value)
+    }
 }
 
 extension ReturnValue: Codable {
@@ -357,6 +382,11 @@ public struct ContractError: Equatable, SchemaCodable {
         let schema = try schema.receiveErrorSchema(receiveName: receiveName)
         return try decode(schema: schema)
     }
+
+    /// Deserialize into the given type
+    public func deserialize<D: Deserialize>(_: D.Type) throws -> D {
+        try D.deserialize(self.value)
+    }
 }
 
 extension ContractError: Codable {
@@ -383,6 +413,11 @@ public struct ContractEvent: SchemaCodable {
 
     public init(_ value: Data) {
         self.value = value
+    }
+
+    /// Deserialize into the given type
+    public func deserialize<D: Deserialize>(_: D.Type) throws -> D {
+        try D.deserialize(self.value)
     }
 }
 
@@ -668,5 +703,112 @@ extension ReceiveName: Codable {
 extension ReceiveName: CustomStringConvertible {
     public var description: String {
         value
+    }
+}
+
+/// Represent a contract update not yet sent to a node.
+public struct ContractUpdateProposal {
+    /// The CCD amount to supply to the update (if payable, otherwise 0)
+    public let amount: CCD
+    /// the contract address of the update
+    public let address: ContractAddress
+    /// the receive name of the update
+    public let receiveName: ReceiveName
+    /// The serialized parameter
+    public let parameter: Parameter
+    /// The node client used to send the transaction
+    public var client: NodeClient
+    /// The energy to supply to the transaction
+    public var energy: Energy
+}
+
+public extension ContractUpdateProposal {
+    /// Add extra energy to the transaction
+    mutating func addEnergy(_ energy: Energy) {
+        self.energy += energy
+    }
+
+    /// Send the proposal to the node
+    /// - Parameters:
+    ///   - sender: the sender account
+    ///   - signer: the signer for the transaction. This should match the keys for the sender account
+    ///   - expiry: An optional expiry. Defaults to 5 minutes in the future.
+    /// - Throws: If the client fails to submit the transaction
+    /// - Returns: A submitted transaction
+    func send(sender: AccountAddress, signer: any Signer, expiry: Date = Date(timeIntervalSinceNow: 5 * 60)) async throws -> SubmittedTransaction {
+        let nonce = try await client.nextAccountSequenceNumber(address: sender)
+        let transaction = AccountTransaction.updateContract(sender: sender, amount: amount, contractAddress: address, receiveName: receiveName, param: parameter, maxEnergy: energy)
+        return try await client.send(transaction: signer.sign(transaction: transaction, sequenceNumber: nonce.sequenceNumber, expiry: UInt64(expiry.timeIntervalSince1970)))
+    }
+}
+
+/// Protocol for interacting with arbitrary smart contracts.
+/// - Example
+///   ```
+///   public struct SomeContract: CotractClient { // now you have a contract client.
+///     public let name: ContractName
+///     public let address: ContractAddress
+///     public let client: NodeClient
+///   }
+///   let client = GRPCNodeClient(...)
+///   let contract = SomeContract(name: ContractName("test"), address: ContractAddress(index: 3, subindex: 0), client: client)
+///   ```
+public protocol ContractClient {
+    /// The name of the contract
+    var name: ContractName { get }
+    /// The contract address used to query
+    var address: ContractAddress { get }
+    /// The node client used to query the contract at `address`
+    var client: NodeClient { get }
+    /// Initialize the contract client
+    /// - Parameters:
+    ///   - client: the node client to use
+    ///   - name: the contract name
+    ///   - address: the contract address
+    init(client: any NodeClient, name: ContractName, address: ContractAddress)
+}
+
+/// Describes errors happening while invoking contract client methods.
+public enum ContractClientError: Error {
+    /// The return value could not be deserialized.
+    case noReturnValue
+}
+
+extension ContractClient {
+    /// Initialize the contract client
+    /// - Parameters:
+    ///   - client: the node client to use
+    ///   - address: the contract address
+    public init(client: NodeClient, address: ContractAddress) async throws {
+        let info = try await client.info(contractAddress: address, block: .lastFinal)
+        self = .init(client: client, name: info.name, address: address)
+    }
+
+    /// Invoke a contract view entrypoint
+    /// - Parameters:
+    ///   - entrypoint: the entrypoint to invoke
+    ///   - param: the parameter for the query to invoke the entrypoint with
+    ///   - block: the block to invoke the entrypoint at. Defaults to `.lastFinal`
+    /// - Throws: If the query cannot be serialized, if node client request fails, or if the response is nil or cannot be deserialized.
+    public func view(entrypoint: EntrypointName, param: Parameter, block: BlockIdentifier = .lastFinal) async throws -> ReturnValue {
+        var request = ContractInvokeRequest(contract: address, method: try ReceiveName(contractName: name, entrypoint: entrypoint))
+        request.parameter = param
+        let res = try await client.invokeInstance(request: request, block: block).success()
+        guard let response = res.returnValue else { throw ContractClientError.noReturnValue }
+        return ReturnValue(response)
+    }
+
+    /// Construct a ``ContractUpdateProposal`` by invoking the contract entrypoint. The proposal can then subsequently be signed and submitted to the node.
+    /// - Parameters:
+    ///   - entrypoint: the entrypoint to invoke
+    ///   - param: the parameter for the query to invoke the entrypoint with
+    ///   - amount: An optional ``CCD`` amount to add to the query, if it is payable. Defaults to 0 CCD.
+    /// - Throws: If the query cannot be serialized, if node client request fails.
+    /// - Returns: A corresponding ``ContractUpdateProposal`` which can be signed and submitted.
+    public func proposal(entrypoint: EntrypointName, param: Parameter, amount: CCD = CCD(microCCD: 0)) async throws -> ContractUpdateProposal {
+        var request = ContractInvokeRequest(contract: address, method: try ReceiveName(contractName: name, entrypoint: entrypoint))
+        request.parameter = param
+        let res = try await client.invokeInstance(request: request, block: .lastFinal).success()
+        return ContractUpdateProposal(amount: amount, address: address, receiveName: request.method, parameter: request.parameter, client: client, energy: res.usedEnergy)
     }
 }
