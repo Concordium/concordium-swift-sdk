@@ -199,13 +199,36 @@ extension WalletConnectSignMessageParam: Decodable {
 
 /// Describes parameter supplied to a walletconnect "sign_message" request
 /// as produced by the NPM package `@concordium/wallet-connectors`
-public struct WalletConnectRequestVerifiablePresentationParam: Decodable {
+public struct WalletConnectRequestVerifiablePresentationParam: Decodable, Equatable {
+    /// The challenge to use for the ``VerifiablePresentation``
     public let challenge: Data
+    /// The list of statements to prove
     public let credentialStatements: [CredentialStatement]
 
-    public enum CredentialStatement {
+    private struct JSON: Decodable {
+        /// Hex
+        let challenge: String
+        let credentialStatements: [CredentialStatement]
+    }
+
+    /// The statements to prove with associated issuer restrictions
+    public enum CredentialStatement: Equatable {
+        /// An account statement request
         case account(issuers: [UInt32], statement: [AtomicStatementV1])
+        /// A Web3 ID statement request
         case web3id(issuers: [ContractAddress], statement: [AtomicStatementV2])
+    }
+
+    init(challenge: Data, credentialStatements: [CredentialStatement]) {
+        self.challenge = challenge
+        self.credentialStatements = credentialStatements
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let json = try container.decode(JSON.self)
+
+        self = try .init(challenge: Data(hex: json.challenge), credentialStatements: json.credentialStatements)
     }
 }
 
@@ -227,14 +250,14 @@ extension WalletConnectRequestVerifiablePresentationParam.CredentialStatement: D
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let nested = try container.nestedContainer(keyedBy: NestedKeys.self, forKey: .statement)
+        let nested = try container.nestedContainer(keyedBy: NestedKeys.self, forKey: .idQualifier)
         let type = try nested.decode(TypeValue.self, forKey: .type)
         switch type {
-        case .sci:
+        case .cred:
             let issuers = try nested.decode([UInt32].self, forKey: .issuers)
             let statement = try container.decode([AtomicStatementV1].self, forKey: .statement)
             self = .account(issuers: issuers, statement: statement)
-        case .cred:
+        case .sci:
             let issuers = try nested.decode([ContractAddress].self, forKey: .issuers)
             let statement = try container.decode([AtomicStatementV2].self, forKey: .statement)
             self = .web3id(issuers: issuers, statement: statement)

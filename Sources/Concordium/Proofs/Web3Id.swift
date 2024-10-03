@@ -14,11 +14,11 @@ extension Web3IdAttribute: @retroactive Codable {
 
     private struct TimestampJSON: Codable {
         let type: AttributeType
-        let timestamp: Date
+        let timestamp: String
 
         init(_ timestamp: Date) {
             type = .dateTime
-            self.timestamp = timestamp
+            self.timestamp = getDateFormatter().string(from: timestamp)
         }
     }
 
@@ -43,7 +43,7 @@ extension Web3IdAttribute: @retroactive Codable {
             return
         }
         let value = try container.decode(TimestampJSON.self) ?! DecodingError.dataCorruptedError(in: container, debugDescription: "Failed to decode 'Web3IdAttribute'")
-        self = .timestamp(value: value.timestamp)
+        self = try .timestamp(value: getDateFormatter().date(from: value.timestamp) ?! DecodingError.dataCorruptedError(in: container, debugDescription: "Dates must be represented in ISO8601 format"))
     }
 }
 
