@@ -596,23 +596,23 @@ public extension BakerKeyPairs {
 
 extension BakerKeyPairs: Codable {
     private struct JSON: Codable {
-        let signatureSignKey:     String
-        let signatureVerifyKey:   String
-        let electionPrivateKey:   String
-        let electionVerifyKey:    String
-        let aggregationSignKey:   String
+        let signatureSignKey: String
+        let signatureVerifyKey: String
+        let electionPrivateKey: String
+        let electionVerifyKey: String
+        let aggregationSignKey: String
         let aggregationVerifyKey: String
     }
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(JSON(
-            signatureSignKey: self.signatureSign.hex,
-            signatureVerifyKey: self.signatureVerify.hex,
-            electionPrivateKey: self.electionSign.hex,
-            electionVerifyKey: self.electionVerify.hex,
-            aggregationSignKey: self.aggregationSign.hex,
-            aggregationVerifyKey: self.aggregationVerify.hex
+            signatureSignKey: signatureSign.hex,
+            signatureVerifyKey: signatureVerify.hex,
+            electionPrivateKey: electionSign.hex,
+            electionVerifyKey: electionVerify.hex,
+            aggregationSignKey: aggregationSign.hex,
+            aggregationVerifyKey: aggregationVerify.hex
         ))
     }
 
@@ -666,7 +666,7 @@ public enum ProtocolVersion: FromGRPC {
 public typealias Slot = UInt64
 /// Represents a chain round
 public typealias Round = UInt64
-/// Represents a chain epoch 
+/// Represents a chain epoch
 public typealias Epoch = UInt64
 /// Represents a genesis index, i.e. the number of protocol updates (re-gensisis') that has happened since the start of the chain
 public typealias GenesisIndex = UInt32

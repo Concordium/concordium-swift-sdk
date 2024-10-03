@@ -302,7 +302,7 @@ extension VerifiableCredentialProof: @retroactive Codable {
             self.issuer = issuer
             type = CCD_TYPE
             if let type = additionalType {
-                self.type.append(contentsOf: type.filter({!CCD_TYPE.contains($0)}))
+                self.type.append(contentsOf: type.filter { !CCD_TYPE.contains($0) })
             }
         }
     }

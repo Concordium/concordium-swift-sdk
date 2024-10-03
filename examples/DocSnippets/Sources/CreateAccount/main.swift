@@ -46,7 +46,7 @@ func createAccount(client: NodeClient) async throws {
     let account = try accountDerivation.deriveAccount(credentials: [seedIndexes])
 
     // Construct, sign, and send deployment transaction.
-    let signedTx = try account.keys.sign(deployment: credential, expiry: expiry)
+    let signedTx = try account.keys.sign(deployment: credential.credential, expiry: expiry)
     let serializedTx = try signedTx.serialize()
     let submittedTx = try await client.send(deployment: serializedTx)
     print("Transaction with hash '\(submittedTx.hash.hex)' successfully submitted.")

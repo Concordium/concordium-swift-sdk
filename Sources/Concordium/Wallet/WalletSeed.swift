@@ -66,7 +66,7 @@ public struct VerifiableCredentialSeedIndexes {
 
     /// Initialize from a contract address + credential index
     public init(contractAddress: ContractAddress, index: VerifiableCredentialIndex) {
-        self.issuer = .init(contractAddress: contractAddress)
+        issuer = .init(contractAddress: contractAddress)
         self.index = index
     }
 
@@ -324,8 +324,8 @@ public class SeedBasedIdentityRequestBuilder {
     /// - Parameters:
     ///   - provider: the identity provider to construct the request for
     ///   - index: the identity index to use
-    ///   - time: the timestamp of the recovery. Defaults to `Date.now` 
-    public func recoveryRequestJSON(provider: IdentityProviderInfo, index: IdentityIndex, time: Date = Date.init(timeIntervalSinceNow: 0)) throws -> String {
+    ///   - time: the timestamp of the recovery. Defaults to `Date.now`
+    public func recoveryRequestJSON(provider: IdentityProviderInfo, index: IdentityIndex, time: Date = Date(timeIntervalSinceNow: 0)) throws -> String {
         let identityIdxs = IdentitySeedIndexes(providerID: provider.identity, index: index)
         let idCredSec = try seed.credSec(identityIndexes: identityIdxs)
         return try identityRecoveryRequestJson(
