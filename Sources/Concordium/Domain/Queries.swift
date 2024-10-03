@@ -1343,15 +1343,15 @@ public struct BakerPoolStatus {
     /// The account address of the pool owner.
     public let bakerAddress: AccountAddress
     /// The equity capital provided by the pool owner.
-    public let bakerEquityCapital: CCD
+    public let bakerEquityCapital: CCD?
     /// The capital delegated to the pool by other accounts.
-    public let delegatedCapital: CCD
+    public let delegatedCapital: CCD?
     /// The maximum amount that may be delegated to the pool, accounting for
     /// leverage and stake limits.
-    public let delegatedCapitalCap: CCD
+    public let delegatedCapitalCap: CCD?
     /// The pool info associated with the pool: open status, metadata URL
     /// and commission rates.
-    public let poolInfo: BakerPoolInfo
+    public let poolInfo: BakerPoolInfo?
     /// Any pending change to the baker's stake.
     public let bakerStakePendingChange: PoolPendingChange
     /// Status of the pool in the current reward period. This will be [`None`]
@@ -1366,14 +1366,18 @@ extension BakerPoolStatus: FromGRPC {
     typealias GRPC = Concordium_V2_PoolInfoResponse
 
     static func fromGRPC(_ g: GRPC) throws -> BakerPoolStatus {
+        let bakerEquityCapital = g.hasEquityCapital ? try CCD.fromGRPC(g.equityCapital) : nil
+        let delegatedCapital = g.hasDelegatedCapital ? try CCD.fromGRPC(g.delegatedCapital) : nil
+        let delegatedCapitalCap = g.hasDelegatedCapitalCap ? try CCD.fromGRPC(g.delegatedCapitalCap) : nil
+        let poolInfo = g.hasPoolInfo ? try BakerPoolInfo.fromGRPC(g.poolInfo) : nil
         let currentPaydayStatus = g.hasCurrentPaydayInfo ? try CurrentPaydayBakerPoolStatus.fromGRPC(g.currentPaydayInfo) : nil
         return try Self(
             bakerId: g.baker.value,
             bakerAddress: .fromGRPC(g.address),
-            bakerEquityCapital: .fromGRPC(g.equityCapital),
-            delegatedCapital: .fromGRPC(g.delegatedCapital),
-            delegatedCapitalCap: .fromGRPC(g.delegatedCapitalCap),
-            poolInfo: .fromGRPC(g.poolInfo),
+            bakerEquityCapital: bakerEquityCapital,
+            delegatedCapital: delegatedCapital,
+            delegatedCapitalCap: delegatedCapitalCap,
+            poolInfo: poolInfo,
             bakerStakePendingChange: .fromGRPC(g.equityPendingChange),
             currentPaydayStatus: currentPaydayStatus,
             allPoolTotalCapital: .fromGRPC(g.allPoolTotalCapital)

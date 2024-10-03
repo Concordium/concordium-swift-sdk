@@ -114,6 +114,7 @@ public enum DelegationEvent {
     case delegationStakeDecreased(delegatorId: AccountIndex, newStake: CCD)
     case delegationSetRestakeEarnings(delegatorId: AccountIndex, restakeEarnings: Bool)
     case delegationSetDelegationTarget(delegatorId: AccountIndex, delegationTarget: DelegationTarget)
+    case bakerRemoved(bakerId: AccountIndex)
 }
 
 extension DelegationEvent: FromGRPC {
@@ -134,6 +135,8 @@ extension DelegationEvent: FromGRPC {
             return try .delegationStakeDecreased(delegatorId: data.delegatorID.id.value, newStake: .fromGRPC(data.newStake))
         case let .delegationStakeIncreased(data):
             return try .delegationStakeIncreased(delegatorId: data.delegatorID.id.value, newStake: .fromGRPC(data.newStake))
+        case let .bakerRemoved(data):
+            return .bakerRemoved(bakerId: data.bakerID.value)
         }
     }
 }
@@ -173,6 +176,7 @@ public enum BakerEvent {
     case bakerSetTransactionFeeCommission(bakerId: AccountIndex, commission: AmountFraction)
     case bakerSetBakingRewardCommission(bakerId: AccountIndex, commission: AmountFraction)
     case bakerSetFinalizationRewardCommission(bakerId: AccountIndex, commission: AmountFraction)
+    case delegatorRemoved(delegatorId: AccountIndex)
 }
 
 extension BakerEvent: FromGRPC {
@@ -203,6 +207,8 @@ extension BakerEvent: FromGRPC {
             return try .bakerSetOpenStatus(bakerId: data.bakerID.value, openStatus: .fromGRPC(data.openStatus))
         case let .bakerSetMetadataURL(data):
             return .bakerSetMetadataUrl(bakerId: data.bakerID.value, metadataUrl: data.url)
+        case let .delegationRemoved(data):
+            return .delegatorRemoved(delegatorId: data.delegatorID.id.value)
         }
     }
 }
