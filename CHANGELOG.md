@@ -11,11 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support for all transactions relevant from protocol version 7 and onwards. This includes expanding `AccountTransactionPayload`
   with the necessary variants, and corresponding constructor functions for `AccountTransaction`.
-- `WalletConnectSendTransactionParam` and `WalletConnectSignMessageParam` for decoding parameters received with walletconnect requests.
+- `BakerKeyPairs.generate` for generating baker keys
+- `WalletConnectSendTransactionParam`, `WalletConnectSignMessageParam`, and `WalletConnectRequestVerifiablePresentationParam` for decoding parameters received with walletconnect requests.
+- `WalletConnectRequest` represents and decodes walletconnect request variants
 - `ContractSchema`, `TypeSchema`, and `ModuleSchema` for encoding/decoding data from/to the corresponding JSON representation
 - `WalletSeed.encryptionKeys` to get the encryption keys for a credential index
 - `decryptAmount` and `combineEncryptedAmounts` to handle encrypted amounts
 - `Statement` and `Proof` types for constructing ID statements and their corresponding proofs
+- `VerifiablePresentation`, `Web3IdCredential`, and `VerifiableCredentialStatement` types for representing verifiable credentials and constructing
+  verifiable presentations for these.
+  - `VerifiablePresentationBuilder` has been added to ease the construction of `VerifiablePresentation`s of a given statement in the context of a verifiable credential.
+- `WalletConnectRequestVerifiablePresentationParam` for decoding parameters re
 
 #### GRPC client
 - `NodeClient.status` to query transaction status.
