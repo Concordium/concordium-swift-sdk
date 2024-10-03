@@ -895,7 +895,7 @@ extension Cooldown.Status: FromGRPC {
             return .preCooldown
         case .prePreCooldown:
             return .prePreCooldown
-        case .UNRECOGNIZED(_):
+        case .UNRECOGNIZED:
             throw GRPCError.valueOutOfBounds
         }
     }
@@ -903,7 +903,7 @@ extension Cooldown.Status: FromGRPC {
 
 extension Cooldown: FromGRPC {
     static func fromGRPC(_ g: Concordium_V2_Cooldown) throws -> Self {
-        return Self(timestamp: .fromGRPC(g.endTime), amount: try .fromGRPC(g.amount), status: try .fromGRPC(g.status))
+        try Self(timestamp: .fromGRPC(g.endTime), amount: .fromGRPC(g.amount), status: .fromGRPC(g.status))
     }
 }
 
@@ -959,7 +959,7 @@ public struct AccountInfo: FromGRPC {
         let credentials = try grpc.creds.reduce(into: [:]) { r, v in r[UInt8(v.key)] = try Versioned(version: 0, value: AccountCredentialDeploymentValues.fromGRPC(v.value)) }
         let releaseSchedule = try ReleaseSchedule.fromGRPC(grpc.schedule)
         var availableBalance: CCD
-        if (grpc.hasAvailableBalance) {
+        if grpc.hasAvailableBalance {
             /// present for node version >=7
             availableBalance = try .fromGRPC(grpc.availableBalance)
         } else {
@@ -975,7 +975,7 @@ public struct AccountInfo: FromGRPC {
             }
             availableBalance = CCD(microCCD: grpc.amount.value - max(releaseSchedule.total, staked))
         }
-        
+
         return try self.init(
             sequenceNumber: grpc.sequenceNumber.value,
             amount: .fromGRPC(grpc.amount),
@@ -987,7 +987,7 @@ public struct AccountInfo: FromGRPC {
             index: grpc.index.value,
             stake: grpc.hasStake ? .fromGRPC(grpc.stake) : nil,
             address: AccountAddress(grpc.address.value),
-            cooldowns: try grpc.cooldowns.map({try Cooldown.fromGRPC($0)}),
+            cooldowns: grpc.cooldowns.map { try Cooldown.fromGRPC($0) },
             availableBalance: availableBalance
         )
     }
