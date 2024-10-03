@@ -2,6 +2,7 @@ import ConcordiumWalletCrypto
 import Foundation
 import NIO
 
+/// Describes the official public networks available for the concordium blockchain
 public typealias Network = ConcordiumWalletCrypto.Network
 
 extension Network: @retroactive Codable {
@@ -583,12 +584,49 @@ extension CredentialDeploymentInfo: Codable {
     }
 }
 
+/// Represents a set of baker key pairs needed to bake blocks
 public typealias BakerKeyPairs = ConcordiumWalletCrypto.BakerKeyPairs
 
 public extension BakerKeyPairs {
     /// Generate a set of baker keys
     static func generate() -> Self {
         generateBakerKeys()
+    }
+}
+
+extension BakerKeyPairs: Codable {
+    private struct JSON: Codable {
+        let signatureSignKey:     String
+        let signatureVerifyKey:   String
+        let electionPrivateKey:   String
+        let electionVerifyKey:    String
+        let aggregationSignKey:   String
+        let aggregationVerifyKey: String
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(JSON(
+            signatureSignKey: self.signatureSign.hex,
+            signatureVerifyKey: self.signatureVerify.hex,
+            electionPrivateKey: self.electionSign.hex,
+            electionVerifyKey: self.electionVerify.hex,
+            aggregationSignKey: self.aggregationSign.hex,
+            aggregationVerifyKey: self.aggregationVerify.hex
+        ))
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let json = try container.decode(JSON.self)
+        self = try .init(
+            signatureSign: Data(hex: json.signatureSignKey),
+            signatureVerify: Data(hex: json.signatureSignKey),
+            electionSign: Data(hex: json.signatureSignKey),
+            electionVerify: Data(hex: json.signatureSignKey),
+            aggregationSign: Data(hex: json.signatureSignKey),
+            aggregationVerify: Data(hex: json.signatureSignKey)
+        )
     }
 }
 
@@ -624,14 +662,20 @@ public enum ProtocolVersion: FromGRPC {
     }
 }
 
+/// Represents a chain slot in which a block can be included
 public typealias Slot = UInt64
+/// Represents a chain round
 public typealias Round = UInt64
+/// Represents a chain epoch 
 public typealias Epoch = UInt64
+/// Represents a genesis index, i.e. the number of protocol updates (re-gensisis') that has happened since the start of the chain
 public typealias GenesisIndex = UInt32
 
 /// Represents either an account or contract address
 public enum Address {
+    /// An account address
     case account(_ address: AccountAddress)
+    /// A contract address
     case contract(_ address: ContractAddress)
 }
 
@@ -658,11 +702,14 @@ extension Address: FromGRPC, ToGRPC {
     }
 }
 
+/// Represents arbitrary versioned values
 public struct Versioned<V> {
+    /// The version of the value
     public var version: UInt32
+    /// The inner value
     public var value: V
 
-    enum CodingKeys: CodingKey {
+    private enum CodingKeys: CodingKey {
         case v
         case value
     }

@@ -89,9 +89,28 @@ extension AtomicStatement: Codable where Tag: Codable, Value: Codable {
     }
 }
 
+/**
+ * For the case where the verifier wants the user to show the value of an
+ * attribute and prove that it is indeed the value inside the on-chain
+ * commitment. Since the verifier does not know the attribute value before
+ * seing the proof, the value is not present here.
+ */
 public typealias RevealAttributeStatementV1 = ConcordiumWalletCrypto.RevealAttributeStatementV1
+/**
+ * For the case where the verifier wants the user to prove that an attribute is
+ * in a set of attributes.
+ */
 public typealias AttributeInSetStatementV1 = ConcordiumWalletCrypto.AttributeInSetStatementV1
+/**
+ * For the case where the verifier wants the user to prove that an attribute is
+ * not in a set of attributes.
+ */
 public typealias AttributeNotInSetStatementV1 = ConcordiumWalletCrypto.AttributeNotInSetStatementV1
+/**
+ * For the case where the verifier wants the user to prove that an attribute is
+ * in a range. The statement is that the attribute value lies in `[lower,
+ * upper)` in the scalar field.
+ */
 public typealias AttributeInRangeStatementV1 = ConcordiumWalletCrypto.AttributeInRangeStatementV1
 /// Statements are composed of one or more atomic statements.
 /// This type defines the different types of atomic statements.
@@ -122,6 +141,7 @@ extension AtomicStatementV1 {
         }
     }
 
+    /// The attribute tag the statement describes
     public var attributeTag: AttributeTag {
         switch self {
         case let .revealAttribute(statement): return statement.attributeTag
@@ -144,6 +164,9 @@ extension AtomicStatementV1: @retroactive Codable {
     }
 }
 
+/**
+ * A statement is a list of atomic statements.
+ */
 public typealias StatementV1 = ConcordiumWalletCrypto.StatementV1
 
 public extension StatementV1 {
@@ -308,6 +331,9 @@ extension AtomicProofV1: @retroactive Codable {
     }
 }
 
+/**
+ * A proof of a statement, composed of one or more atomic proofs.
+ */
 public typealias ProofV1 = ConcordiumWalletCrypto.ProofV1
 
 extension ProofV1: @retroactive Codable {
@@ -327,6 +353,9 @@ extension ProofV1: @retroactive Codable {
     }
 }
 
+/**
+ * A versioned variant of `ProofV1`
+ */
 public typealias VersionedProofV1 = ConcordiumWalletCrypto.VersionedProofV1
 
 extension VersionedProofV1: @retroactive Codable {

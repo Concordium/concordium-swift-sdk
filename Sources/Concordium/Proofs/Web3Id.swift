@@ -47,9 +47,28 @@ extension Web3IdAttribute: @retroactive Codable {
     }
 }
 
+/**
+ * For the case where the verifier wants the user to show the value of an
+ * attribute and prove that it is indeed the value inside the on-chain
+ * commitment. Since the verifier does not know the attribute value before
+ * seing the proof, the value is not present here.
+ */
 public typealias RevealAttributeStatementV2 = ConcordiumWalletCrypto.RevealAttributeStatementV2
+/**
+ * For the case where the verifier wants the user to prove that an attribute is
+ * in a set of attributes.
+ */
 public typealias AttributeInSetStatementV2 = ConcordiumWalletCrypto.AttributeInSetStatementV2
+/**
+ * For the case where the verifier wants the user to prove that an attribute is
+ * not in a set of attributes.
+ */
 public typealias AttributeNotInSetStatementV2 = ConcordiumWalletCrypto.AttributeNotInSetStatementV2
+/**
+ * For the case where the verifier wants the user to prove that an attribute is
+ * in a range. The statement is that the attribute value lies in `[lower,
+ * upper)` in the scalar field.
+ */
 public typealias AttributeInRangeStatementV2 = ConcordiumWalletCrypto.AttributeInRangeStatementV2
 /// Statements are composed of one or more atomic statements.
 /// This type defines the different types of atomic statements.
@@ -161,6 +180,7 @@ extension DID: @retroactive Codable {
     }
 }
 
+/// Date formatter used to transform dates to the expected serializable form for verifiable credentials
 func getDateFormatter() -> ISO8601DateFormatter {
     let dateFormatter = ISO8601DateFormatter()
     dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -282,7 +302,7 @@ extension VerifiableCredentialProof: @retroactive Codable {
             self.issuer = issuer
             type = CCD_TYPE
             if let type = additionalType {
-                self.type.append(contentsOf: type)
+                self.type.append(contentsOf: type.filter({!CCD_TYPE.contains($0)}))
             }
         }
     }
@@ -549,15 +569,19 @@ extension Web3IdCredential: Codable {
     }
 }
 
-// TODO: doc..
+/// Represents errors happening while building a ``VerifiablePresentation`` utilizing the ``VerifiablePresentationBuilder``
 public enum VerifiablePresentationBuilderError: Error {
+    /// A attribute value is missing for the attribute found in the statement provided
     case missingValue(tag: String)
+    /// A randomness value is missing for the attribute found in the statement provided
     case missingRandomness(tag: String)
 }
 
-// TODO: doc..
+/// Can be used to ease the construction of ``Verifiable Presentation``s
 public struct VerifiablePresentationBuilder {
+    /// The challenge used to construct the ``VerifiablePresentation``
     public let challenge: Data
+    /// The network the verifiable credentials are created for
     public let network: Network
     private var statements: Set<PresentationInput> = Set()
 
@@ -571,14 +595,34 @@ public struct VerifiablePresentationBuilder {
         let commitmentInputs: VerifiableCredentialCommitmentInputs
     }
 
+    /// Add a ``VerifiableCredentialProof`` of the supplied statement for the ``IdentityObject``
+    /// - Parameters:
+    ///   - statement: the statement to prove
+    ///   - idObject: the identity to prove the `statement` for
+    ///   - cred: the credential and associated randomness to use
+    ///   - issuer: the identity issuer corresponding to the issuer used for the `idObject`
     public mutating func verify(_ statement: [AtomicStatementV1], for idObject: IdentityObject, cred: AccountCredentialWithRandomness, issuer: UInt32) throws {
         try verify(statement, values: idObject.attributeList.chosenAttributes, randomness: cred.randomness.attributesRand, credId: CredentialRegistrationID(cred.credential.credId), issuer: issuer)
     }
 
+    /// Add a ``VerifiableCredentialProof`` of the supplied statement for the ``IdentityObject``
+    /// - Parameters:
+    ///   - statement: the statement to prove
+    ///   - idObject: the identity to prove the `statement` for
+    ///   - credId: the credential registration ID to use
+    ///   - cred: the randomness corresponding to the credential
+    ///   - issuer: the identity issuer corresponding to the issuer used for the `idObject`
     public mutating func verify(_ statement: [AtomicStatementV1], for idObject: IdentityObject, credId: CredentialRegistrationID, randomness: Randomness, issuer: UInt32) throws {
         try verify(statement, values: idObject.attributeList.chosenAttributes, randomness: randomness.attributesRand, credId: credId, issuer: issuer)
     }
 
+    /// Add a ``VerifiableCredentialProof`` of the supplied statement for the supplied attribute values
+    /// - Parameters:
+    ///   - statement: the statement to prove
+    ///   - values: the attribute values to use for the proof
+    ///   - wallet: the wallet to derive values from
+    ///   - credIndices: the credential indices used to derive values
+    ///   - global: the cryptographic parameters of the chain
     public mutating func verify(_ statement: [AtomicStatementV1], for values: [AttributeTag: String], wallet: WalletSeed, credIndices: AccountCredentialSeedIndexes, global: CryptographicParameters) throws {
         let attributes = statement.map(\.attributeTag)
         let randomness = try attributes.reduce(into: [AttributeTag: Data]()) { acc, tag in
@@ -588,6 +632,13 @@ public struct VerifiablePresentationBuilder {
         try verify(statement, values: values, randomness: randomness, credId: credId, issuer: credIndices.identity.providerID)
     }
 
+    /// Add a ``VerifiableCredentialProof`` of the supplied statement for the supplied attribute values
+    /// - Parameters:
+    ///   - statement: the statement to prove
+    ///   - values: the attribute values to use for the proof
+    ///   - randomness: the attribute randomness to use for the proof
+    ///   - credId: the credential registration ID to use for the proof
+    ///   - issuer: the identity issuer corresponding to the issuer for the credentials underlying identity
     public mutating func verify(_ statement: [AtomicStatementV1], values: [AttributeTag: String], randomness: [AttributeTag: Data], credId: CredentialRegistrationID, issuer: UInt32) throws {
         let attributes = statement.map(\.attributeTag)
         let (values, randomness) = try attributes.reduce(into: ([AttributeTag: String](), [AttributeTag: Data]())) { acc, tag in
@@ -600,11 +651,22 @@ public struct VerifiablePresentationBuilder {
         statements.insert(PresentationInput(statement: verifiableStatement, commitmentInputs: commitmentInputs))
     }
 
+    /// Add a ``VerifiableCredentialProof`` of the supplied statement for the supplied ``Web3IdCredential``
+    /// - Parameters:
+    ///   - statement: the statement to prove
+    ///   - cred: the credential to prove the statement for
+    ///   - wallet: the wallet to derive the signing key of the credential
+    ///   - credIndex: the credential index of the ``Web3IdCredential``
     public mutating func verify(_ statement: [AtomicStatementV2], for cred: Web3IdCredential, wallet: WalletSeed, credIndex: UInt32) throws {
         let signer = try wallet.signingKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes(issuer: IssuerSeedIndexes(index: cred.registry.index, subindex: cred.registry.subindex), index: credIndex))
         return try verify(statement, for: cred, signer: signer)
     }
 
+    /// Add a ``VerifiableCredentialProof`` of the supplied statement for the supplied ``Web3IdCredential``
+    /// - Parameters:
+    ///   - statement: the statement to prove
+    ///   - cred: the credential to prove the statement for
+    ///   - signer: the signing key for the credential
     public mutating func verify(_ statement: [AtomicStatementV2], for cred: Web3IdCredential, signer: Data) throws {
         let attributes = statement.map(\.attributeTag)
         let (values, randomness) = try attributes.reduce(into: ([String: Web3IdAttribute](), [String: Data]())) { acc, tag in
@@ -616,6 +678,10 @@ public struct VerifiablePresentationBuilder {
         statements.insert(PresentationInput(statement: verifiableStatement, commitmentInputs: commitmentInputs))
     }
 
+    /// Finalize the ``VerifiablePresentation`` from the added verification rows
+    /// - Parameter global: the cryptographic parameters of the chain
+    /// - Throws: if the presentation could not be constructed
+    /// - Returns: a ``VerifiablePresentation`` of the ``VerifiableCredentialStatement``s built in the context of the associated credentials and the global context of the associated chain.
     public func finalize(global: CryptographicParameters) throws -> VerifiablePresentation {
         let (statements, commitmentInputs) = self.statements.reduce(into: ([VerifiableCredentialStatement](), [VerifiableCredentialCommitmentInputs]())) { acc, row in
             acc.0.append(row.statement)
