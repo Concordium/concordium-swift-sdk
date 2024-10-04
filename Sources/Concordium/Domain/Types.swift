@@ -414,7 +414,7 @@ extension ScheduledTransfer: FromGRPC {
 /// Represents a contract address on chain
 public typealias ContractAddress = ConcordiumWalletCrypto.ContractAddress
 
-extension ContractAddress: Serialize, Deserialize, FromGRPC, ToGRPC, @retroactive Codable {
+extension ContractAddress: FromGRPC, ToGRPC, @retroactive Codable {
     public func encode(to encoder: any Encoder) throws {
         try JSON(index: index, subindex: subindex).encode(to: encoder)
     }
@@ -430,16 +430,6 @@ extension ContractAddress: Serialize, Deserialize, FromGRPC, ToGRPC, @retroactiv
         var subindex: UInt64
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeInteger(index) + buffer.writeInteger(subindex)
-    }
-
-    public static func deserialize(_ data: inout Cursor) -> ContractAddress? {
-        guard let index = data.parseUInt(UInt64.self),
-              let subindex = data.parseUInt(UInt64.self) else { return nil }
-        return Self(index: index, subindex: subindex)
-    }
-
     func toGRPC() -> Concordium_V2_ContractAddress {
         var g = GRPC()
         g.index = index
@@ -449,6 +439,28 @@ extension ContractAddress: Serialize, Deserialize, FromGRPC, ToGRPC, @retroactiv
 
     static func fromGRPC(_ gRPC: Concordium_V2_ContractAddress) -> Self {
         Self(index: gRPC.index, subindex: gRPC.subindex)
+    }
+}
+
+extension ContractAddress: Serialize, Deserialize, ContractSerialize, ContractDeserialize {
+    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(index) + buffer.writeInteger(subindex)
+    }
+
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(index, endianness: .little) + buffer.writeInteger(subindex, endianness: .little)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> ContractAddress? {
+        guard let index = data.parseUInt(UInt64.self),
+              let subindex = data.parseUInt(UInt64.self) else { return nil }
+        return Self(index: index, subindex: subindex)
+    }
+
+    public static func contractDeserialize(_ data: inout Cursor) -> ContractAddress? {
+        guard let index = data.parseUInt(UInt64.self, endianness: .little),
+              let subindex = data.parseUInt(UInt64.self, endianness: .little) else { return nil }
+        return ContractAddress(index: index, subindex: subindex)
     }
 }
 
@@ -679,7 +691,14 @@ public enum Address {
     case contract(_ address: ContractAddress)
 }
 
-extension Address: Serialize {
+extension Address: Serialize, ContractSerialize {
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        switch self {
+        case let .account(address): return buffer.writeInteger(UInt8(0)) + buffer.writeData(address.data)
+        case let .contract(address): return buffer.writeInteger(UInt8(1)) + address.contractSerialize(into: &buffer)
+        }
+    }
+
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         switch self {
         case let .account(address): return buffer.writeInteger(UInt8(0)) + buffer.writeData(address.data)

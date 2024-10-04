@@ -1,6 +1,7 @@
 import Foundation
 import NIO
 
+/// CIS0 namespace containing CIS-0 related functionality
 public enum CIS0 {
     /// Describes a contract standard identifier
     public struct StandardIdentifier {
@@ -15,7 +16,7 @@ public enum CIS0 {
         }
     }
 
-    typealias SupportsParam = List<StandardIdentifier, UInt16>
+    typealias SupportsParam = PrefixListLE<StandardIdentifier, UInt16>
 
     /// Describes the possible support variants
     public enum SupportResult: Equatable {
@@ -27,7 +28,7 @@ public enum CIS0 {
         case supportedBy(contracts: [ContractAddress])
     }
 
-    typealias SupportsResponse = List<SupportResult, UInt16>
+    typealias SupportsResponse = PrefixListLE<SupportResult, UInt16>
 
     /// Can be used in any contract that conforms to the CIS0 standard
     public protocol Client: ContractClient {}
@@ -54,32 +55,21 @@ public extension CIS0.Client {
     }
 }
 
-extension CIS0.StandardIdentifier: Serialize {
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+extension CIS0.StandardIdentifier: ContractSerialize {
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeString(id, prefixLength: UInt8.self, using: .ascii)
     }
 }
 
-/// deserialize intermideary for ``ContractAddress``
-private struct ContractAddressLE: Deserialize {
-    let value: ContractAddress
-
-    static func deserialize(_ data: inout Cursor) -> ContractAddressLE? {
-        guard let index = data.parseUInt(UInt64.self, endianness: .little),
-              let subindex = data.parseUInt(UInt64.self, endianness: .little) else { return nil }
-        return Self(value: ContractAddress(index: index, subindex: subindex))
-    }
-}
-
-extension CIS0.SupportResult: Deserialize {
-    public static func deserialize(_ data: inout Cursor) -> CIS0.SupportResult? {
+extension CIS0.SupportResult: ContractDeserialize {
+    public static func contractDeserialize(_ data: inout Cursor) -> CIS0.SupportResult? {
         guard let type = data.parseUInt(UInt8.self) else { return nil }
         switch type {
         case 0: return CIS0.SupportResult.notSupported
         case 1: return CIS0.SupportResult.supported
         case 2:
-            guard let contracts = [ContractAddressLE].deserialize(&data, prefixLength: UInt8.self) else { return nil }
-            return CIS0.SupportResult.supportedBy(contracts: contracts.map(\.value))
+            guard let contracts = [ContractAddress].contractDeserialize(&data, prefixLength: UInt8.self) else { return nil }
+            return CIS0.SupportResult.supportedBy(contracts: contracts)
         default: return nil
         }
     }

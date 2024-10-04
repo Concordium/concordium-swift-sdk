@@ -62,7 +62,7 @@ public struct Cursor {
 
     /// Read a string (currently only as UTF8) prefixed with the associated length.
     public mutating func readString<UInt: UnsignedInteger>(prefixLength _: UInt.Type, prefixEndianness: Endianness = .big) -> String? {
-        guard let bytes = read(prefixLength: UInt.self) else { return nil }
+        guard let bytes = read(prefixLength: UInt.self, endianness: prefixEndianness) else { return nil }
         return String(decoding: bytes, as: UTF8.self)
     }
 
@@ -141,7 +141,7 @@ public struct DeserializeError: Error {
 public protocol Deserialize {
     /// Deserializes part of the data in the cursor into the implementing type.
     /// - Returns: The corresponding type, or `nil` if the type could not be parsed due running out of bytes to read.
-    static func deserialize(_ data: inout Cursor) -> Self? // TODO: refactor this to throw instead of returning optional
+    static func deserialize(_ data: inout Cursor) -> Self?
 }
 
 public extension Deserialize {
@@ -220,33 +220,33 @@ extension ByteBuffer {
     }
 
     /// Writes a list of ``Serializable`` type into the buffer, returning the number of bytes written.
-    @discardableResult mutating func writeSerializable<T: Serialize, P: UnsignedInteger & FixedWidthInteger>(list: [T], prefixLength _: P.Type) -> Int {
+    @discardableResult mutating func writeSerializable<T: Serialize, P: UnsignedInteger & FixedWidthInteger>(list: [T], prefixLength _: P.Type, prefixEndianness: Endianness = .big) -> Int {
         var res = 0
-        res += writeInteger(P(list.count))
+        res += writeInteger(P(list.count), endianness: prefixEndianness)
         res += writeSerializable(list: list)
         return res
     }
 
     /// Writes a map of ``Serializable`` type into the buffer, returning the number of bytes written.
-    @discardableResult mutating func writeSerializable<K: Serialize, V: Serialize, P: UnsignedInteger & FixedWidthInteger>(map: [K: V], prefixLength _: P.Type) -> Int {
+    @discardableResult mutating func writeSerializable<K: Serialize, V: Serialize, P: UnsignedInteger & FixedWidthInteger>(map: [K: V], prefixLength _: P.Type, prefixEndianness: Endianness = .big) -> Int {
         var res = 0
-        res += writeInteger(P(map.count))
+        res += writeInteger(P(map.count), endianness: prefixEndianness)
         res += writeSerializable(map: map)
         return res
     }
 
     /// Writes data into buffer with the length prefixed as the supplied ``FixedWidthInteger`` type
-    @discardableResult mutating func writeData<T: UnsignedInteger & FixedWidthInteger>(_ data: Data, prefixLength _: T.Type) -> Int {
+    @discardableResult mutating func writeData<T: UnsignedInteger & FixedWidthInteger>(_ data: Data, prefixLength _: T.Type, prefixEndianness: Endianness = .big) -> Int {
         var res = 0
-        res += writeInteger(T(data.count))
+        res += writeInteger(T(data.count), endianness: prefixEndianness)
         res += writeData(data)
         return res
     }
 
     /// Writes data into buffer with the length prefixed as the supplied ``FixedWidthInteger`` type
-    @discardableResult mutating func writeString<T: UnsignedInteger & FixedWidthInteger>(_ value: String, prefixLength _: T.Type, using encoding: String.Encoding = .utf8) -> Int {
+    @discardableResult mutating func writeString<T: UnsignedInteger & FixedWidthInteger>(_ value: String, prefixLength _: T.Type, using encoding: String.Encoding = .utf8, prefixEndianness: Endianness = .big) -> Int {
         var res = 0
-        res += writeInteger(T(value.lengthOfBytes(using: encoding)))
+        res += writeInteger(T(value.lengthOfBytes(using: encoding)), endianness: prefixEndianness)
         res += writeString(value)
         return res
     }
@@ -311,17 +311,17 @@ public extension Array where Element: Deserialize {
     /// - Parameters:
     ///   - data: The data to deserialize
     ///   - _: the integer size used to describe the number of elements serialized.
-    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: inout Cursor, prefixLength _: P.Type, prefixEndianness: Endianness = .big) -> [Element]? {
-        data.deserialize(listOf: Element.self, prefixLength: P.self, prefixEndianness: prefixEndianness)
+    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: inout Cursor, prefixLength _: P.Type) -> [Element]? {
+        data.deserialize(listOf: Element.self, prefixLength: P.self)
     }
 
     /// Deserialize data into a list of ``Element``s
     /// - Parameters:
     ///   - data: The data to deserialize
     ///   - _: the integer size used to describe the number of elements serialized.
-    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: Data, prefixLength _: P.Type, prefixEndianness: Endianness = .big) throws -> [Element] {
+    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: Data, prefixLength _: P.Type) throws -> [Element] {
         var parser = Cursor(data: data)
-        guard let result = Self.deserialize(&parser, prefixLength: P.self, prefixEndianness: prefixEndianness), parser.empty else { throw DeserializeError(Self.self, data: data) }
+        guard let result = Self.deserialize(&parser, prefixLength: P.self), parser.empty else { throw DeserializeError(Self.self, data: data) }
         return result
     }
 }
@@ -380,40 +380,17 @@ public extension Dictionary where Key: Deserialize, Value: Deserialize {
     /// - Parameters:
     ///   - data: The data to deserialize
     ///   - _: the integer size used to describe the number of pairs serialized.
-    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: inout Cursor, prefixLength _: P.Type, prefixEndianness: Endianness = .big) -> [Key: Value]? {
-        data.deserialize(mapOf: Value.self, keys: Key.self, prefixLength: P.self, prefixEndianness: prefixEndianness)
+    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: inout Cursor, prefixLength _: P.Type) -> [Key: Value]? {
+        data.deserialize(mapOf: Value.self, keys: Key.self, prefixLength: P.self)
     }
 
     /// Deserialize data into a ``[Key:Value]``
     /// - Parameters:
     ///   - data: The data to deserialize
     ///   - _: the integer size used to describe the number of elements serialized.
-    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: Data, prefixLength _: P.Type, prefixEndianness: Endianness = .big) throws -> [Key: Value] {
+    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: Data, prefixLength _: P.Type) throws -> [Key: Value] {
         var parser = Cursor(data: data)
-        guard let result = Self.deserialize(&parser, prefixLength: P.self, prefixEndianness: prefixEndianness), parser.empty else { throw DeserializeError(Self.self, data: data) }
+        guard let result = Self.deserialize(&parser, prefixLength: P.self), parser.empty else { throw DeserializeError(Self.self, data: data) }
         return result
-    }
-}
-
-/// List that serializes prefixed with length of the list.
-struct PrefixListLE<E, P: UnsignedInteger & FixedWidthInteger> {
-    private let prefixLength = P.self
-    let elements: [E]
-
-    init(_ elements: [E]) {
-        self.elements = elements
-    }
-}
-
-extension PrefixListLE: Serialize where E: Serialize {
-    func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        elements.serializeInto(buffer: &buffer, prefixLength: prefixLength.self)
-    }
-}
-
-extension PrefixListLE: Deserialize where E: Deserialize {
-    static func deserialize(_ data: inout Cursor) -> PrefixListLE<E, P>? {
-        guard let elements = [E].deserialize(&data, prefixLength: P.self, prefixEndianness: .little) else { return nil }
-        return .init(elements)
     }
 }

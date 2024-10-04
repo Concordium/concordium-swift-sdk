@@ -91,12 +91,12 @@ public enum CIS2 {
         public let data: Data?
     }
 
-    typealias BalanceOfParam = List<BalanceOfQuery, UInt16>
-    typealias TransferParam = List<TransferPayload, UInt16>
-    typealias TokenMetadataParam = List<TokenID, UInt16>
+    typealias BalanceOfParam = PrefixListLE<BalanceOfQuery, UInt16>
+    typealias TransferParam = PrefixListLE<TransferPayload, UInt16>
+    typealias TokenMetadataParam = PrefixListLE<TokenID, UInt16>
 
-    typealias BalanceOfResponse = List<TokenAmount, UInt16>
-    typealias TokenMetadataResponse = List<TokenMetadata, UInt16>
+    typealias BalanceOfResponse = PrefixListLE<TokenAmount, UInt16>
+    typealias TokenMetadataResponse = PrefixListLE<TokenMetadata, UInt16>
 
     /// Can be used by contracts conforming to the CIS2 standard
     public protocol Client: ContractClient, CIS0.Client {}
@@ -177,34 +177,34 @@ public extension CIS2.Client {
     }
 }
 
-extension CIS2.BalanceOfQuery: Serialize {
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        tokenId.serializeInto(buffer: &buffer) + address.serializeInto(buffer: &buffer)
+extension CIS2.TokenID: ContractSerialize {
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeData(data, prefixLength: UInt8.self)
     }
 }
 
-extension CIS2.TokenAmount: Serialize {
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+extension CIS2.BalanceOfQuery: ContractSerialize {
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        tokenId.contractSerialize(into: &buffer) + address.contractSerialize(into: &buffer)
+    }
+}
+
+extension CIS2.TokenAmount: ContractSerialize {
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         ULEB128.encode(amount, into: &buffer)
     }
 }
 
-extension CIS2.TokenAmount: Deserialize {
-    public static func deserialize(_ data: inout Cursor) -> CIS2.TokenAmount? {
+extension CIS2.TokenAmount: ContractDeserialize {
+    public static func contractDeserialize(_ data: inout Cursor) -> CIS2.TokenAmount? {
         let amount = ULEB128.decode(&data, as: BigUInt.self)
         return CIS2.TokenAmount(amount)
     }
 }
 
-extension CIS2.TokenID: Serialize {
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeData(data, prefixLength: UInt8.self)
-    }
-}
-
-extension CIS2.TokenMetadata: Deserialize {
-    public static func deserialize(_ data: inout Cursor) -> CIS2.TokenMetadata? {
-        guard let url = data.readString(prefixLength: UInt16.self).flatMap({ URL(string: $0) }),
+extension CIS2.TokenMetadata: ContractDeserialize {
+    public static func contractDeserialize(_ data: inout Cursor) -> CIS2.TokenMetadata? {
+        guard let url = data.readString(prefixLength: UInt16.self, prefixEndianness: .little).flatMap({ URL(string: $0) }),
               let hasChecksum = data.parseBool() else { return nil }
 
         if !hasChecksum {
@@ -216,20 +216,20 @@ extension CIS2.TokenMetadata: Deserialize {
     }
 }
 
-extension CIS2.Receiver: Serialize {
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+extension CIS2.Receiver: ContractSerialize {
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         switch self {
         case let .account(address):
             buffer.writeInteger(UInt8(0)) + address.serializeInto(buffer: &buffer)
         case let .contract(address, hookName):
-            buffer.writeInteger(UInt8(1)) + address.serializeInto(buffer: &buffer) + hookName.serializeInto(buffer: &buffer)
+            buffer.writeInteger(UInt8(1)) + address.contractSerialize(into: &buffer) + hookName.contractSerialize(into: &buffer)
         }
     }
 }
 
-extension CIS2.TransferPayload: Serialize {
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        var written = tokenID.serializeInto(buffer: &buffer) + amount.serializeInto(buffer: &buffer) + sender.serializeInto(buffer: &buffer) + receiver.serializeInto(buffer: &buffer)
+extension CIS2.TransferPayload: ContractSerialize {
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        var written = tokenID.contractSerialize(into: &buffer) + amount.contractSerialize(into: &buffer) + sender.contractSerialize(into: &buffer) + receiver.contractSerialize(into: &buffer)
         if let data = data {
             written += buffer.writeData(data)
         }
