@@ -2,7 +2,7 @@ import Foundation
 import NIO
 
 /// Namespace for ULEB128 functionality.
-struct ULEB128 {
+enum ULEB128 {
     /// Encode the unsigned integer as ULEB128.
     /// - Parameters:
     ///   - value: The value to encode
@@ -13,10 +13,10 @@ struct ULEB128 {
         var encodedBytes: [UInt8] = []
 
         repeat {
-            var byte = UInt8(value & 0x7F)  // Extract the lower 7 bits
-            value >>= 7                     // Shift value to the right by 7 bits
+            var byte = UInt8(value & 0x7F) // Extract the lower 7 bits
+            value >>= 7 // Shift value to the right by 7 bits
             if value != 0 {
-                byte |= 0x80                // Set the most significant bit if there's more data
+                byte |= 0x80 // Set the most significant bit if there's more data
             }
             encodedBytes.append(byte)
         } while value != 0
@@ -33,10 +33,10 @@ struct ULEB128 {
         var encodedBytes: [UInt8] = []
 
         repeat {
-            var byte = UInt8(value & 0x7F)  // Extract the lower 7 bits
-            value >>= 7                     // Shift value to the right by 7 bits
+            var byte = UInt8(value & 0x7F) // Extract the lower 7 bits
+            value >>= 7 // Shift value to the right by 7 bits
             if value != 0 {
-                byte |= 0x80                // Set the most significant bit if there's more data
+                byte |= 0x80 // Set the most significant bit if there's more data
             }
             encodedBytes.append(byte)
         } while value != 0
@@ -56,12 +56,12 @@ struct ULEB128 {
         var bytesRead: UInt = 0
         for byte in data.remaining {
             bytesRead += 1
-            let byteValue = UInt(byte & 0x7F)    // Extract the lower 7 bits
-            value |= (byteValue << shift)        // Add the shifted byte to the result
-            if (byte & 0x80) == 0 {              // Check if the most significant bit is clear (end of data)
+            let byteValue = UInt(byte & 0x7F) // Extract the lower 7 bits
+            value |= (byteValue << shift) // Add the shifted byte to the result
+            if (byte & 0x80) == 0 { // Check if the most significant bit is clear (end of data)
                 break
             }
-            shift += 7                           // Increase the shift for the next byte
+            shift += 7 // Increase the shift for the next byte
         }
 
         data.advance(by: bytesRead)
@@ -78,7 +78,7 @@ struct ULEB128 {
     static func decode<U: UnsignedInteger>(_ data: Data, as _: U.Type) -> U? {
         var cursor = Cursor(data: data)
         let amount = decode(&cursor, as: U.self)
-        guard cursor.empty else { return nil}
+        guard cursor.empty else { return nil }
         return amount
     }
 }

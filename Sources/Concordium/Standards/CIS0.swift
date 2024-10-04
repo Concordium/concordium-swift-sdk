@@ -1,7 +1,7 @@
 import Foundation
 import NIO
 
-public struct CIS0 {
+public enum CIS0 {
     /// Describes a contract standard identifier
     public struct StandardIdentifier {
         /// The ASCII identifier of the contract standard, i.e. CIS-0, CIS-2, ...
@@ -10,7 +10,7 @@ public struct CIS0 {
         /// Initialize the value. If the string contains non-ascii characters, nil is returned
         /// - Parameter id: An ascii string
         public init?(id: String) {
-            guard id.allSatisfy(\.isASCII) else {return nil}
+            guard id.allSatisfy(\.isASCII) else { return nil }
             self.id = id
         }
     }
@@ -48,15 +48,15 @@ public extension CIS0.Client {
         let entrypoint = EntrypointName(unchecked: "supports")
         let param = try Parameter(serializable: CIS0.SupportsParam(queries))
 
-        let results = try await self.view( entrypoint: entrypoint, param: param).deserialize(CIS0.SupportsResponse.self).elements
-        guard queries.count == results.count else { throw ListQueryMismatch(queriesCount: UInt(queries.count), responseCount: UInt(results.count))}
+        let results = try await view(entrypoint: entrypoint, param: param).deserialize(CIS0.SupportsResponse.self).elements
+        guard queries.count == results.count else { throw ListQueryMismatch(queriesCount: UInt(queries.count), responseCount: UInt(results.count)) }
         return results
     }
 }
 
 extension CIS0.StandardIdentifier: Serialize {
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeString(self.id, prefixLength: UInt8.self, using: .ascii)
+        buffer.writeString(id, prefixLength: UInt8.self, using: .ascii)
     }
 }
 
@@ -67,7 +67,7 @@ extension CIS0.SupportResult: Deserialize {
         case 0: return CIS0.SupportResult.notSupported
         case 1: return CIS0.SupportResult.supported
         case 2:
-            guard let contracts = [ContractAddress].deserialize(&data, prefixLength: UInt8.self) else {return nil}
+            guard let contracts = [ContractAddress].deserialize(&data, prefixLength: UInt8.self) else { return nil }
             return CIS0.SupportResult.supportedBy(contracts: contracts)
         default: return nil
         }

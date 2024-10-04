@@ -347,7 +347,7 @@ public struct ReturnValue: Equatable, SchemaCodable {
 
     /// Deserialize into the given type
     public func deserialize<D: Deserialize>(_: D.Type) throws -> D {
-        try D.deserialize(self.value)
+        try D.deserialize(value)
     }
 }
 
@@ -385,7 +385,7 @@ public struct ContractError: Equatable, SchemaCodable {
 
     /// Deserialize into the given type
     public func deserialize<D: Deserialize>(_: D.Type) throws -> D {
-        try D.deserialize(self.value)
+        try D.deserialize(value)
     }
 }
 
@@ -417,7 +417,7 @@ public struct ContractEvent: SchemaCodable {
 
     /// Deserialize into the given type
     public func deserialize<D: Deserialize>(_: D.Type) throws -> D {
-        try D.deserialize(self.value)
+        try D.deserialize(value)
     }
 }
 
@@ -774,12 +774,12 @@ public enum ContractClientError: Error {
     case noReturnValue
 }
 
-extension ContractClient {
+public extension ContractClient {
     /// Initialize the contract client
     /// - Parameters:
     ///   - client: the node client to use
     ///   - address: the contract address
-    public init(client: NodeClient, address: ContractAddress) async throws {
+    init(client: NodeClient, address: ContractAddress) async throws {
         let info = try await client.info(contractAddress: address, block: .lastFinal)
         self = .init(client: client, name: info.name, address: address)
     }
@@ -790,8 +790,8 @@ extension ContractClient {
     ///   - param: the parameter for the query to invoke the entrypoint with
     ///   - block: the block to invoke the entrypoint at. Defaults to `.lastFinal`
     /// - Throws: If the query cannot be serialized, if node client request fails, or if the response is nil or cannot be deserialized.
-    public func view(entrypoint: EntrypointName, param: Parameter, block: BlockIdentifier = .lastFinal) async throws -> ReturnValue {
-        var request = ContractInvokeRequest(contract: address, method: try ReceiveName(contractName: name, entrypoint: entrypoint))
+    func view(entrypoint: EntrypointName, param: Parameter, block: BlockIdentifier = .lastFinal) async throws -> ReturnValue {
+        var request = try ContractInvokeRequest(contract: address, method: ReceiveName(contractName: name, entrypoint: entrypoint))
         request.parameter = param
         let res = try await client.invokeInstance(request: request, block: block).success()
         guard let response = res.returnValue else { throw ContractClientError.noReturnValue }
@@ -805,8 +805,8 @@ extension ContractClient {
     ///   - amount: An optional ``CCD`` amount to add to the query, if it is payable. Defaults to 0 CCD.
     /// - Throws: If the query cannot be serialized, if node client request fails.
     /// - Returns: A corresponding ``ContractUpdateProposal`` which can be signed and submitted.
-    public func proposal(entrypoint: EntrypointName, param: Parameter, amount: CCD = CCD(microCCD: 0)) async throws -> ContractUpdateProposal {
-        var request = ContractInvokeRequest(contract: address, method: try ReceiveName(contractName: name, entrypoint: entrypoint))
+    func proposal(entrypoint: EntrypointName, param: Parameter, amount: CCD = CCD(microCCD: 0)) async throws -> ContractUpdateProposal {
+        var request = try ContractInvokeRequest(contract: address, method: ReceiveName(contractName: name, entrypoint: entrypoint))
         request.parameter = param
         let res = try await client.invokeInstance(request: request, block: .lastFinal).success()
         return ContractUpdateProposal(amount: amount, address: address, receiveName: request.method, parameter: request.parameter, client: client, energy: res.usedEnergy)

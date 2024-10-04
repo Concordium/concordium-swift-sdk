@@ -1,5 +1,5 @@
-import Foundation
 import BigInt
+import Foundation
 import NIO
 
 public struct ListQueryMismatch: Error {
@@ -10,7 +10,7 @@ public struct ListQueryMismatch: Error {
 }
 
 /// Namespace for any CIS2 related type
-public struct CIS2 {
+public enum CIS2 {
     /// The max length of a token ID
     public static let TOKEN_ID_MAX_LENGTH = 255
     /// The max byte size of a token amount encoding
@@ -31,9 +31,9 @@ public struct CIS2 {
     /// A token ID for a CIS2 contract token
     public struct TokenID {
         let data: Data
-    
+
         /// Initialize the value, returning `nil` if the data size exceeds ``CIS2.TOKEN_ID_MAX_LENGTH``
-        /// - Parameter data: 
+        /// - Parameter data:
         public init?(_ data: Data) {
             guard data.count <= TOKEN_ID_MAX_LENGTH else { return nil }
             self.data = data
@@ -121,11 +121,12 @@ public extension CIS2.Client {
         default: return nil
         }
     }
+
     /// Query the contract for the balance of an ``Address`` for a specific token
     /// - Parameter queries: the query holding the ``Address`` and ``TokenID``
     /// - Throws: if the query fails
     func balanceOf(_ query: CIS2.BalanceOfQuery) async throws -> CIS2.TokenAmount {
-        return try await balanceOf(queries: [query])[0]
+        try await balanceOf(queries: [query])[0]
     }
 
     /// Query the contract for a list of balances corresponding to a list of ``Address`` for a specific token
@@ -135,8 +136,8 @@ public extension CIS2.Client {
         let entrypoint = EntrypointName(unchecked: "balanceOf")
         let param = try Parameter(serializable: CIS2.BalanceOfParam(queries))
 
-        let balances = try await self.view(entrypoint: entrypoint, param: param).deserialize(CIS2.BalanceOfResponse.self).elements
-        guard queries.count == balances.count else { throw ListQueryMismatch(queriesCount: UInt(queries.count), responseCount: UInt(balances.count))}
+        let balances = try await view(entrypoint: entrypoint, param: param).deserialize(CIS2.BalanceOfResponse.self).elements
+        guard queries.count == balances.count else { throw ListQueryMismatch(queriesCount: UInt(queries.count), responseCount: UInt(balances.count)) }
         return balances
     }
 
@@ -144,7 +145,7 @@ public extension CIS2.Client {
     /// - Parameter tokenID: the token ID to query for
     /// - Throws: if the query fails
     func tokenMetadata(_ tokenID: CIS2.TokenID) async throws -> CIS2.TokenMetadata {
-        return try await tokenMetadata(queries: [tokenID])[0]
+        try await tokenMetadata(queries: [tokenID])[0]
     }
 
     /// Query the contract for a list of ``CIS2.TokenMetadata`` corresponding to the list of ``CIS2.TokenID``s
@@ -154,8 +155,8 @@ public extension CIS2.Client {
         let entrypoint = EntrypointName(unchecked: "tokenMetadata")
         let param = try Parameter(serializable: CIS2.TokenMetadataParam(queries))
 
-        let metadata = try await self.view( entrypoint: entrypoint, param: param).deserialize(CIS2.TokenMetadataResponse.self).elements
-        guard queries.count == metadata.count else { throw ListQueryMismatch(queriesCount: UInt(queries.count), responseCount: UInt(metadata.count))}
+        let metadata = try await view(entrypoint: entrypoint, param: param).deserialize(CIS2.TokenMetadataResponse.self).elements
+        guard queries.count == metadata.count else { throw ListQueryMismatch(queriesCount: UInt(queries.count), responseCount: UInt(metadata.count)) }
         return metadata
     }
 
@@ -172,19 +173,19 @@ public extension CIS2.Client {
     func transfer(transfers: [CIS2.TransferPayload]) async throws -> ContractUpdateProposal {
         let entrypoint = EntrypointName(unchecked: "transfer")
         let param = try Parameter(serializable: CIS2.TransferParam(transfers))
-        return try await self.proposal(entrypoint: entrypoint, param: param)
+        return try await proposal(entrypoint: entrypoint, param: param)
     }
 }
 
 extension CIS2.BalanceOfQuery: Serialize {
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        self.tokenId.serializeInto(buffer: &buffer) + self.address.serializeInto(buffer: &buffer)
+        tokenId.serializeInto(buffer: &buffer) + address.serializeInto(buffer: &buffer)
     }
 }
 
 extension CIS2.TokenAmount: Serialize {
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        ULEB128.encode(self.amount, into: &buffer)
+        ULEB128.encode(amount, into: &buffer)
     }
 }
 
@@ -197,20 +198,20 @@ extension CIS2.TokenAmount: Deserialize {
 
 extension CIS2.TokenID: Serialize {
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeData(self.data, prefixLength: UInt8.self)
+        buffer.writeData(data, prefixLength: UInt8.self)
     }
 }
 
 extension CIS2.TokenMetadata: Deserialize {
     public static func deserialize(_ data: inout Cursor) -> CIS2.TokenMetadata? {
-        guard let url = data.readString(prefixLength: UInt16.self).flatMap({URL(string: $0)}),
-              let hasChecksum = data.parseBool() else {return nil}
+        guard let url = data.readString(prefixLength: UInt16.self).flatMap({ URL(string: $0) }),
+              let hasChecksum = data.parseBool() else { return nil }
 
-        if (!hasChecksum) {
+        if !hasChecksum {
             return CIS2.TokenMetadata(url: url)
         }
 
-        guard let checksum = data.read(num: UInt(32)) else {return nil}
+        guard let checksum = data.read(num: UInt(32)) else { return nil }
         return CIS2.TokenMetadata(url: url, checksum: checksum)
     }
 }
@@ -218,7 +219,7 @@ extension CIS2.TokenMetadata: Deserialize {
 extension CIS2.Receiver: Serialize {
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         switch self {
-        case let .account(address): 
+        case let .account(address):
             buffer.writeInteger(UInt8(0)) + address.serializeInto(buffer: &buffer)
         case let .contract(address, hookName):
             buffer.writeInteger(UInt8(1)) + address.serializeInto(buffer: &buffer) + hookName.serializeInto(buffer: &buffer)
@@ -228,8 +229,8 @@ extension CIS2.Receiver: Serialize {
 
 extension CIS2.TransferPayload: Serialize {
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        var written = self.tokenID.serializeInto(buffer: &buffer) + self.amount.serializeInto(buffer: &buffer) + self.sender.serializeInto(buffer: &buffer) + self.receiver.serializeInto(buffer: &buffer)
-        if let data = self.data {
+        var written = tokenID.serializeInto(buffer: &buffer) + amount.serializeInto(buffer: &buffer) + sender.serializeInto(buffer: &buffer) + receiver.serializeInto(buffer: &buffer)
+        if let data = data {
             written += buffer.writeData(data)
         }
         return written
