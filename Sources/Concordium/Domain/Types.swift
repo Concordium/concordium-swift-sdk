@@ -694,14 +694,14 @@ public enum Address {
 extension Address: Serialize, ContractSerialize {
     public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         switch self {
-        case let .account(address): return buffer.writeInteger(UInt8(0)) + buffer.writeData(address.data)
+        case let .account(address): return buffer.writeInteger(UInt8(0)) + address.serializeInto(buffer: &buffer)
         case let .contract(address): return buffer.writeInteger(UInt8(1)) + address.contractSerialize(into: &buffer)
         }
     }
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         switch self {
-        case let .account(address): return buffer.writeInteger(UInt8(0)) + buffer.writeData(address.data)
+        case let .account(address): return buffer.writeInteger(UInt8(0)) + address.serializeInto(buffer: &buffer)
         case let .contract(address): return buffer.writeInteger(UInt8(1)) + address.serializeInto(buffer: &buffer)
         }
     }

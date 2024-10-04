@@ -16,7 +16,7 @@ public enum CIS2 {
     /// The max byte size of a token amount encoding
     public static let TOKEN_AMOUNT_MAX_LENGTH = 37
     /// Represents a token amount of arbitrary precision
-    public struct TokenAmount {
+    public struct TokenAmount: Equatable {
         /// The inner amount
         public let amount: BigUInt
 
@@ -49,7 +49,7 @@ public enum CIS2 {
     }
 
     /// Represents a token metadata URL for a CIS2 token
-    public struct TokenMetadata {
+    public struct TokenMetadata: Equatable {
         /// The url
         public let url: URL
         /// An optional checksum for the data at the `url`
@@ -72,9 +72,9 @@ public enum CIS2 {
     /// Describes the possible receivers of a token transfer
     public enum Receiver {
         /// An account receiver
-        case account(address: AccountAddress)
+        case account(_ address: AccountAddress)
         /// A contract receiver, with an associated entrypoint to invoke upon transfer
-        case contract(address: ContractAddress, hookName: EntrypointName)
+        case contract(_ address: ContractAddress, hookName: ReceiveName)
     }
 
     /// Payload for a CIS2 transfer
@@ -229,10 +229,10 @@ extension CIS2.Receiver: ContractSerialize {
 
 extension CIS2.TransferPayload: ContractSerialize {
     public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
-        var written = tokenID.contractSerialize(into: &buffer) + amount.contractSerialize(into: &buffer) + sender.contractSerialize(into: &buffer) + receiver.contractSerialize(into: &buffer)
-        if let data = data {
-            written += buffer.writeData(data)
-        }
-        return written
+        tokenID.contractSerialize(into: &buffer)
+            + amount.contractSerialize(into: &buffer)
+            + sender.contractSerialize(into: &buffer)
+            + receiver.contractSerialize(into: &buffer)
+            + buffer.writeData(data ?? Data([]), prefixLength: UInt16.self, prefixEndianness: .little)
     }
 }

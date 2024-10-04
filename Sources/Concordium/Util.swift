@@ -29,19 +29,9 @@ enum ULEB128 {
     ///   - value: The value to encode
     /// - Returns: The encoded value as ``Data``
     static func encode<U: UnsignedInteger>(_ value: U) -> Data {
-        var value = value
-        var encodedBytes: [UInt8] = []
-
-        repeat {
-            var byte = UInt8(value & 0x7F) // Extract the lower 7 bits
-            value >>= 7 // Shift value to the right by 7 bits
-            if value != 0 {
-                byte |= 0x80 // Set the most significant bit if there's more data
-            }
-            encodedBytes.append(byte)
-        } while value != 0
-
-        return Data(encodedBytes)
+        var buf = ByteBuffer()
+        let _ = encode(value, into: &buf)
+        return Data(buffer: buf)
     }
 
     ///  Decode the ULEB128 encoded data into the unsigned integer type

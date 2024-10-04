@@ -3,7 +3,7 @@ import XCTest
 
 let decoder = JSONDecoder()
 
-let account = try! AccountAddress(base58Check: "35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh")
+private let account = try! AccountAddress(base58Check: "35CJPZohio6Ztii2zy1AYzJKvuxbGG44wrBn7hLHiYLoF2nxnh")
 
 func makePayloadJson(type: TransactionTypeString, transactionPayloadJson: String) -> Data {
     """

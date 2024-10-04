@@ -640,7 +640,7 @@ extension EntrypointName: CustomStringConvertible {
 
 /// A wrapper around a receive name, consisting of a ``ContractName`` and an ``EntrypointName`` in
 /// the format `<contract-name>.<entrypoint-name>`
-public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, Hashable {
+public struct ReceiveName: Equatable, FromGRPC, ToGRPC, Hashable {
     typealias GRPC = Concordium_V2_ReceiveName
     public let value: String
 
@@ -663,15 +663,6 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, 
         try self.init(contractName.value.appending(".\(entrypoint.value)"))
     }
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, prefixLength: UInt16.self)
-    }
-
-    public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
-        return try? Self(parsed)
-    }
-
     func toGRPC() -> GRPC {
         var g = GRPC()
         g.value = value
@@ -691,6 +682,21 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, 
         var index = value.firstIndex(of: ".")! // We know this type always has this as a separator between contract name and entrypoint name
         index = value.index(after: index)
         return EntrypointName(unchecked: String(value[index...]))
+    }
+}
+
+extension ReceiveName: Serialize, Deserialize, ContractSerialize {
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeString(value, prefixLength: UInt16.self, prefixEndianness: .little)
+    }
+
+    public func serializeInto(buffer: inout ByteBuffer) -> Int {
+        buffer.writeString(value, prefixLength: UInt16.self)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> Self? {
+        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
+        return try? Self(parsed)
     }
 }
 
