@@ -851,6 +851,11 @@ public extension ContractSerialize {
         contractSerialize(into: &buf)
         return Data(buffer: buf)
     }
+
+    /// Static version of ``self.serialize(into: inout ByteBuffer)
+    static func contractSerialize(_ value: Self, _ buffer: inout ByteBuffer) -> Int {
+        value.contractSerialize(into: &buffer)
+    }
 }
 
 public extension Array where Element: ContractSerialize {
@@ -860,12 +865,7 @@ public extension Array where Element: ContractSerialize {
     ///   - elements: The serializable elements to write
     ///   - _: the integer size used to describe the number of elements serialized.
     func contractSerialize<P: UnsignedInteger & FixedWidthInteger>(into buffer: inout NIOCore.ByteBuffer, prefixLength _: P.Type) -> Int {
-        var res = 0
-        res += buffer.writeInteger(P(count), endianness: .little)
-        for item in self {
-            res += item.contractSerialize(into: &buffer)
-        }
-        return res
+        buffer.writeSerializable(list: self, prefixLength: P.self, prefixEndianness: .little, with: Element.contractSerialize)
     }
 
     /// Serializes the list with the number of elements prefixed
@@ -902,14 +902,61 @@ extension Array where Element: ContractDeserialize {
     ///   - data: The data to deserialize
     ///   - _: the integer size used to describe the number of elements serialized.
     static func contractDeserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: inout Cursor, prefixLength _: P.Type) -> [Element]? {
-        guard let length = data.parseUInt(P.self, endianness: .little) else { return nil }
+        data.contractDeserialize(listOf: Element.self, prefixLength: P.self)
+    }
+}
 
-        var list: [Element] = []
-        for _ in 0 ..< Int(length) {
-            guard let s = Element.contractDeserialize(&data) else { return nil }
-            list.append(s)
-        }
-        return list
+public extension Cursor {
+    /// Deserialize a deserializable type from the inner data.
+    mutating func contractDeserialize<T: ContractDeserialize>(_ _: T) -> T? {
+        deserialize(with: T.contractDeserialize)
+    }
+
+    /// Deserialize a list of deserializable types. This will completely exhaust the data in the cursor.
+    mutating func contractDeserialize<T: ContractDeserialize>(listOf _: T.Type) -> [T]? {
+        deserialize(listOf: T.self, with: T.contractDeserialize)
+    }
+
+    /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
+    mutating func contractDeserialize<T: ContractDeserialize, UInt: UnsignedInteger>(listOf _: T.Type, prefixLength _: UInt.Type) -> [T]? {
+        deserialize(listOf: T.self, prefixLength: UInt.self, prefixEndianness: .little, with: T.contractDeserialize)
+    }
+
+    /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
+    mutating func contractDeserialize<K: ContractDeserialize, V: ContractDeserialize>(mapOf _: V.Type, keys _: K.Type) -> [K: V]? {
+        deserialize(mapOf: V.self, keys: K.self, deserializeKey: K.contractDeserialize, deserializeValue: V.contractDeserialize)
+    }
+
+    /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
+    mutating func contractDeserialize<K: ContractDeserialize, V: ContractDeserialize, UInt: UnsignedInteger>(mapOf _: V.Type, keys _: K.Type, prefixLength _: UInt.Type) -> [K: V]? {
+        deserialize(mapOf: V.self, keys: K.self, prefixLength: UInt.self, prefixEndianness: .little, deserializeKey: K.contractDeserialize, deserializeValue: V.contractDeserialize)
+    }
+}
+
+extension ByteBuffer {
+    /// Writes a ``ContractSerialize`` type into the buffer, returning the number of bytes written.
+    @discardableResult mutating func writeContractSerializable<T: ContractSerialize>(_ value: T) -> Int {
+        writeSerializable(value, with: T.contractSerialize)
+    }
+
+    /// Writes a list of ``ContractSerialize`` type into the buffer, returning the number of bytes written.
+    @discardableResult mutating func writeContractSerializable<T: ContractSerialize>(list: [T]) -> Int {
+        writeSerializable(list: list, with: T.contractSerialize)
+    }
+
+    /// Writes a map of ``ContractSerialize`` type into the buffer, returning the number of bytes written.
+    @discardableResult mutating func writeContractSerializable<K: ContractSerialize, V: ContractSerialize>(map: [K: V]) -> Int {
+        writeSerializable(map: map, serializeKey: K.contractSerialize, serializeValue: V.contractSerialize)
+    }
+
+    /// Writes a list of ``ContractSerialize`` type into the buffer, returning the number of bytes written.
+    @discardableResult mutating func writeContractSerializable<T: ContractSerialize, P: UnsignedInteger & FixedWidthInteger>(list: [T], prefixLength _: P.Type) -> Int {
+        writeSerializable(list: list, prefixLength: P.self, prefixEndianness: .little, with: T.contractSerialize)
+    }
+
+    /// Writes a map of ``ContractSerialize`` type into the buffer, returning the number of bytes written.
+    @discardableResult mutating func writeContractSerializable<K: ContractSerialize, V: ContractSerialize, P: UnsignedInteger & FixedWidthInteger>(map: [K: V], prefixLength _: P.Type) -> Int {
+        writeSerializable(map: map, prefixLength: P.self, prefixEndianness: .little, serializeKey: K.contractSerialize, serializeValue: V.contractSerialize)
     }
 }
 
