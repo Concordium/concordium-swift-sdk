@@ -195,9 +195,9 @@ public struct PreparedAccountTransaction {
     public var serializedPayload: Data
 
     /// Serializes the transaction into the provided `ByteBuffer`
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
+    @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
         var res = 0
-        res += header.serializeInto(buffer: &buffer, serializedPayloadSize: UInt32(serializedPayload.count))
+        res += header.serialize(into: &buffer, serializedPayloadSize: UInt32(serializedPayload.count))
         res += buffer.writeData(serializedPayload)
         return res
     }
@@ -205,7 +205,7 @@ public struct PreparedAccountTransaction {
     /// Serializes the transaction
     public func serialize() -> SerializedAccountTransaction {
         var buf = ByteBuffer()
-        serializeInto(buffer: &buf)
+        serialize(into: &buf)
         let data = Data(buffer: buf)
         return .init(data: data)
     }
@@ -437,7 +437,7 @@ public enum TransactionType: UInt8, Serialize, Deserialize, Codable {
     /// Effective from protocol version 4
     case configureDelegation = 26
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(rawValue)
     }
 
@@ -557,7 +557,7 @@ public struct SecToPubTransferData: Equatable {
 }
 
 extension SecToPubTransferData: Deserialize, Serialize {
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         var res = 0
         res += buffer.writeData(remainingAmount)
         res += buffer.writeSerializable(transferAmount)
@@ -601,7 +601,7 @@ extension SecToPubTransferData: Codable {
 public typealias BakerKeysPayload = ConcordiumWalletCrypto.BakerKeysPayload
 
 extension BakerKeysPayload: Serialize, Deserialize {
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeData(electionVerifyKey) + buffer.writeData(proofElection) + buffer.writeData(signatureVerifyKey) + buffer.writeData(proofSig) + buffer.writeData(aggregationVerifyKey) + buffer.writeData(proofAggregation)
     }
 
@@ -732,7 +732,7 @@ public struct ConfigureBakerPayload: Equatable, Serialize, Deserialize, Codable 
         return .init(capital: capital, restakeEarnings: restakeEarnings, openForDelegation: openForDelegation, keysWithProofs: keysWithProofs, metadataUrl: metadataUrl, transactionFeeCommission: transactionFeeCommission, bakingRewardCommission: bakingRewardCommission, finalizationRewardCommission: finalizationRewardCommission)
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         var res = 0
 
         var bitmap: UInt16 = 0
@@ -792,7 +792,7 @@ public struct ConfigureDelegationPayload: Equatable, Serialize, Deserialize, Cod
         self.delegationTarget = delegationTarget
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         var res = 0
 
         var bitmap: UInt16 = 0
@@ -902,7 +902,7 @@ public extension AccountTransactionPayload {
 }
 
 extension AccountTransactionPayload: Serialize, Deserialize {
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
+    @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
         var res = 0
 
         // Based on 'https://github.com/Concordium/concordium-base/blob/2c3255f39afd73543b5b21bbae1074fb069a0abd/rust-src/concordium_base/src/transactions.rs#L931'.
@@ -1087,7 +1087,7 @@ public struct AccountTransactionHeader: ToGRPC {
         self.expiry = expiry
     }
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer, serializedPayloadSize: UInt32) -> Int {
+    @discardableResult public func serialize(into buffer: inout ByteBuffer, serializedPayloadSize: UInt32) -> Int {
         var res = 0
         res += buffer.writeData(sender.data)
         res += buffer.writeInteger(sequenceNumber, endianness: .big, as: UInt64.self)
@@ -1099,7 +1099,7 @@ public struct AccountTransactionHeader: ToGRPC {
 
     public func serialize(serializedPayloadSize: UInt32) -> Data {
         var buf = ByteBuffer()
-        serializeInto(buffer: &buf, serializedPayloadSize: serializedPayloadSize)
+        serialize(into: &buf, serializedPayloadSize: serializedPayloadSize)
         return Data(buffer: buf)
     }
 

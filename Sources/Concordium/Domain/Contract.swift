@@ -261,7 +261,7 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC, Sc
         try self.init(serializable.contractSerialize())
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(UInt16(value.count)) + buffer.writeData(value)
     }
 
@@ -479,7 +479,7 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, Has
         try self.init("init_".appending(contractName.value))
     }
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
+    @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
         buffer.writeString(value, prefixLength: UInt16.self)
     }
 
@@ -553,7 +553,7 @@ public struct ContractName: Serialize, Deserialize, Equatable, Hashable {
         try ReceiveName(contractName: self, entrypoint: ep)
     }
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
+    @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
         buffer.writeString(value, prefixLength: UInt16.self)
     }
 
@@ -610,7 +610,7 @@ extension EntrypointName: Serialize, Deserialize, ContractSerialize {
         buffer.writeString(value, prefixLength: UInt16.self, prefixEndianness: .little)
     }
 
-    public func serializeInto(buffer: inout ByteBuffer) -> Int {
+    public func serialize(into buffer: inout ByteBuffer) -> Int {
         buffer.writeString(value, prefixLength: UInt16.self)
     }
 
@@ -690,7 +690,7 @@ extension ReceiveName: Serialize, Deserialize, ContractSerialize {
         buffer.writeString(value, prefixLength: UInt16.self, prefixEndianness: .little)
     }
 
-    public func serializeInto(buffer: inout ByteBuffer) -> Int {
+    public func serialize(into buffer: inout ByteBuffer) -> Int {
         buffer.writeString(value, prefixLength: UInt16.self)
     }
 

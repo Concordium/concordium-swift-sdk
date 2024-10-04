@@ -49,7 +49,7 @@ public struct CredentialRegistrationID: Serialize, Deserialize, FromGRPC, ToGRPC
         return g
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeData(value)
     }
 
@@ -199,7 +199,7 @@ public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC
         try .init(grpc.value)
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeData(data)
     }
 
@@ -289,7 +289,7 @@ extension CredentialPublicKeys: FromGRPC, Serialize, Deserialize {
         )
     }
 
-    public func serializeInto(buffer: inout ByteBuffer) -> Int {
+    public func serialize(into buffer: inout ByteBuffer) -> Int {
         var res = 0
         res += buffer.writeSerializable(map: keys, prefixLength: UInt8.self)
         res += buffer.writeInteger(threshold)
@@ -345,7 +345,7 @@ public enum VerifyKeyError: Error, Equatable {
 
 extension VerifyKey: FromGRPC, Serialize, Deserialize {
     public static let SIZE: UInt8 = 32
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(0, as: UInt8.self) + buffer.writeData(key) // We unwrap, as initializing safely will mean this always succeeds
     }
 
@@ -637,7 +637,7 @@ public struct AmountFraction: FromGRPC, Equatable, Serialize, Deserialize {
         .init(partsPerHundredThousand: grpc.partsPerHundredThousand)
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(partsPerHundredThousand)
     }
 
@@ -687,7 +687,7 @@ public enum OpenStatus: UInt8, FromGRPC, Equatable, Serialize, Deserialize, Coda
         try .init(rawValue: UInt8(grpc.rawValue)) ?! GRPCError.unsupportedValue("open status '\(grpc.rawValue)'")
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(rawValue)
     }
 
@@ -750,7 +750,7 @@ public enum DelegationTarget: FromGRPC, Equatable, Serialize, Deserialize {
         }
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         var res = 0
         switch self {
         case .passive:

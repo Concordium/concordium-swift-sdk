@@ -89,7 +89,7 @@ public struct CCDError: Error {
 public struct CCD: CustomStringConvertible, Codable, Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     typealias GRPC = Concordium_V2_Amount
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(microCCD)
     }
 

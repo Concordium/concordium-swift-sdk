@@ -4,14 +4,14 @@ import NIO
 /// Details serialization into format expected by concordium nodes
 public protocol Serialize {
     /// Serialize the implementing type into the supplied ``ByteBuffer``. Returns the number of bytes written.
-    @discardableResult func serializeInto(buffer: inout ByteBuffer) -> Int
+    @discardableResult func serialize(into buffer: inout ByteBuffer) -> Int
 }
 
 public extension Serialize {
     /// Serialize the implementing type to ``Data``
     func serialize() -> Data {
         var buf = ByteBuffer()
-        serializeInto(buffer: &buf)
+        serialize(into: &buf)
         return Data(buffer: buf)
     }
 }
@@ -159,7 +159,7 @@ extension UInt8: Serialize, Deserialize {
         data.parseUInt(Self.self)
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(self)
     }
 }
@@ -169,7 +169,7 @@ extension UInt16: Serialize, Deserialize {
         data.parseUInt(Self.self)
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(self)
     }
 }
@@ -179,7 +179,7 @@ extension UInt32: Serialize, Deserialize {
         data.parseUInt(Self.self)
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(self)
     }
 }
@@ -189,7 +189,7 @@ extension UInt64: Serialize, Deserialize {
         data.parseUInt(Self.self)
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(self)
     }
 }
@@ -197,7 +197,7 @@ extension UInt64: Serialize, Deserialize {
 extension ByteBuffer {
     /// Writes a ``Serializable`` type into the buffer, returning the number of bytes written.
     @discardableResult mutating func writeSerializable<T: Serialize>(_ value: T) -> Int {
-        value.serializeInto(buffer: &self)
+        value.serialize(into: &self)
     }
 
     /// Writes a list of ``Serializable`` type into the buffer, returning the number of bytes written.
@@ -261,12 +261,12 @@ public extension Array where Element: Serialize {
     /// Serialize list elements
     func serialize() -> Data {
         var buf = ByteBuffer()
-        let _ = serializeInto(buffer: &buf)
+        let _ = serialize(into: &buf)
         return Data(buffer: buf)
     }
 
     /// Serialize list elements into the buffer
-    func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeSerializable(list: self)
     }
 
@@ -275,7 +275,7 @@ public extension Array where Element: Serialize {
     ///   - buffer: The buffer to write the data to
     ///   - elements: The serializable elements to write
     ///   - _: the integer size used to describe the number of elements serialized.
-    func serializeInto<P: UnsignedInteger & FixedWidthInteger>(buffer: inout NIOCore.ByteBuffer, prefixLength _: P.Type) -> Int {
+    func serialize<P: UnsignedInteger & FixedWidthInteger>(into buffer: inout NIOCore.ByteBuffer, prefixLength _: P.Type) -> Int {
         buffer.writeSerializable(list: self, prefixLength: P.self)
     }
 
@@ -285,7 +285,7 @@ public extension Array where Element: Serialize {
     ///   - _: the integer size used to describe the number of elements serialized.
     func serialize<P: UnsignedInteger & FixedWidthInteger>(prefixLength _: P.Type) -> Data {
         var buf = ByteBuffer()
-        let _ = serializeInto(buffer: &buf, prefixLength: P.self)
+        let _ = serialize(into: &buf, prefixLength: P.self)
         return Data(buffer: buf)
     }
 }
@@ -330,12 +330,12 @@ public extension Dictionary where Key: Serialize, Value: Serialize {
     /// Serialize dictionary
     func serialize() -> Data {
         var buf = ByteBuffer()
-        let _ = serializeInto(buffer: &buf)
+        let _ = serialize(into: &buf)
         return Data(buffer: buf)
     }
 
     /// Serialize dictionary into the supplied buffer
-    func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeSerializable(map: self)
     }
 
@@ -344,7 +344,7 @@ public extension Dictionary where Key: Serialize, Value: Serialize {
     ///   - buffer: The buffer to write the data to
     ///   - elements: The serializable elements to write
     ///   - _: the integer size used to describe the number of pairs serialized.
-    func serializeInto<P: UnsignedInteger & FixedWidthInteger>(buffer: inout NIOCore.ByteBuffer, prefixLength _: P.Type) -> Int {
+    func serialize<P: UnsignedInteger & FixedWidthInteger>(into buffer: inout NIOCore.ByteBuffer, prefixLength _: P.Type) -> Int {
         buffer.writeSerializable(map: self, prefixLength: P.self)
     }
 
@@ -354,7 +354,7 @@ public extension Dictionary where Key: Serialize, Value: Serialize {
     ///   - _: the integer size used to describe the number of pairs serialized.
     func serialize<P: UnsignedInteger & FixedWidthInteger>(prefixLength _: P.Type) -> Data {
         var buf = ByteBuffer()
-        let _ = serializeInto(buffer: &buf, prefixLength: P.self)
+        let _ = serialize(into: &buf, prefixLength: P.self)
         return Data(buffer: buf)
     }
 }

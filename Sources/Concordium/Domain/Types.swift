@@ -204,7 +204,7 @@ public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGR
         self.value = value
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeData(value)
     }
 
@@ -248,7 +248,7 @@ public enum WasmVersion: UInt8, Serialize, Deserialize, Codable {
     case v0
     case v1
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
+    @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
         buffer.writeInteger(UInt32(rawValue))
     }
 
@@ -270,7 +270,7 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var version: WasmVersion
     public var source: Data
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
+    @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
         buffer.writeSerializable(version) + buffer.writeData(source, prefixLength: UInt32.self)
     }
 
@@ -337,7 +337,7 @@ public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
         self.value = value
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeData(value, prefixLength: UInt16.self)
     }
 
@@ -380,7 +380,7 @@ public struct ScheduledTransfer: Serialize, Deserialize, Equatable, Codable {
         self.amount = amount
     }
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
+    @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
         buffer.writeInteger(timestamp) + buffer.writeSerializable(amount)
     }
 
@@ -443,7 +443,7 @@ extension ContractAddress: FromGRPC, ToGRPC, @retroactive Codable {
 }
 
 extension ContractAddress: Serialize, Deserialize, ContractSerialize, ContractDeserialize {
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(index) + buffer.writeInteger(subindex)
     }
 
@@ -496,7 +496,7 @@ public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRP
         self.init(unchecked: value)
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(UInt16(value.count)) + buffer.writeData(value)
     }
 
@@ -541,7 +541,7 @@ public typealias SecToPubAmountTransferProof = Data
 public typealias CredentialDeploymentInfo = ConcordiumWalletCrypto.CredentialDeploymentInfo
 
 extension CredentialDeploymentInfo: Serialize {
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         let bytes = try! serializeCredentialDeploymentInfo(credInfo: self) // In practice, this will type will never be generated manually, so unwrap is relatively safe...
         return buffer.writeData(Data(bytes))
     }
@@ -694,15 +694,15 @@ public enum Address {
 extension Address: Serialize, ContractSerialize {
     public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         switch self {
-        case let .account(address): return buffer.writeInteger(UInt8(0)) + address.serializeInto(buffer: &buffer)
+        case let .account(address): return buffer.writeInteger(UInt8(0)) + address.serialize(into: &buffer)
         case let .contract(address): return buffer.writeInteger(UInt8(1)) + address.contractSerialize(into: &buffer)
         }
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         switch self {
-        case let .account(address): return buffer.writeInteger(UInt8(0)) + address.serializeInto(buffer: &buffer)
-        case let .contract(address): return buffer.writeInteger(UInt8(1)) + address.serializeInto(buffer: &buffer)
+        case let .account(address): return buffer.writeInteger(UInt8(0)) + address.serialize(into: &buffer)
+        case let .contract(address): return buffer.writeInteger(UInt8(1)) + address.serialize(into: &buffer)
         }
     }
 }

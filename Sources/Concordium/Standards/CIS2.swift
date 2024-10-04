@@ -220,7 +220,7 @@ extension CIS2.Receiver: ContractSerialize {
     public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         switch self {
         case let .account(address):
-            buffer.writeInteger(UInt8(0)) + address.serializeInto(buffer: &buffer)
+            buffer.writeInteger(UInt8(0)) + address.serialize(into: &buffer)
         case let .contract(address, hookName):
             buffer.writeInteger(UInt8(1)) + address.contractSerialize(into: &buffer) + hookName.contractSerialize(into: &buffer)
         }

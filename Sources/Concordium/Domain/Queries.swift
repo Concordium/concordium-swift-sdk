@@ -266,7 +266,7 @@ public struct ElectionDifficulty: FromGRPC, Equatable, Serialize, Deserialize {
         .init(partsPerHundredThousand: g.value.partsPerHundredThousand)
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(partsPerHundredThousand)
     }
 
