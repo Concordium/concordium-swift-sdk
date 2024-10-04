@@ -217,12 +217,12 @@ final class WalletConnectTest: XCTestCase {
         """.data(using: .utf8)!
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        
+
         let value = try decoder.decode(WalletConnectRequestVerifiablePresentationParam.self, from: json)
         let expected = try WalletConnectRequestVerifiablePresentationParam(challenge: Data(hex: "010203"), credentialStatements: [
-            .account(issuers: [0,1,2], statement: [
+            .account(issuers: [0, 1, 2], statement: [
                 .revealAttribute(statement: RevealAttributeStatementV1(attributeTag: .firstName)),
-                .attributeInSet(statement: AttributeInSetStatementV1(attributeTag: .nationality, set: ["DK", "NO"]))
+                .attributeInSet(statement: AttributeInSetStatementV1(attributeTag: .nationality, set: ["DK", "NO"])),
             ]),
             .web3id(issuers: [ContractAddress(index: 1, subindex: 0), ContractAddress(index: 42, subindex: 1337)], statement: [
                 .revealAttribute(statement: RevealAttributeStatementV2(attributeTag: "something")),
@@ -231,9 +231,10 @@ final class WalletConnectTest: XCTestCase {
                 .attributeInRange(statement: AttributeInRangeStatementV2(
                     attributeTag: "time",
                     lower: .timestamp(value: formatter.date(from: "2022-10-03T08:38:18.738Z")!),
-                    upper: .timestamp(value: formatter.date(from: "2024-10-03T08:38:18.738Z")!))
+                    upper: .timestamp(value: formatter.date(from: "2024-10-03T08:38:18.738Z")!)
                 )
-            ])
+                ),
+            ]),
         ])
         XCTAssertEqual(value, expected)
     }
