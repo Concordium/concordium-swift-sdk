@@ -91,6 +91,13 @@ public struct CIS2 {
         public let data: Data?
     }
 
+    typealias BalanceOfParam = List<BalanceOfQuery, UInt16>
+    typealias TransferParam = List<TransferPayload, UInt16>
+    typealias TokenMetadataParam = List<TokenID, UInt16>
+
+    typealias BalanceOfResponse = List<TokenAmount, UInt16>
+    typealias TokenMetadataResponse = List<TokenMetadata, UInt16>
+
     /// Can be used by contracts conforming to the CIS2 standard
     public protocol Client: ContractClient, CIS0.Client {}
 
@@ -125,13 +132,12 @@ public extension CIS2.Client {
     /// - Parameter queries: the list of queries holding the ``Address`` and ``TokenID``
     /// - Throws: if the query fails
     func balanceOf(queries: [CIS2.BalanceOfQuery]) async throws -> [CIS2.TokenAmount] {
-        let value = try await self.view(
-            entrypoint: EntrypointName(unchecked: "balanceOf"),
-            param: Parameter(queries.serialize(prefixLength: UInt16.self))
-        )
-        let amounts = try [CIS2.TokenAmount].deserialize(value.value, prefixLength: UInt16.self)
-        guard queries.count == amounts.count else { throw ListQueryMismatch(queriesCount: UInt(queries.count), responseCount: UInt(amounts.count))}
-        return amounts
+        let entrypoint = EntrypointName(unchecked: "balanceOf")
+        let param = try Parameter(serializable: CIS2.BalanceOfParam(queries))
+
+        let balances = try await self.view(entrypoint: entrypoint, param: param).deserialize(CIS2.BalanceOfResponse.self).elements
+        guard queries.count == balances.count else { throw ListQueryMismatch(queriesCount: UInt(queries.count), responseCount: UInt(balances.count))}
+        return balances
     }
 
     /// Query the contract for ``CIS2.TokenMetadata`` corresponding to the ``CIS2.TokenID``
@@ -145,11 +151,10 @@ public extension CIS2.Client {
     /// - Parameter queries: the list of token IDs
     /// - Throws: if the query fails
     func tokenMetadata(queries: [CIS2.TokenID]) async throws -> [CIS2.TokenMetadata] {
-        let value = try await self.view(
-            entrypoint: EntrypointName(unchecked: "tokenMetadat"),
-            param: Parameter(queries.serialize(prefixLength: UInt16.self))
-        )
-        let metadata = try [CIS2.TokenMetadata].deserialize(value.value, prefixLength: UInt16.self)
+        let entrypoint = EntrypointName(unchecked: "tokenMetadata")
+        let param = try Parameter(serializable: CIS2.TokenMetadataParam(queries))
+
+        let metadata = try await self.view( entrypoint: entrypoint, param: param).deserialize(CIS2.TokenMetadataResponse.self).elements
         guard queries.count == metadata.count else { throw ListQueryMismatch(queriesCount: UInt(queries.count), responseCount: UInt(metadata.count))}
         return metadata
     }
@@ -165,7 +170,9 @@ public extension CIS2.Client {
     /// - Parameter transfers: the list of transfer payloads
     /// - Throws: if the node client fails to perform the entrypoint invocation
     func transfer(transfers: [CIS2.TransferPayload]) async throws -> ContractUpdateProposal {
-        try await self.proposal(entrypoint: EntrypointName(unchecked: "transfer"), param: Parameter(transfers.serialize(prefixLength: UInt16.self)))
+        let entrypoint = EntrypointName(unchecked: "transfer")
+        let param = try Parameter(serializable: CIS2.TransferParam(transfers))
+        return try await self.proposal(entrypoint: entrypoint, param: param)
     }
 }
 

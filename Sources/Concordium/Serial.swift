@@ -127,11 +127,11 @@ public struct Cursor {
 /// Used to represent an error happening when deserializing from byte format.
 public struct DeserializeError: Error {
     /// The type attempted to deserialize
-    let type: any Deserialize.Type
+    let type: Any.Type
     let expected: UInt
     let actual: UInt
 
-    init<T: Deserialize>(_: T.Type, data: Data) {
+    init<T: Any>(_: T.Type, data: Data) {
         type = T.self
         expected = UInt(MemoryLayout<T>.size)
         actual = UInt(data.count)
@@ -257,7 +257,15 @@ extension ByteBuffer {
     }
 }
 
-extension Array: Serialize where Element: Serialize {
+extension Array where Element: Serialize {
+    /// Serialize list elements
+    public func serialize() -> Data {
+        var buf = ByteBuffer()
+        let _ = serializeInto(buffer: &buf)
+        return Data(buffer: buf)
+    }
+
+    /// Serialize list elements into the buffer
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeSerializable(list: self)
     }
@@ -282,7 +290,19 @@ extension Array: Serialize where Element: Serialize {
     }
 }
 
-extension Array: Deserialize where Element: Deserialize {
+extension Array where Element: Deserialize {
+    /// Deserialize the data into a list of ``Element``
+    /// - Parameter data: the data to deserialize
+    /// - Throws: if the data does not fit the expected value
+    public static func deserialize(_ data: Data) throws -> [Element] {
+        var cursor = Cursor(data: data)
+        guard let elements = deserialize(&cursor), cursor.empty else {throw DeserializeError(Self.self, data: data)}
+        return elements
+    }
+
+    /// Deserialize the data into a list of ``Element``
+    /// - Parameter data: the data to deserialize
+    /// - Returns the list or nil if not enough data was available to deserialize the a list of ``Element``s
     public static func deserialize(_ data: inout Cursor) -> [Element]? {
         data.deserialize(listOf: Element.self)
     }
@@ -306,7 +326,15 @@ extension Array: Deserialize where Element: Deserialize {
     }
 }
 
-extension Dictionary: Serialize where Key: Serialize, Value: Serialize {
+extension Dictionary where Key: Serialize, Value: Serialize {
+    /// Serialize dictionary
+    public func serialize() -> Data {
+        var buf = ByteBuffer()
+        let _ = serializeInto(buffer: &buf)
+        return Data(buffer: buf)
+    }
+
+    /// Serialize dictionary into the supplied buffer
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeSerializable(map: self)
     }
@@ -331,7 +359,19 @@ extension Dictionary: Serialize where Key: Serialize, Value: Serialize {
     }
 }
 
-extension Dictionary: Deserialize where Key: Deserialize, Value: Deserialize {
+extension Dictionary where Key: Deserialize, Value: Deserialize {
+    /// Deserialize the data into a dictionary of ``Key``, ``Value`` pairs
+    /// - Parameter data: the data to deserialize
+    /// - Throws: if the data does not fit the expected value
+    public static func deserialize(_ data: Data) throws -> [Key: Value] {
+        var cursor = Cursor(data: data)
+        guard let elements = deserialize(&cursor), cursor.empty else {throw DeserializeError(Self.self, data: data)}
+        return elements
+    }
+
+    /// Deserialize the data into a dictionary of ``Key``, ``Value`` pairs
+    /// - Parameter data: the data to deserialize
+    /// - Returns the list or nil if not enough data was available to deserialize the a list of ``Element``s
     public static func deserialize(_ data: inout Cursor) -> [Key: Value]? {
         data.deserialize(mapOf: Value.self, keys: Key.self)
     }
@@ -352,5 +392,28 @@ extension Dictionary: Deserialize where Key: Deserialize, Value: Deserialize {
         var parser = Cursor(data: data)
         guard let result = Self.deserialize(&parser, prefixLength: P.self), parser.empty else { throw DeserializeError(Self.self, data: data) }
         return result
+    }
+}
+
+/// List that serializes prefixed with length of the list.
+struct List<E, P: UnsignedInteger & FixedWidthInteger> {
+    private let prefixLength = P.self
+    let elements: [E]
+
+    init(_ elements: [E]) {
+        self.elements = elements
+    }
+}
+
+extension List: Serialize where E: Serialize {
+    func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+        elements.serializeInto(buffer: &buffer, prefixLength: prefixLength.self)
+    }
+}
+
+extension List: Deserialize where E: Deserialize {
+    static func deserialize(_ data: inout Cursor) -> List<E, P>? {
+        guard let elements = [E].deserialize(&data, prefixLength: P.self) else {return nil}
+        return .init(elements)
     }
 }
