@@ -46,6 +46,11 @@ public enum CIS2 {
         public let contract: ContractAddress
         /// The token ID within the associated contract
         public let id: TokenID
+
+        public init(id: TokenID, contract: ContractAddress) {
+            self.id = id
+            self.contract = contract
+        }
     }
 
     /// Represents a token metadata URL for a CIS2 token
@@ -67,6 +72,11 @@ public enum CIS2 {
         public let tokenId: TokenID
         /// The ``Address`` to query the balance for
         public let address: Address
+
+        public init(tokenId: TokenID, address: Address) {
+            self.tokenId = tokenId
+            self.address = address
+        }
     }
 
     /// Describes the possible receivers of a token transfer
@@ -80,7 +90,7 @@ public enum CIS2 {
     /// Payload for a CIS2 transfer
     public struct TransferPayload {
         /// The token ID of the token to transfer
-        public let tokenID: TokenID
+        public let tokenId: TokenID
         /// The amount of the token to transfer
         public let amount: TokenAmount
         /// The sender address
@@ -89,6 +99,14 @@ public enum CIS2 {
         public let receiver: Receiver
         /// Optional data to include with the transfer
         public let data: Data?
+
+        public init(tokenId: TokenID, amount: TokenAmount, sender: Address, receiver: Receiver, data: Data? = nil) {
+            self.tokenId = tokenId
+            self.amount = amount
+            self.sender = sender
+            self.receiver = receiver
+            self.data = data
+        }
     }
 
     typealias BalanceOfParam = PrefixListLE<BalanceOfQuery, UInt16>
@@ -229,7 +247,7 @@ extension CIS2.Receiver: ContractSerialize {
 
 extension CIS2.TransferPayload: ContractSerialize {
     public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
-        tokenID.contractSerialize(into: &buffer)
+        tokenId.contractSerialize(into: &buffer)
             + amount.contractSerialize(into: &buffer)
             + sender.contractSerialize(into: &buffer)
             + receiver.contractSerialize(into: &buffer)
