@@ -181,6 +181,7 @@ extension WalletConnectSignMessageParam: Decodable {
     private enum CodingKeys: String, CodingKey {
         case message
     }
+
     private struct DataJSON: Decodable {
         /// Hex
         let data: String
