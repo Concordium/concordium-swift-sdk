@@ -812,3 +812,16 @@ extension ContractClient {
         return ContractUpdateProposal(amount: amount, address: address, receiveName: request.method, parameter: request.parameter, client: client, energy: res.usedEnergy)
     }
 }
+
+/// Represents generic contracts, exposing the default interface of ``ContractClient``
+public class GenericContract: ContractClient {
+    public var name: ContractName
+    public var address: ContractAddress
+    public var client: any NodeClient
+
+    public required init(client: any NodeClient, name: ContractName, address: ContractAddress) {
+        self.client = client
+        self.name = name
+        self.address = address
+    }
+}
