@@ -50,8 +50,8 @@ public struct Cursor {
     }
 
     /// Read a number of bytes from the inner data, where the number of bytes to read is declared in the data with an ``UnsignedInteger`` prefix
-    public mutating func read<UInt: UnsignedInteger>(prefixLength _: UInt.Type) -> Data? {
-        guard let len = parseUInt(UInt.self) else { return nil }
+    public mutating func read<UInt: UnsignedInteger>(prefixLength _: UInt.Type, endianness: Endianness = .big) -> Data? {
+        guard let len = parseUInt(UInt.self, endianness: endianness) else { return nil }
         return read(num: len)
     }
 
@@ -61,7 +61,7 @@ public struct Cursor {
     }
 
     /// Read a string (currently only as UTF8) prefixed with the associated length.
-    public mutating func readString<UInt: UnsignedInteger>(prefixLength _: UInt.Type) -> String? {
+    public mutating func readString<UInt: UnsignedInteger>(prefixLength _: UInt.Type, prefixEndianness: Endianness = .big) -> String? {
         guard let bytes = read(prefixLength: UInt.self) else { return nil }
         return String(decoding: bytes, as: UTF8.self)
     }
@@ -82,8 +82,8 @@ public struct Cursor {
     }
 
     /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
-    public mutating func deserialize<T: Deserialize, UInt: UnsignedInteger>(listOf _: T.Type, prefixLength _: UInt.Type) -> [T]? {
-        guard let length = parseUInt(UInt.self) else { return nil }
+    public mutating func deserialize<T: Deserialize, UInt: UnsignedInteger>(listOf _: T.Type, prefixLength _: UInt.Type, prefixEndianness: Endianness = .big) -> [T]? {
+        guard let length = parseUInt(UInt.self, endianness: prefixEndianness) else { return nil }
 
         var list: [T] = []
         for _ in 0 ..< Int(length) {
@@ -104,8 +104,8 @@ public struct Cursor {
     }
 
     /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
-    public mutating func deserialize<K: Deserialize, V: Deserialize, UInt: UnsignedInteger>(mapOf _: V.Type, keys _: K.Type, prefixLength _: UInt.Type) -> [K: V]? {
-        guard let length = parseUInt(UInt.self) else { return nil }
+    public mutating func deserialize<K: Deserialize, V: Deserialize, UInt: UnsignedInteger>(mapOf _: V.Type, keys _: K.Type, prefixLength _: UInt.Type, prefixEndianness: Endianness = .big) -> [K: V]? {
+        guard let length = parseUInt(UInt.self, endianness: prefixEndianness) else { return nil }
 
         var map: [K: V] = [:]
         for _ in 0 ..< Int(length) {
@@ -311,17 +311,17 @@ public extension Array where Element: Deserialize {
     /// - Parameters:
     ///   - data: The data to deserialize
     ///   - _: the integer size used to describe the number of elements serialized.
-    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: inout Cursor, prefixLength _: P.Type) -> [Element]? {
-        data.deserialize(listOf: Element.self, prefixLength: P.self)
+    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: inout Cursor, prefixLength _: P.Type, prefixEndianness: Endianness = .big) -> [Element]? {
+        data.deserialize(listOf: Element.self, prefixLength: P.self, prefixEndianness: prefixEndianness)
     }
 
     /// Deserialize data into a list of ``Element``s
     /// - Parameters:
     ///   - data: The data to deserialize
     ///   - _: the integer size used to describe the number of elements serialized.
-    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: Data, prefixLength _: P.Type) throws -> [Element] {
+    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: Data, prefixLength _: P.Type, prefixEndianness: Endianness = .big) throws -> [Element] {
         var parser = Cursor(data: data)
-        guard let result = Self.deserialize(&parser, prefixLength: P.self), parser.empty else { throw DeserializeError(Self.self, data: data) }
+        guard let result = Self.deserialize(&parser, prefixLength: P.self, prefixEndianness: prefixEndianness), parser.empty else { throw DeserializeError(Self.self, data: data) }
         return result
     }
 }
@@ -380,23 +380,23 @@ public extension Dictionary where Key: Deserialize, Value: Deserialize {
     /// - Parameters:
     ///   - data: The data to deserialize
     ///   - _: the integer size used to describe the number of pairs serialized.
-    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: inout Cursor, prefixLength _: P.Type) -> [Key: Value]? {
-        data.deserialize(mapOf: Value.self, keys: Key.self, prefixLength: P.self)
+    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: inout Cursor, prefixLength _: P.Type, prefixEndianness: Endianness = .big) -> [Key: Value]? {
+        data.deserialize(mapOf: Value.self, keys: Key.self, prefixLength: P.self, prefixEndianness: prefixEndianness)
     }
 
     /// Deserialize data into a ``[Key:Value]``
     /// - Parameters:
     ///   - data: The data to deserialize
     ///   - _: the integer size used to describe the number of elements serialized.
-    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: Data, prefixLength _: P.Type) throws -> [Key: Value] {
+    static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: Data, prefixLength _: P.Type, prefixEndianness: Endianness = .big) throws -> [Key: Value] {
         var parser = Cursor(data: data)
-        guard let result = Self.deserialize(&parser, prefixLength: P.self), parser.empty else { throw DeserializeError(Self.self, data: data) }
+        guard let result = Self.deserialize(&parser, prefixLength: P.self, prefixEndianness: prefixEndianness), parser.empty else { throw DeserializeError(Self.self, data: data) }
         return result
     }
 }
 
 /// List that serializes prefixed with length of the list.
-struct List<E, P: UnsignedInteger & FixedWidthInteger> {
+struct PrefixListLE<E, P: UnsignedInteger & FixedWidthInteger> {
     private let prefixLength = P.self
     let elements: [E]
 
@@ -405,15 +405,15 @@ struct List<E, P: UnsignedInteger & FixedWidthInteger> {
     }
 }
 
-extension List: Serialize where E: Serialize {
+extension PrefixListLE: Serialize where E: Serialize {
     func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         elements.serializeInto(buffer: &buffer, prefixLength: prefixLength.self)
     }
 }
 
-extension List: Deserialize where E: Deserialize {
-    static func deserialize(_ data: inout Cursor) -> List<E, P>? {
-        guard let elements = [E].deserialize(&data, prefixLength: P.self) else { return nil }
+extension PrefixListLE: Deserialize where E: Deserialize {
+    static func deserialize(_ data: inout Cursor) -> PrefixListLE<E, P>? {
+        guard let elements = [E].deserialize(&data, prefixLength: P.self, prefixEndianness: .little) else { return nil }
         return .init(elements)
     }
 }
