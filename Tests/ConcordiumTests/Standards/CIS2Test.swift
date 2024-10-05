@@ -3,6 +3,7 @@ import Foundation
 import XCTest
 
 private let account = try! AccountAddress(Data([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]))
+private let receiver = try! AccountAddress(Data([3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]))
 
 final class CIS2Test: XCTestCase {
     func testSerializeBalanceOfParam() throws {
@@ -22,10 +23,10 @@ final class CIS2Test: XCTestCase {
 
     func testSerializeTransferParam() throws {
         let value = CIS2.TransferParam([
-            CIS2.TransferPayload(tokenId: CIS2.TokenID(Data([12]))!, amount: CIS2.TokenAmount(12345)!, sender: Address.account(account), receiver: CIS2.Receiver.account(account), data: nil),
+            CIS2.TransferPayload(tokenId: CIS2.TokenID(Data([12]))!, amount: CIS2.TokenAmount(12345)!, sender: Address.account(account), receiver: CIS2.Receiver.account(receiver), data: nil),
             CIS2.TransferPayload(tokenId: CIS2.TokenID(Data([0]))!, amount: CIS2.TokenAmount(12345)!, sender: Address.contract(ContractAddress(index: 1, subindex: 2)), receiver: CIS2.Receiver.contract(ContractAddress(index: 12, subindex: 0), hookName: ReceiveName(unchecked: "test.receive")), data: Data([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])),
         ]).contractSerialize()
-        let expected = try Data(hex: "0200010cb96000020202020202020202020202020202020202020202020202020202020202020200020202020202020202020202020202020202020202020202020202020202020200000100b9600101000000000000000200000000000000010c0000000000000000000000000000000c00746573742e726563656976650a000102030405060708090a")
+        let expected = try Data(hex: "0200010cb96000020202020202020202020202020202020202020202020202020202020202020200030303030303030303030303030303030303030303030303030303030303030300000100b9600101000000000000000200000000000000010c0000000000000000000000000000000c00746573742e726563656976650a000102030405060708090a")
         XCTAssertEqual(value, expected)
     }
 

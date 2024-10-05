@@ -26,6 +26,11 @@ public enum CIS2 {
             guard ULEB128.encode(amount).count <= TOKEN_AMOUNT_MAX_LENGTH else { return nil }
             self.amount = amount
         }
+
+        public init?(_ amount: any UnsignedInteger) {
+            guard let amount = Self(BigUInt(amount)) else { return nil }
+            self = amount
+        }
     }
 
     /// A token ID for a CIS2 contract token
@@ -251,18 +256,20 @@ public extension CIS2.Client {
 
     /// Construct a ``ContractUpdateProposal`` for a single CIS2 transfers
     /// - Parameter transfers: the transfer payloads
+    /// - Parameter sender: the sending account
     /// - Throws: if the node client fails to perform the entrypoint invocation
-    func transfer(_ transfer: CIS2.TransferPayload) async throws -> ContractUpdateProposal {
-        try await self.transfer(transfers: [transfer])
+    func transfer(_ transfer: CIS2.TransferPayload, sender: AccountAddress) async throws -> ContractUpdateProposal {
+        try await self.transfer(transfers: [transfer], sender: sender)
     }
 
     /// Construct a ``ContractUpdateProposal`` for a list of CIS2 transfers
     /// - Parameter transfers: the list of transfer payloads
+    /// - Parameter sender: the sending account
     /// - Throws: if the node client fails to perform the entrypoint invocation
-    func transfer(transfers: [CIS2.TransferPayload]) async throws -> ContractUpdateProposal {
+    func transfer(transfers: [CIS2.TransferPayload], sender: AccountAddress) async throws -> ContractUpdateProposal {
         let entrypoint = EntrypointName(unchecked: "transfer")
         let param = try Parameter(serializable: CIS2.TransferParam(transfers))
-        return try await proposal(entrypoint: entrypoint, param: param)
+        return try await proposal(entrypoint: entrypoint, param: param, sender: sender)
     }
 }
 

@@ -720,6 +720,8 @@ extension ReceiveName: CustomStringConvertible {
 
 /// Represent a contract update not yet sent to a node.
 public struct ContractUpdateProposal {
+    /// The transacton sender
+    public let sender: AccountAddress
     /// The CCD amount to supply to the update (if payable, otherwise 0)
     public let amount: CCD
     /// the contract address of the update
@@ -736,7 +738,7 @@ public struct ContractUpdateProposal {
 
 public extension ContractUpdateProposal {
     /// Add extra energy to the transaction
-    mutating func addEnergy(_ energy: Energy) {
+    mutating func add(energy: Energy) {
         self.energy += energy
     }
 
@@ -747,7 +749,7 @@ public extension ContractUpdateProposal {
     ///   - expiry: An optional expiry. Defaults to 5 minutes in the future.
     /// - Throws: If the client fails to submit the transaction
     /// - Returns: A submitted transaction
-    func send(sender: AccountAddress, signer: any Signer, expiry: Date = Date(timeIntervalSinceNow: 5 * 60)) async throws -> SubmittedTransaction {
+    func send(signer: any Signer, expiry: Date = Date(timeIntervalSinceNow: 5 * 60)) async throws -> SubmittedTransaction {
         let nonce = try await client.nextAccountSequenceNumber(address: sender)
         let transaction = AccountTransaction.updateContract(sender: sender, amount: amount, contractAddress: address, receiveName: receiveName, param: parameter, maxEnergy: energy)
         return try await client.send(transaction: signer.sign(transaction: transaction, sequenceNumber: nonce.sequenceNumber, expiry: UInt64(expiry.timeIntervalSince1970)))
@@ -817,11 +819,13 @@ public extension ContractClient {
     ///   - amount: An optional ``CCD`` amount to add to the query, if it is payable. Defaults to 0 CCD.
     /// - Throws: If the query cannot be serialized, if node client request fails.
     /// - Returns: A corresponding ``ContractUpdateProposal`` which can be signed and submitted.
-    func proposal(entrypoint: EntrypointName, param: Parameter, amount: CCD = CCD(microCCD: 0)) async throws -> ContractUpdateProposal {
+    func proposal(entrypoint: EntrypointName, param: Parameter, amount: CCD = CCD(microCCD: 0), sender: AccountAddress) async throws -> ContractUpdateProposal {
         var request = try ContractInvokeRequest(contract: address, method: ReceiveName(contractName: name, entrypoint: entrypoint))
         request.parameter = param
+        request.invoker = Address.account(sender)
+        request.amount = amount
         let res = try await client.invokeInstance(request: request, block: .lastFinal).success()
-        return ContractUpdateProposal(amount: amount, address: address, receiveName: request.method, parameter: request.parameter, client: client, energy: res.usedEnergy)
+        return ContractUpdateProposal(sender: sender, amount: amount, address: address, receiveName: request.method, parameter: request.parameter, client: client, energy: res.usedEnergy)
     }
 }
 

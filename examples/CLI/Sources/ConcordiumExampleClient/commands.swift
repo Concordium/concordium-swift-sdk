@@ -287,7 +287,7 @@ struct Root: AsyncParsableCommand {
         var index: UInt64
 
         @Option()
-        var subindex: UInt64
+        var subindex: UInt64 = 0
 
         @Option()
         var entrypoint: ReceiveName
@@ -446,7 +446,10 @@ struct Root: AsyncParsableCommand {
         var index: UInt64
 
         @Option()
-        var subindex: UInt64?
+        var subindex: UInt64 = 0
+
+        @Option()
+        var tokenId: String = ""
 
         struct BalanceOf: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
@@ -462,13 +465,10 @@ struct Root: AsyncParsableCommand {
             @Option()
             var account: String
 
-            @Option()
-            var tokenId: String?
-
             func run() async throws {
                 let res = try await withGRPCClient(rootCmd.opts) {
-                    let client = try await CIS2.Contract(client: $0, address: ContractAddress(index: cis2Cmd.index, subindex: cis2Cmd.subindex ?? 0))!
-                    return try await client.balanceOf(CIS2.BalanceOfQuery(tokenId: CIS2.TokenID(Data(hex: tokenId ?? ""))!, address: Address.account(AccountAddress(base58Check: account))))
+                    let client = try await CIS2.Contract(client: $0, address: ContractAddress(index: cis2Cmd.index, subindex: cis2Cmd.subindex))!
+                    return try await client.balanceOf(CIS2.BalanceOfQuery(tokenId: CIS2.TokenID(Data(hex: cis2Cmd.tokenId))!, address: Address.account(AccountAddress(base58Check: account))))
                 }
                 print(res)
             }
@@ -485,13 +485,10 @@ struct Root: AsyncParsableCommand {
             @OptionGroup
             var cis2Cmd: Cis2
 
-            @Option()
-            var tokenId: String?
-
             func run() async throws {
                 let res = try await withGRPCClient(rootCmd.opts) {
-                    let client = try await CIS2.Contract(client: $0, address: ContractAddress(index: cis2Cmd.index, subindex: cis2Cmd.subindex ?? 0))!
-                    let metadata = try await client.tokenMetadata(CIS2.TokenID(Data(hex: tokenId ?? ""))!)
+                    let client = try await CIS2.Contract(client: $0, address: ContractAddress(index: cis2Cmd.index, subindex: cis2Cmd.subindex))!
+                    let metadata = try await client.tokenMetadata(CIS2.TokenID(Data(hex: cis2Cmd.tokenId))!)
                     return try await (metadata, metadata.get())
                 }
                 print(res)
@@ -502,20 +499,98 @@ struct Root: AsyncParsableCommand {
     struct Wallet: AsyncParsableCommand {
         static var configuration = CommandConfiguration(
             abstract: "Subcommands related to wallet activities.",
-            subcommands: [Transfer.self, Identity.self]
+            subcommands: [Transfer.self, Identity.self, TransferToken.self]
         )
 
         @Option(help: "Seed phrase.")
         var seedPhrase: String
 
-        @Option(help: "Network: 'Mainnet' or 'Testnet' (default).")
-        var network: NetworkOption = .init(argument: "Testnet")!
+        @Option(help: "Network: 'mainnet' or 'testnet' (default).")
+        var network: NetworkOption = .init(argument: "testnet")!
 
         @Option(help: "Index of IP that issued identity.")
         var identityProviderID: IdentityProviderID
 
         @Option(help: "Index of identity issued by IP.")
         var identityIndex: IdentityIndex
+
+        struct TransferToken: AsyncParsableCommand {
+            static var configuration = CommandConfiguration(
+                abstract: "Transfer CIS2 to another account."
+            )
+
+            @OptionGroup
+            var rootCmd: Root
+
+            @OptionGroup
+            var walletCmd: Wallet
+
+            @Option(help: "Index of credential from which the sender account is derived.")
+            var credentialCounter: CredentialCounter
+
+            @Option(help: "Address of receiving account.")
+            var receiver: AccountAddress
+
+            @Option(help: "Amount of tokens to send.")
+            var amount: UInt64
+
+            @Option()
+            var index: UInt64
+
+            @Option()
+            var subindex: UInt64 = 0
+
+            @Option()
+            var tokenId: String = ""
+
+            func run() async throws {
+                let seedHex = try Mnemonic.deterministicSeedString(from: walletCmd.seedPhrase)
+                print("Resolved seed hex '\(seedHex)'.")
+
+                print("Fetching crypto parameters (for commitment key).")
+
+                try await withGRPCClient(rootCmd.opts) { client in
+                    let cryptoParams = try await client.cryptographicParameters(block: .lastFinal)
+                    print("Deriving account address and keys.")
+                    let account = try SeedBasedAccountDerivation(
+                        seed: WalletSeed(seedHex: seedHex, network: walletCmd.network.network),
+                        cryptoParams: cryptoParams
+                    ).deriveAccount(
+                        credentials: [
+                            .init(
+                                identity: .init(providerID: walletCmd.identityProviderID, index: walletCmd.identityIndex),
+                                counter: credentialCounter
+                            ),
+                        ]
+                    )
+                    print("Resolved address \(account.address.base58Check) from credential \(credentialCounter) of identity \(walletCmd.identityProviderID):\(walletCmd.identityIndex).")
+
+                    let cis2 = try await CIS2.Contract(client: client, address: ContractAddress(index: index, subindex: subindex))!
+
+                    let balance = try await cis2.balanceOf(CIS2.BalanceOfQuery(tokenId: CIS2.TokenID(Data([]))!, address: account.address))
+                    guard balance.amount >= amount else {
+                        print("Insufficient account balance: \(balance)")
+                        return
+                    }
+
+                    let transfer = try CIS2.TransferPayload(
+                        tokenId: CIS2.TokenID(Data(hex: tokenId))!,
+                        amount: CIS2.TokenAmount(amount)!,
+                        sender: account.address,
+                        receiver: receiver
+                    )
+
+                    // Construct and send transaction.
+                    var proposal = try await cis2.transfer(transfer, sender: account.address)
+                    proposal.add(energy: 50) // Add some energy to ensure
+                    let tx = try await proposal.send(signer: account.keys)
+                    print("Transaction with hash '\(tx.hash)' successfully submitted. Waiting for finalization.")
+
+                    let (blockHash, summary) = try await tx.waitUntilFinalized(timeoutSeconds: 10)
+                    print("Transaction finalized in block \(blockHash): \(summary)")
+                }
+            }
+        }
 
         struct Transfer: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
