@@ -439,14 +439,14 @@ struct Root: AsyncParsableCommand {
     struct Cis2: AsyncParsableCommand {
         static var configuration = CommandConfiguration(
             abstract: "Subcommands related to a particular CIS2 contract.",
-            subcommands: [BalanceOf.self]
+            subcommands: [BalanceOf.self, TokenMetadata.self]
         )
 
         @Option()
         var index: UInt64
 
         @Option()
-        var subindex: UInt64
+        var subindex: UInt64?
 
         struct BalanceOf: AsyncParsableCommand {
             static var configuration = CommandConfiguration(
@@ -467,8 +467,32 @@ struct Root: AsyncParsableCommand {
 
             func run() async throws {
                 let res = try await withGRPCClient(rootCmd.opts) {
-                    let client = try await CIS2.Contract(client: $0, address: ContractAddress(index: cis2Cmd.index, subindex: cis2Cmd.subindex))!
+                    let client = try await CIS2.Contract(client: $0, address: ContractAddress(index: cis2Cmd.index, subindex: cis2Cmd.subindex ?? 0))!
                     return try await client.balanceOf(CIS2.BalanceOfQuery(tokenId: CIS2.TokenID(Data(hex: tokenId ?? ""))!, address: Address.account(AccountAddress(base58Check: account))))
+                }
+                print(res)
+            }
+        }
+
+        struct TokenMetadata: AsyncParsableCommand {
+            static var configuration = CommandConfiguration(
+                abstract: "Display the metadata for a specific token ID in the contract"
+            )
+
+            @OptionGroup
+            var rootCmd: Root
+
+            @OptionGroup
+            var cis2Cmd: Cis2
+
+            @Option()
+            var tokenId: String?
+
+            func run() async throws {
+                let res = try await withGRPCClient(rootCmd.opts) {
+                    let client = try await CIS2.Contract(client: $0, address: ContractAddress(index: cis2Cmd.index, subindex: cis2Cmd.subindex ?? 0))!
+                    let metadata = try await client.tokenMetadata(CIS2.TokenID(Data(hex: tokenId ?? ""))!)
+                    return try await (metadata, metadata.get())
                 }
                 print(res)
             }

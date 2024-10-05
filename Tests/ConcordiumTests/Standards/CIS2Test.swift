@@ -39,7 +39,7 @@ final class CIS2Test: XCTestCase {
 
     func testDeserializeTokenMetadataResponse() throws {
         let value = try CIS2.TokenMetadataResponse.contractDeserialize(Data(hex: "0200120068747470733a2f2f676f6f676c652e636f6d00160068747470733a2f2f636f6e636f726469756d2e636f6d013737373737373737373737373737373737373737373737373737373737373737")).elements
-        let expected = try [CIS2.TokenMetadata(url: URL(string: "https://google.com")!), CIS2.TokenMetadata(url: URL(string: "https://concordium.com")!, checksum: Data(hex: "3737373737373737373737373737373737373737373737373737373737373737"))]
+        let expected = try [CIS2.TokenMetadataUrl(url: URL(string: "https://google.com")!), CIS2.TokenMetadataUrl(url: URL(string: "https://concordium.com")!, checksum: Data(hex: "3737373737373737373737373737373737373737373737373737373737373737"))]
         XCTAssertEqual(value, expected)
     }
 }

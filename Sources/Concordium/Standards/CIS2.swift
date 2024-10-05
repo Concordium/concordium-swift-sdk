@@ -54,15 +54,61 @@ public enum CIS2 {
     }
 
     /// Represents a token metadata URL for a CIS2 token
-    public struct TokenMetadata: Equatable {
+    public struct TokenMetadataUrl: Equatable {
         /// The url
         public let url: URL
-        /// An optional checksum for the data at the `url`
+        /// An optional SHA256 checksum for the data at the `url`
         public let checksum: Data?
 
         public init(url: URL, checksum: Data? = nil) {
             self.url = url
             self.checksum = checksum
+        }
+    }
+
+    /// The token metadata is stored off-chain and is expected be a JSON (RFC 8259) file.
+    /// All of the fields in the JSON file are optional, and this specification reserves a number of field names, shown in the table below.
+    public struct TokenMetadata: Codable {
+        /// The name to display for the token type.
+        public var name: String?
+        /// Short text to display for the token type.
+        public var symbol: String?
+        /// Describes whether a token should be treated as unique.
+        /// If unique, a wallet should treat the balance as a boolean.
+        /// If this field is not present, the token should not be treated as unique.
+        public var unique: Bool?
+        /// The number of decimals, when displaying an amount of this token type in a user interface.
+        /// If the decimal is set to d then a token amount a should be displayed as `a * 10^(-d)`
+        public var decimals: UInt8
+        /// A description for this token type.
+        public var description: String?
+        /// An image URL to a small image for displaying the asset.
+        public var thumbnail: TokenMetadata.Url?
+        /// An image URL to a large image for displaying the asset.
+        public var display: TokenMetadata.Url?
+        /// A URL to the token asset.
+        public var artifact: TokenMetadata.Url?
+        /// Collection of assets.
+        public var assets: [TokenMetadata]?
+        /// Assign a number of attributes to the token type. Attributes can be used to include extra information about the token type.
+        public var attributes: [Attribute]?
+        /// URLs to JSON files with localized token metadata.
+        public var localization: [Locale: Url]?
+
+        public struct Url: Codable {
+            /// A URL.
+            public var url: URL
+            /// A SHA256 hash of the `url` content encoded as a hex string.
+            public var hash: Data?
+        }
+
+        public struct Attribute: Codable {
+            /// Type for the value field of the attribute.
+            public var type: String
+            /// Name of the attribute.
+            public var name: String
+            /// Value of the attrbute.
+            public var value: String
         }
     }
 
@@ -114,7 +160,7 @@ public enum CIS2 {
     typealias TokenMetadataParam = PrefixListLE<TokenID, UInt16>
 
     typealias BalanceOfResponse = PrefixListLE<TokenAmount, UInt16>
-    typealias TokenMetadataResponse = PrefixListLE<TokenMetadata, UInt16>
+    typealias TokenMetadataResponse = PrefixListLE<TokenMetadataUrl, UInt16>
 
     /// Can be used by contracts conforming to the CIS2 standard
     public protocol Client: ContractClient, CIS0.Client {}
@@ -123,8 +169,19 @@ public enum CIS2 {
     public class Contract: GenericContract, CIS0.Client, Client {}
 }
 
-public extension CIS2.TokenMetadata {
-    func get() async throws {} // TODO: we should implement this...
+public extension CIS2.TokenMetadataUrl {
+    /// Get, parse, and check (if checksum is specified) the data at the URL.
+    /// - Throws:
+    ///   - if the http request fails
+    ///   - if the data cannot be parsed
+    ///   - if verification of the data fails (checksum)
+    func get() async throws -> CIS2.TokenMetadata {
+        let req = HTTPRequest<CIS2.TokenMetadata>(url: url)
+        if let checksum = checksum {
+            return try await req.send(checkSHA256: checksum)
+        }
+        return try await req.send()
+    }
 }
 
 public extension CIS2.Client {
@@ -166,14 +223,14 @@ public extension CIS2.Client {
     /// Query the contract for ``CIS2.TokenMetadata`` corresponding to the ``CIS2.TokenID``
     /// - Parameter tokenID: the token ID to query for
     /// - Throws: if the query fails
-    func tokenMetadata(_ tokenID: CIS2.TokenID) async throws -> CIS2.TokenMetadata {
+    func tokenMetadata(_ tokenID: CIS2.TokenID) async throws -> CIS2.TokenMetadataUrl {
         try await tokenMetadata(queries: [tokenID])[0]
     }
 
     /// Query the contract for a list of ``CIS2.TokenMetadata`` corresponding to the list of ``CIS2.TokenID``s
     /// - Parameter queries: the list of token IDs
     /// - Throws: if the query fails
-    func tokenMetadata(queries: [CIS2.TokenID]) async throws -> [CIS2.TokenMetadata] {
+    func tokenMetadata(queries: [CIS2.TokenID]) async throws -> [CIS2.TokenMetadataUrl] {
         let entrypoint = EntrypointName(unchecked: "tokenMetadata")
         let param = try Parameter(serializable: CIS2.TokenMetadataParam(queries))
 
@@ -224,17 +281,17 @@ extension CIS2.TokenAmount: ContractDeserialize {
     }
 }
 
-extension CIS2.TokenMetadata: ContractDeserialize {
-    public static func contractDeserialize(_ data: inout Cursor) -> CIS2.TokenMetadata? {
+extension CIS2.TokenMetadataUrl: ContractDeserialize {
+    public static func contractDeserialize(_ data: inout Cursor) -> CIS2.TokenMetadataUrl? {
         guard let url = data.readString(prefix: LengthPrefix.LE(size: UInt16.self)).flatMap({ URL(string: $0) }),
               let hasChecksum = data.parseBool() else { return nil }
 
         if !hasChecksum {
-            return CIS2.TokenMetadata(url: url)
+            return CIS2.TokenMetadataUrl(url: url)
         }
 
         guard let checksum = data.read(num: UInt(32)) else { return nil }
-        return CIS2.TokenMetadata(url: url, checksum: checksum)
+        return CIS2.TokenMetadataUrl(url: url, checksum: checksum)
     }
 }
 
