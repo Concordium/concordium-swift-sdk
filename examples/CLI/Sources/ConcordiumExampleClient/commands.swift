@@ -568,7 +568,7 @@ struct Root: AsyncParsableCommand {
                     let cis2 = try await CIS2.Contract(client: client, address: ContractAddress(index: index, subindex: subindex))!
 
                     let balance = try await cis2.balanceOf(CIS2.BalanceOfQuery(tokenId: CIS2.TokenID(Data([]))!, address: account.address))
-                    guard balance.amount >= amount else {
+                    guard balance.value >= amount else {
                         print("Insufficient account balance: \(balance)")
                         return
                     }

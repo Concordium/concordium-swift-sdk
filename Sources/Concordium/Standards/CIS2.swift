@@ -18,19 +18,22 @@ public enum CIS2 {
     /// Represents a token amount of arbitrary precision
     public struct TokenAmount: Equatable {
         /// The inner amount
-        public let amount: BigUInt
+        public let value: BigUInt
 
         /// Initializes the token amount if the size of the encoding does not exceed ``CIS2.TOKEN_AMOUNT_MAX_LENGTH``
         /// - Parameter amount: the token amount
         public init?(_ amount: BigUInt) {
             guard ULEB128.encode(amount).count <= TOKEN_AMOUNT_MAX_LENGTH else { return nil }
-            self.amount = amount
+            value = amount
         }
 
         public init?(_ amount: any UnsignedInteger) {
             guard let amount = Self(BigUInt(amount)) else { return nil }
             self = amount
         }
+
+        /// Convert to ``Amount`` with the given number of decimals which can be accessed from ``CIS2.TokenMetadata``
+        public func amount(decimals: UInt16) -> Amount { Amount(self.value, decimalCount: decimals) }
     }
 
     /// A token ID for a CIS2 contract token
@@ -104,7 +107,7 @@ public enum CIS2 {
         public var unique: Bool?
         /// The number of decimals, when displaying an amount of this token type in a user interface.
         /// If the decimal is set to d then a token amount a should be displayed as `a * 10^(-d)`
-        public var decimals: UInt8
+        public var decimals: UInt16
         /// A description for this token type.
         public var description: String?
         /// An image URL to a small image for displaying the asset.
@@ -307,7 +310,7 @@ extension CIS2.BalanceOfQuery: ContractSerialize {
 
 extension CIS2.TokenAmount: ContractSerialize {
     public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
-        ULEB128.encode(amount, into: &buffer)
+        ULEB128.encode(value, into: &buffer)
     }
 }
 
