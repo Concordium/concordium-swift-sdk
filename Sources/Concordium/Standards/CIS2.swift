@@ -123,6 +123,11 @@ public enum CIS2 {
             self.tokenId = tokenId
             self.address = address
         }
+
+        /// Convenience for getting the balance for an account
+        public init(tokenId: TokenID, address: AccountAddress) {
+            self = .init(tokenId: tokenId, address: Address.account(address))
+        }
     }
 
     /// Describes the possible receivers of a token transfer
@@ -152,6 +157,11 @@ public enum CIS2 {
             self.sender = sender
             self.receiver = receiver
             self.data = data
+        }
+
+        /// Convenience for describing a transfer between two accounts
+        public init(tokenId: TokenID, amount: TokenAmount, sender: AccountAddress, receiver: AccountAddress, data: Data? = nil) {
+            self = .init(tokenId: tokenId, amount: amount, sender: Address.account(sender), receiver: CIS2.Receiver.account(receiver), data: data)
         }
     }
 
