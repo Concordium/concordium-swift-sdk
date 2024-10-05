@@ -266,7 +266,7 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC, Sc
     }
 
     public static func deserialize(_ data: inout Cursor) -> Parameter? {
-        guard let value = data.read(prefixLength: UInt16.self) else { return nil }
+        guard let value = data.read(prefix: LengthPrefix.BE(size: UInt16.self)) else { return nil }
         return try? self.init(value)
     }
 
@@ -480,11 +480,11 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, Has
     }
 
     @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, prefixLength: UInt16.self)
+        buffer.writeString(value, prefix: LengthPrefix.BE(size: UInt16.self))
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefix: LengthPrefix.BE(size: UInt16.self)) else { return nil }
         return try? Self(parsed)
     }
 
@@ -554,11 +554,11 @@ public struct ContractName: Serialize, Deserialize, Equatable, Hashable {
     }
 
     @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, prefixLength: UInt16.self)
+        buffer.writeString(value, prefix: LengthPrefix.BE(size: UInt16.self))
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefix: LengthPrefix.BE(size: UInt16.self)) else { return nil }
         return try? Self(parsed)
     }
 }
@@ -607,15 +607,15 @@ public struct EntrypointName: Equatable, Hashable {
 
 extension EntrypointName: Serialize, Deserialize, ContractSerialize {
     public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeString(value, prefixLength: UInt16.self, prefixEndianness: .little)
+        buffer.writeString(value, prefix: LengthPrefix.LE(size: UInt16.self))
     }
 
     public func serialize(into buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, prefixLength: UInt16.self)
+        buffer.writeString(value, prefix: LengthPrefix.BE(size: UInt16.self))
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefix: LengthPrefix.BE(size: UInt16.self)) else { return nil }
         return try? Self(parsed)
     }
 }
@@ -687,15 +687,15 @@ public struct ReceiveName: Equatable, FromGRPC, ToGRPC, Hashable {
 
 extension ReceiveName: Serialize, Deserialize, ContractSerialize {
     public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeString(value, prefixLength: UInt16.self, prefixEndianness: .little)
+        buffer.writeString(value, prefix: LengthPrefix.LE(size: UInt16.self))
     }
 
     public func serialize(into buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, prefixLength: UInt16.self)
+        buffer.writeString(value, prefix: LengthPrefix.BE(size: UInt16.self))
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefix: LengthPrefix.BE(size: UInt16.self)) else { return nil }
         return try? Self(parsed)
     }
 }
@@ -865,7 +865,7 @@ public extension Array where Element: ContractSerialize {
     ///   - elements: The serializable elements to write
     ///   - _: the integer size used to describe the number of elements serialized.
     func contractSerialize<P: UnsignedInteger & FixedWidthInteger>(into buffer: inout NIOCore.ByteBuffer, prefixLength _: P.Type) -> Int {
-        buffer.writeSerializable(list: self, prefixLength: P.self, prefixEndianness: .little, with: Element.contractSerialize)
+        buffer.writeSerializable(list: self, prefix: LengthPrefix.LE(size: P.self), with: Element.contractSerialize)
     }
 
     /// Serializes the list with the number of elements prefixed
@@ -918,8 +918,8 @@ public extension Cursor {
     }
 
     /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
-    mutating func contractDeserialize<T: ContractDeserialize, UInt: UnsignedInteger>(listOf _: T.Type, prefixLength _: UInt.Type) -> [T]? {
-        deserialize(listOf: T.self, prefixLength: UInt.self, prefixEndianness: .little, with: T.contractDeserialize)
+    mutating func contractDeserialize<T: ContractDeserialize, P: UnsignedInteger & FixedWidthInteger>(listOf _: T.Type, prefixLength _: P.Type) -> [T]? {
+        deserialize(listOf: T.self, prefix: LengthPrefix.LE(size: P.self), with: T.contractDeserialize)
     }
 
     /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
@@ -928,8 +928,8 @@ public extension Cursor {
     }
 
     /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
-    mutating func contractDeserialize<K: ContractDeserialize, V: ContractDeserialize, UInt: UnsignedInteger>(mapOf _: V.Type, keys _: K.Type, prefixLength _: UInt.Type) -> [K: V]? {
-        deserialize(mapOf: V.self, keys: K.self, prefixLength: UInt.self, prefixEndianness: .little, deserializeKey: K.contractDeserialize, deserializeValue: V.contractDeserialize)
+    mutating func contractDeserialize<K: ContractDeserialize, V: ContractDeserialize, P: UnsignedInteger & FixedWidthInteger>(mapOf _: V.Type, keys _: K.Type, prefixLength _: P.Type) -> [K: V]? {
+        deserialize(mapOf: V.self, keys: K.self, prefix: LengthPrefix.LE(size: P.self), deserializeKey: K.contractDeserialize, deserializeValue: V.contractDeserialize)
     }
 }
 
@@ -951,12 +951,12 @@ extension ByteBuffer {
 
     /// Writes a list of ``ContractSerialize`` type into the buffer, returning the number of bytes written.
     @discardableResult mutating func writeContractSerializable<T: ContractSerialize, P: UnsignedInteger & FixedWidthInteger>(list: [T], prefixLength _: P.Type) -> Int {
-        writeSerializable(list: list, prefixLength: P.self, prefixEndianness: .little, with: T.contractSerialize)
+        writeSerializable(list: list, prefix: LengthPrefix.LE(size: P.self), with: T.contractSerialize)
     }
 
     /// Writes a map of ``ContractSerialize`` type into the buffer, returning the number of bytes written.
     @discardableResult mutating func writeContractSerializable<K: ContractSerialize, V: ContractSerialize, P: UnsignedInteger & FixedWidthInteger>(map: [K: V], prefixLength _: P.Type) -> Int {
-        writeSerializable(map: map, prefixLength: P.self, prefixEndianness: .little, serializeKey: K.contractSerialize, serializeValue: V.contractSerialize)
+        writeSerializable(map: map, prefix: LengthPrefix.LE(size: P.self), serializeKey: K.contractSerialize, serializeValue: V.contractSerialize)
     }
 }
 

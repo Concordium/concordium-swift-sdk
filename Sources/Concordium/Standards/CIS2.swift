@@ -123,6 +123,10 @@ public enum CIS2 {
     public class Contract: GenericContract, CIS0.Client, Client {}
 }
 
+public extension CIS2.TokenMetadata {
+    func get() async throws {} // TODO: we should implement this...
+}
+
 public extension CIS2.Client {
     /// Initialize the contract client if the contract supports CIS-2 (queries support through CIS-0 standard)
     /// - Parameters:
@@ -197,7 +201,7 @@ public extension CIS2.Client {
 
 extension CIS2.TokenID: ContractSerialize {
     public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeData(data, prefixLength: UInt8.self)
+        buffer.writeData(data, prefix: LengthPrefix<UInt8>())
     }
 }
 
@@ -222,7 +226,7 @@ extension CIS2.TokenAmount: ContractDeserialize {
 
 extension CIS2.TokenMetadata: ContractDeserialize {
     public static func contractDeserialize(_ data: inout Cursor) -> CIS2.TokenMetadata? {
-        guard let url = data.readString(prefixLength: UInt16.self, prefixEndianness: .little).flatMap({ URL(string: $0) }),
+        guard let url = data.readString(prefix: LengthPrefix.LE(size: UInt16.self)).flatMap({ URL(string: $0) }),
               let hasChecksum = data.parseBool() else { return nil }
 
         if !hasChecksum {
@@ -251,6 +255,6 @@ extension CIS2.TransferPayload: ContractSerialize {
             + amount.contractSerialize(into: &buffer)
             + sender.contractSerialize(into: &buffer)
             + receiver.contractSerialize(into: &buffer)
-            + buffer.writeData(data ?? Data([]), prefixLength: UInt16.self, prefixEndianness: .little)
+            + buffer.writeData(data ?? Data([]), prefix: LengthPrefix.LE(size: UInt16.self))
     }
 }

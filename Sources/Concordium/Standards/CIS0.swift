@@ -57,7 +57,7 @@ public extension CIS0.Client {
 
 extension CIS0.StandardIdentifier: ContractSerialize {
     public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeString(id, prefixLength: UInt8.self, using: .ascii)
+        buffer.writeString(id, prefix: LengthPrefix<UInt8>(), using: .ascii)
     }
 }
 

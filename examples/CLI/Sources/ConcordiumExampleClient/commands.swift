@@ -124,7 +124,7 @@ struct Root: AsyncParsableCommand {
             LegacyWallet.self,
             IdentityProviders.self,
             AnonymityRevokers.self,
-            Cis2.self
+            Cis2.self,
         ]
     )
 
@@ -468,7 +468,7 @@ struct Root: AsyncParsableCommand {
             func run() async throws {
                 let res = try await withGRPCClient(rootCmd.opts) {
                     let client = try await CIS2.Contract(client: $0, address: ContractAddress(index: cis2Cmd.index, subindex: cis2Cmd.subindex))!
-                    return try await client.balanceOf(CIS2.BalanceOfQuery(tokenId: CIS2.TokenID(try Data(hex: tokenId ?? ""))!, address: Address.account(try AccountAddress(base58Check: account))))
+                    return try await client.balanceOf(CIS2.BalanceOfQuery(tokenId: CIS2.TokenID(Data(hex: tokenId ?? ""))!, address: Address.account(AccountAddress(base58Check: account))))
                 }
                 print(res)
             }

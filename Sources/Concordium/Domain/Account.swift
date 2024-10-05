@@ -291,13 +291,13 @@ extension CredentialPublicKeys: FromGRPC, Serialize, Deserialize {
 
     public func serialize(into buffer: inout ByteBuffer) -> Int {
         var res = 0
-        res += buffer.writeSerializable(map: keys, prefixLength: UInt8.self)
+        res += buffer.writeSerializable(map: keys, prefix: LengthPrefix<UInt8>())
         res += buffer.writeInteger(threshold)
         return res
     }
 
     public static func deserialize(_ data: inout Cursor) -> CredentialPublicKeys? {
-        guard let keys = data.deserialize(mapOf: VerifyKey.self, keys: UInt8.self, prefixLength: UInt8.self),
+        guard let keys = data.deserialize(mapOf: VerifyKey.self, keys: UInt8.self, prefix: LengthPrefix<UInt8>()),
               let threshold = data.parseUInt(UInt8.self) else { return nil }
         return CredentialPublicKeys(keys: keys, threshold: threshold)
     }

@@ -271,12 +271,12 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var source: Data
 
     @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
-        buffer.writeSerializable(version) + buffer.writeData(source, prefixLength: UInt32.self)
+        buffer.writeSerializable(version) + buffer.writeData(source, prefix: LengthPrefix.BE(size: UInt32.self))
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let version = WasmVersion.deserialize(&data),
-              let source = data.read(prefixLength: UInt32.self) else { return nil }
+              let source = data.read(prefix: LengthPrefix.BE(size: UInt32.self)) else { return nil }
 
         return Self(version: version, source: Data(source))
     }
@@ -338,11 +338,11 @@ public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     }
 
     public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeData(value, prefixLength: UInt16.self)
+        buffer.writeData(value, prefix: LengthPrefix.BE(size: UInt16.self))
     }
 
     public static func deserialize(_ data: inout Cursor) -> Memo? {
-        data.read(prefixLength: UInt16.self).map { Self(Data($0)) }
+        data.read(prefix: LengthPrefix.BE(size: UInt16.self)).map { Self(Data($0)) }
     }
 
     static func fromGRPC(_ gRPC: Concordium_V2_Memo) throws -> Memo {
@@ -501,7 +501,7 @@ public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRP
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let value = data.read(prefixLength: UInt16.self) else { return nil }
+        guard let value = data.read(prefix: LengthPrefix.BE(size: UInt16.self)) else { return nil }
         return try? self.init(value)
     }
 

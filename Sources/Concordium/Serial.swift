@@ -21,6 +21,48 @@ public extension Serialize {
     }
 }
 
+/// A length prefix used when serializing lists/maps
+public struct LengthPrefix<U: FixedWidthInteger & UnsignedInteger> {
+    /// The endianness used to serialize the prefix
+    public let endianness: Endianness
+
+    private init(size _: U.Type, endianness: Endianness) {
+        self.endianness = endianness
+    }
+
+    /// Construct a prefix config with BE serialization
+    public static func BE(size _: U.Type) -> Self { .init(size: U.self, endianness: .big) }
+    /// Construct a prefix config with LE serialization
+    public static func LE(size _: U.Type) -> Self { .init(size: U.self, endianness: .little) }
+
+    /// Get prefix correspoding to integer value
+    public func get(_ num: U) -> Data {
+        var buf = ByteBuffer()
+        buf.writeInteger(num, endianness: endianness)
+        return Data(buffer: buf)
+    }
+
+    /// Get prefix for ``Data``
+    public func get(for data: Data) -> Data { get(U(data.count)) }
+    /// Get prefix for a ``String`` encoding
+    public func get(for string: String, using encoding: String.Encoding = .utf8) -> Data { get(U(string.lengthOfBytes(using: encoding))) }
+    /// Get prefix for a list of arbitrary elements
+    public func get(for list: [Any]) -> Data { get(U(list.count)) }
+    /// Get prefix for a map of arbitrary elements
+    public func get(for map: [AnyHashable: Any]) -> Data { get(U(map.count)) }
+
+    /// Read the prefix from the cursor
+    public func read(in cursor: inout Cursor) -> U? {
+        cursor.parseUInt(U.self, endianness: endianness)
+    }
+}
+
+public extension LengthPrefix where U == UInt8 {
+    init() {
+        endianness = .big
+    }
+}
+
 /// A wrapper around ``Data`` useful for deserializing the inner data in a sequence of steps.
 public struct Cursor {
     private var data: Data
@@ -55,8 +97,8 @@ public struct Cursor {
     }
 
     /// Read a number of bytes from the inner data, where the number of bytes to read is declared in the data with an ``UnsignedInteger`` prefix
-    public mutating func read<UInt: UnsignedInteger>(prefixLength _: UInt.Type, endianness: Endianness = .big) -> Data? {
-        guard let len = parseUInt(UInt.self, endianness: endianness) else { return nil }
+    public mutating func read<UInt: UnsignedInteger>(prefix: LengthPrefix<UInt>) -> Data? {
+        guard let len = prefix.read(in: &self) else { return nil }
         return read(num: len)
     }
 
@@ -66,8 +108,8 @@ public struct Cursor {
     }
 
     /// Read a string (currently only as UTF8) prefixed with the associated length.
-    public mutating func readString<UInt: UnsignedInteger>(prefixLength _: UInt.Type, prefixEndianness: Endianness = .big) -> String? {
-        guard let bytes = read(prefixLength: UInt.self, endianness: prefixEndianness) else { return nil }
+    public mutating func readString<UInt: UnsignedInteger>(prefix: LengthPrefix<UInt>) -> String? {
+        guard let bytes = read(prefix: prefix) else { return nil }
         return String(decoding: bytes, as: UTF8.self)
     }
 
@@ -87,11 +129,11 @@ public struct Cursor {
     }
 
     /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
-    public mutating func deserialize<T, UInt: UnsignedInteger>(listOf _: T.Type, prefixLength _: UInt.Type, prefixEndianness: Endianness = .big, with deserializer: (_: inout Cursor) -> T?) -> [T]? {
-        guard let length = parseUInt(UInt.self, endianness: prefixEndianness) else { return nil }
+    public mutating func deserialize<T, UInt: UnsignedInteger>(listOf _: T.Type, prefix: LengthPrefix<UInt>, with deserializer: (_: inout Cursor) -> T?) -> [T]? {
+        guard let len = prefix.read(in: &self) else { return nil }
 
         var list: [T] = []
-        for _ in 0 ..< Int(length) {
+        for _ in 0 ..< Int(len) {
             guard let s = deserializer(&self) else { return nil }
             list.append(s)
         }
@@ -109,11 +151,11 @@ public struct Cursor {
     }
 
     /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
-    public mutating func deserialize<K, V, UInt: UnsignedInteger>(mapOf _: V.Type, keys _: K.Type, prefixLength _: UInt.Type, prefixEndianness: Endianness = .big, deserializeKey: (_: inout Cursor) -> K?, deserializeValue: (_: inout Cursor) -> V?) -> [K: V]? {
-        guard let length = parseUInt(UInt.self, endianness: prefixEndianness) else { return nil }
+    public mutating func deserialize<K, V, UInt: UnsignedInteger>(mapOf _: V.Type, keys _: K.Type, prefix: LengthPrefix<UInt>, deserializeKey: (_: inout Cursor) -> K?, deserializeValue: (_: inout Cursor) -> V?) -> [K: V]? {
+        guard let len = prefix.read(in: &self) else { return nil }
 
         var map: [K: V] = [:]
-        for _ in 0 ..< Int(length) {
+        for _ in 0 ..< Int(len) {
             guard let k = deserializeKey(&self), let v = deserializeValue(&self) else { return nil }
             map[k] = v
         }
@@ -141,8 +183,8 @@ public extension Cursor {
     }
 
     /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
-    mutating func deserialize<T: Deserialize, UInt: UnsignedInteger>(listOf _: T.Type, prefixLength _: UInt.Type, prefixEndianness: Endianness = .big) -> [T]? {
-        deserialize(listOf: T.self, prefixLength: UInt.self, prefixEndianness: prefixEndianness, with: T.deserialize)
+    mutating func deserialize<T: Deserialize, UInt: UnsignedInteger>(listOf _: T.Type, prefix: LengthPrefix<UInt>) -> [T]? {
+        deserialize(listOf: T.self, prefix: prefix, with: T.deserialize)
     }
 
     /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
@@ -151,8 +193,8 @@ public extension Cursor {
     }
 
     /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
-    mutating func deserialize<K: Deserialize, V: Deserialize, UInt: UnsignedInteger>(mapOf _: V.Type, keys _: K.Type, prefixLength _: UInt.Type, prefixEndianness: Endianness = .big) -> [K: V]? {
-        deserialize(mapOf: V.self, keys: K.self, prefixLength: UInt.self, prefixEndianness: prefixEndianness, deserializeKey: K.deserialize, deserializeValue: V.deserialize)
+    mutating func deserialize<K: Deserialize, V: Deserialize, UInt: UnsignedInteger>(mapOf _: V.Type, keys _: K.Type, prefix: LengthPrefix<UInt>) -> [K: V]? {
+        deserialize(mapOf: V.self, keys: K.self, prefix: prefix, deserializeKey: K.deserialize, deserializeValue: V.deserialize)
     }
 }
 
@@ -252,33 +294,33 @@ extension ByteBuffer {
     }
 
     /// Writes a list of some type into the buffer, returning the number of bytes written.
-    @discardableResult mutating func writeSerializable<T, P: UnsignedInteger & FixedWidthInteger>(list: [T], prefixLength _: P.Type, prefixEndianness: Endianness = .big, with serializer: (_: T, _: inout ByteBuffer) -> Int) -> Int {
+    @discardableResult mutating func writeSerializable<T, P: UnsignedInteger & FixedWidthInteger>(list: [T], prefix: LengthPrefix<P>, with serializer: (_: T, _: inout ByteBuffer) -> Int) -> Int {
         var res = 0
-        res += writeInteger(P(list.count), endianness: prefixEndianness)
+        res += writeData(prefix.get(for: list))
         res += writeSerializable(list: list, with: serializer)
         return res
     }
 
     /// Writes a map of some type into the buffer, returning the number of bytes written.
-    @discardableResult mutating func writeSerializable<K, V, P: UnsignedInteger & FixedWidthInteger>(map: [K: V], prefixLength _: P.Type, prefixEndianness: Endianness = .big, serializeKey: (_: K, _: inout ByteBuffer) -> Int, serializeValue: (_: V, _: inout ByteBuffer) -> Int) -> Int {
+    @discardableResult mutating func writeSerializable<K, V, P: UnsignedInteger & FixedWidthInteger>(map: [K: V], prefix: LengthPrefix<P>, serializeKey: (_: K, _: inout ByteBuffer) -> Int, serializeValue: (_: V, _: inout ByteBuffer) -> Int) -> Int {
         var res = 0
-        res += writeInteger(P(map.count), endianness: prefixEndianness)
+        res += writeData(prefix.get(for: map))
         res += writeSerializable(map: map, serializeKey: serializeKey, serializeValue: serializeValue)
         return res
     }
 
     /// Writes data into buffer with the length prefixed as the supplied ``FixedWidthInteger`` type
-    @discardableResult mutating func writeData<T: UnsignedInteger & FixedWidthInteger>(_ data: Data, prefixLength _: T.Type, prefixEndianness: Endianness = .big) -> Int {
+    @discardableResult mutating func writeData<P: UnsignedInteger & FixedWidthInteger>(_ data: Data, prefix: LengthPrefix<P>) -> Int {
         var res = 0
-        res += writeInteger(T(data.count), endianness: prefixEndianness)
+        res += writeData(prefix.get(for: data))
         res += writeData(data)
         return res
     }
 
     /// Writes data into buffer with the length prefixed as the supplied ``FixedWidthInteger`` type
-    @discardableResult mutating func writeString<T: UnsignedInteger & FixedWidthInteger>(_ value: String, prefixLength _: T.Type, using encoding: String.Encoding = .utf8, prefixEndianness: Endianness = .big) -> Int {
+    @discardableResult mutating func writeString<P: UnsignedInteger & FixedWidthInteger>(_ value: String, prefix: LengthPrefix<P>, using encoding: String.Encoding = .utf8) -> Int {
         var res = 0
-        res += writeInteger(T(value.lengthOfBytes(using: encoding)), endianness: prefixEndianness)
+        res += writeData(prefix.get(for: value, using: encoding))
         res += writeString(value)
         return res
     }
@@ -306,13 +348,13 @@ extension ByteBuffer {
     }
 
     /// Writes a list of ``Serialize`` type into the buffer, returning the number of bytes written.
-    @discardableResult mutating func writeSerializable<T: Serialize, P: UnsignedInteger & FixedWidthInteger>(list: [T], prefixLength _: P.Type, prefixEndianness: Endianness = .big) -> Int {
-        writeSerializable(list: list, prefixLength: P.self, prefixEndianness: prefixEndianness, with: T.serialize)
+    @discardableResult mutating func writeSerializable<T: Serialize, P: UnsignedInteger & FixedWidthInteger>(list: [T], prefix: LengthPrefix<P>) -> Int {
+        writeSerializable(list: list, prefix: prefix, with: T.serialize)
     }
 
     /// Writes a map of ``Serialize`` type into the buffer, returning the number of bytes written.
-    @discardableResult mutating func writeSerializable<K: Serialize, V: Serialize, P: UnsignedInteger & FixedWidthInteger>(map: [K: V], prefixLength _: P.Type, prefixEndianness: Endianness = .big) -> Int {
-        writeSerializable(map: map, prefixLength: P.self, prefixEndianness: prefixEndianness, serializeKey: K.serialize, serializeValue: V.serialize)
+    @discardableResult mutating func writeSerializable<K: Serialize, V: Serialize, P: UnsignedInteger & FixedWidthInteger>(map: [K: V], prefix: LengthPrefix<P>) -> Int {
+        writeSerializable(map: map, prefix: prefix, serializeKey: K.serialize, serializeValue: V.serialize)
     }
 }
 
@@ -335,7 +377,7 @@ public extension Array where Element: Serialize {
     ///   - elements: The serializable elements to write
     ///   - _: the integer size used to describe the number of elements serialized.
     func serialize<P: UnsignedInteger & FixedWidthInteger>(into buffer: inout NIOCore.ByteBuffer, prefixLength _: P.Type) -> Int {
-        buffer.writeSerializable(list: self, prefixLength: P.self, with: Element.serialize)
+        buffer.writeSerializable(list: self, prefix: LengthPrefix.BE(size: P.self), with: Element.serialize)
     }
 
     /// Serializes the list with the number of elements prefixed
@@ -371,7 +413,7 @@ public extension Array where Element: Deserialize {
     ///   - data: The data to deserialize
     ///   - _: the integer size used to describe the number of elements serialized.
     static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: inout Cursor, prefixLength _: P.Type) -> [Element]? {
-        data.deserialize(listOf: Element.self, prefixLength: P.self, with: Element.deserialize)
+        data.deserialize(listOf: Element.self, prefix: LengthPrefix.BE(size: P.self), with: Element.deserialize)
     }
 
     /// Deserialize data into a list of ``Element``s
@@ -404,7 +446,7 @@ public extension Dictionary where Key: Serialize, Value: Serialize {
     ///   - elements: The serializable elements to write
     ///   - _: the integer size used to describe the number of pairs serialized.
     func serialize<P: UnsignedInteger & FixedWidthInteger>(into buffer: inout NIOCore.ByteBuffer, prefixLength _: P.Type) -> Int {
-        buffer.writeSerializable(map: self, prefixLength: P.self, serializeKey: Key.serialize, serializeValue: Value.serialize)
+        buffer.writeSerializable(map: self, prefix: LengthPrefix.BE(size: P.self), serializeKey: Key.serialize, serializeValue: Value.serialize)
     }
 
     /// Serializes the dictionary with the number of pairs prefixed
@@ -440,7 +482,7 @@ public extension Dictionary where Key: Deserialize, Value: Deserialize {
     ///   - data: The data to deserialize
     ///   - _: the integer size used to describe the number of pairs serialized.
     static func deserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: inout Cursor, prefixLength _: P.Type) -> [Key: Value]? {
-        data.deserialize(mapOf: Value.self, keys: Key.self, prefixLength: P.self, deserializeKey: Key.deserialize, deserializeValue: Value.deserialize)
+        data.deserialize(mapOf: Value.self, keys: Key.self, prefix: LengthPrefix.BE(size: P.self), deserializeKey: Key.deserialize, deserializeValue: Value.deserialize)
     }
 
     /// Deserialize data into a ``[Key:Value]``
