@@ -43,6 +43,26 @@ public enum CIS2 {
             guard data.count <= TOKEN_ID_MAX_LENGTH else { return nil }
             self.data = data
         }
+
+        /// Initialize an empty TokenID.
+        public init() {
+            self.data = Data()
+        }
+
+        /// Initialize from any integer
+        public init?<I: FixedWidthInteger>(int: I, as _: I.Type = I.self) {
+            var buf = ByteBuffer()
+            buf.writeInteger(int, endianness: .little)
+            guard let id = Self(Data(buffer: buf)) else { return nil }
+            self = id
+        }
+
+        /// Initialize from a hex string
+        /// - Throws: if the string is not valid hex
+        public init?(hex: String) throws {
+            guard let id = try Self(Data(hex: hex)) else { return nil }
+            self = id
+        }
     }
 
     /// Represents a token address, i.e. a contract + token ID

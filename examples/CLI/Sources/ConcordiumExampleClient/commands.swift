@@ -468,7 +468,7 @@ struct Root: AsyncParsableCommand {
             func run() async throws {
                 let res = try await withGRPCClient(rootCmd.opts) {
                     let client = try await CIS2.Contract(client: $0, address: ContractAddress(index: cis2Cmd.index, subindex: cis2Cmd.subindex))!
-                    return try await client.balanceOf(CIS2.BalanceOfQuery(tokenId: CIS2.TokenID(Data(hex: cis2Cmd.tokenId))!, address: Address.account(AccountAddress(base58Check: account))))
+                    return try await client.balanceOf(CIS2.BalanceOfQuery(tokenId: CIS2.TokenID(hex: cis2Cmd.tokenId)!, address: Address.account(AccountAddress(base58Check: account))))
                 }
                 print(res)
             }
@@ -488,7 +488,7 @@ struct Root: AsyncParsableCommand {
             func run() async throws {
                 let res = try await withGRPCClient(rootCmd.opts) {
                     let client = try await CIS2.Contract(client: $0, address: ContractAddress(index: cis2Cmd.index, subindex: cis2Cmd.subindex))!
-                    let metadata = try await client.tokenMetadata(CIS2.TokenID(Data(hex: cis2Cmd.tokenId))!)
+                    let metadata = try await client.tokenMetadata(CIS2.TokenID(hex: cis2Cmd.tokenId)!)
                     return try await (metadata, metadata.get())
                 }
                 print(res)
@@ -574,7 +574,7 @@ struct Root: AsyncParsableCommand {
                     }
 
                     let transfer = try CIS2.TransferPayload(
-                        tokenId: CIS2.TokenID(Data(hex: tokenId))!,
+                        tokenId: CIS2.TokenID(hex: tokenId)!,
                         amount: CIS2.TokenAmount(amount)!,
                         sender: account.address,
                         receiver: receiver
