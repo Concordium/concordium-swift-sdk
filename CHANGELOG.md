@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WalletConnectSendTransactionParam`, `WalletConnectSignMessageParam`, and `WalletConnectRequestVerifiablePresentationParam` for decoding parameters received with walletconnect requests.
 - `WalletConnectRequest` represents and decodes walletconnect request variants
 
+#### Contract standards (CIS)
+- `CIS0` and `CIS2` (wallet MVP) namespaces for functionality related to the 2 standards. 
+  - `CIS0` includes a `Client` protocol, as CIS-0 is mostly meant to be an extension of other contract standards
+  - `CIS2` includes a `Client` protocol and a `Contract` class for interacting with specific (i.e. conforming to `CIS2.Client`) and arbitrary (i.e. `CIS2.Contract`) CIS-2 contracts.
+
 
 #### GRPC client
 - `NodeClient.status` to query transaction status.
