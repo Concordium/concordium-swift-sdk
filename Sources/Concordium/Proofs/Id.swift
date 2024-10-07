@@ -150,6 +150,16 @@ extension AtomicStatementV1 {
         case let .attributeInRange(statement): return statement.attributeTag
         }
     }
+
+    /// Checks that a value can be proven for the atomic statement.
+    public func checkValue(value: String) -> Bool {
+        switch self {
+        case .revealAttribute(_): return true
+        case let .attributeInSet(statement): return statement.set.contains(value)
+        case let .attributeNotInSet(statement): return !statement.set.contains(value)
+        case let .attributeInRange(statement): return statement.lower <= value && value < statement.upper
+        }
+    }
 }
 
 extension AtomicStatementV1: @retroactive Codable {

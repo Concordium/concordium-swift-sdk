@@ -107,6 +107,26 @@ extension AtomicStatementV2 {
         case let .attributeInRange(statement): return statement.attributeTag
         }
     }
+
+    /// Checks that a value can be proven for the atomic statement.
+    /// This assumes that all values in the statement are comparable with the given value. If not, false is also returned.
+    public func checkValue(value: Web3IdAttribute) -> Bool {
+        switch self {
+        case .revealAttribute(_): return true
+        case let .attributeInSet(statement): return statement.set.contains(value)
+        case let .attributeNotInSet(statement): return !statement.set.contains(value)
+        case let .attributeInRange(statement):
+            switch (statement.lower, statement.upper, value) {
+            case let (.string(lower), .string(upper), .string(value)):
+                return lower <= value && value < upper
+            case let (.numeric(lower), .numeric(upper), .numeric(value)):
+                return lower <= value && value < upper
+            case let (.timestamp(lower), .timestamp(upper), .timestamp(value)):
+                return lower <= value && value < upper
+            default: return false
+            }
+        }
+    }
 }
 
 extension AtomicStatementV2: @retroactive Codable {
@@ -569,13 +589,6 @@ extension Web3IdCredential: Codable {
     }
 }
 
-/// Represents errors happening while building a ``VerifiablePresentation`` utilizing the ``VerifiablePresentationBuilder``
-public enum VerifiablePresentationBuilderError: Error {
-    /// A attribute value is missing for the attribute found in the statement provided
-    case missingValue(tag: String)
-    /// A randomness value is missing for the attribute found in the statement provided
-    case missingRandomness(tag: String)
-}
 
 /// Can be used to ease the construction of ``Verifiable Presentation``s
 public struct VerifiablePresentationBuilder {
@@ -590,9 +603,47 @@ public struct VerifiablePresentationBuilder {
         self.network = network
     }
 
-    private struct PresentationInput: Hashable {
+    /// Represents errors happening while building a ``VerifiablePresentation`` utilizing the ``VerifiablePresentationBuilder``
+    public enum BuilderError: Error {
+        /// A attribute value is missing for the attribute found in the statement provided
+        case missingValue(tag: String)
+        /// A randomness value is missing for the attribute found in the statement provided
+        case missingRandomness(tag: String)
+    }
+
+    public struct IdStatementCheckError: Error {
+        /// The attributes that failed the check for a statement
+        let attributes: [AttributeTag]
+    }
+
+    public struct Web3IdStatementCheckError: Error {
+        /// The attributes that failed the check for a statement
+        let attributes: [String]
+    }
+
+    private struct PresentationInput: Equatable, Hashable {
         let statement: VerifiableCredentialStatement
         let commitmentInputs: VerifiableCredentialCommitmentInputs
+
+        public func hash(into hasher: inout Hasher) {
+            switch self.statement {
+            case let .account(network, _, statement):
+                hasher.combine(network)
+                hasher.combine(statement)
+            case let .web3Id(_, network, _, _, statement):
+                hasher.combine(network)
+                hasher.combine(statement)
+            }
+        }
+
+        // Implement Equatable protocol (required for Hashable)
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            switch (lhs.statement, rhs.statement) {
+            case let (.account(lNetwork, _, lStatement), .account(rNetwork, _, rStatement)): return lNetwork == rNetwork && lStatement == rStatement
+            case let (.web3Id(_, lNetwork, _, _, lStatement), .web3Id(_, rNetwork, _, _, rStatement)): return lNetwork == rNetwork && lStatement == rStatement
+            default: return false
+            }
+        }
     }
 
     /// Add a ``VerifiableCredentialProof`` of the supplied statement for the ``IdentityObject``
@@ -601,8 +652,10 @@ public struct VerifiablePresentationBuilder {
     ///   - idObject: the identity to prove the `statement` for
     ///   - cred: the credential and associated randomness to use
     ///   - issuer: the identity issuer corresponding to the issuer used for the `idObject`
-    public mutating func verify(_ statement: [AtomicStatementV1], for idObject: IdentityObject, cred: AccountCredentialWithRandomness, issuer: UInt32) throws {
-        try verify(statement, values: idObject.attributeList.chosenAttributes, randomness: cred.randomness.attributesRand, credId: CredentialRegistrationID(cred.credential.credId), issuer: issuer)
+    /// - Throws: ``VerifiablePresentationBuilderError`` if the required values were not found for the parameters given
+    /// - Returns: ``Result.error`` if any value provided does not pass a check for whether it can be proven, i.e. is within the bounds of the statement.
+    public mutating func verify(_ statement: [AtomicStatementV1], for idObject: IdentityObject, cred: AccountCredentialWithRandomness, issuer: UInt32) throws -> Result<Void, [IdStatementCheckError]> {
+        return try verify(statement, values: idObject.attributeList.chosenAttributes, randomness: cred.randomness.attributesRand, credId: CredentialRegistrationID(cred.credential.credId), issuer: issuer)
     }
 
     /// Add a ``VerifiableCredentialProof`` of the supplied statement for the ``IdentityObject``
@@ -612,8 +665,10 @@ public struct VerifiablePresentationBuilder {
     ///   - credId: the credential registration ID to use
     ///   - cred: the randomness corresponding to the credential
     ///   - issuer: the identity issuer corresponding to the issuer used for the `idObject`
-    public mutating func verify(_ statement: [AtomicStatementV1], for idObject: IdentityObject, credId: CredentialRegistrationID, randomness: Randomness, issuer: UInt32) throws {
-        try verify(statement, values: idObject.attributeList.chosenAttributes, randomness: randomness.attributesRand, credId: credId, issuer: issuer)
+    /// - Throws: ``VerifiablePresentationBuilderError`` if the required values were not found for the parameters given
+    /// - Returns: ``Result.error`` if any value provided does not pass a check for whether it can be proven, i.e. is within the bounds of the statement.
+    public mutating func verify(_ statement: [AtomicStatementV1], for idObject: IdentityObject, credId: CredentialRegistrationID, randomness: Randomness, issuer: UInt32) throws -> Result<Void, [IdStatementCheckError]> {
+        return try verify(statement, values: idObject.attributeList.chosenAttributes, randomness: randomness.attributesRand, credId: credId, issuer: issuer)
     }
 
     /// Add a ``VerifiableCredentialProof`` of the supplied statement for the supplied attribute values
@@ -623,13 +678,15 @@ public struct VerifiablePresentationBuilder {
     ///   - wallet: the wallet to derive values from
     ///   - credIndices: the credential indices used to derive values
     ///   - global: the cryptographic parameters of the chain
-    public mutating func verify(_ statement: [AtomicStatementV1], for values: [AttributeTag: String], wallet: WalletSeed, credIndices: AccountCredentialSeedIndexes, global: CryptographicParameters) throws {
+    /// - Throws: ``VerifiablePresentationBuilderError`` if the required values were not found for the parameters given
+    /// - Returns: ``Result.error`` if any value provided does not pass a check for whether it can be proven, i.e. is within the bounds of the statement.
+    public mutating func verify(_ statement: [AtomicStatementV1], for values: [AttributeTag: String], wallet: WalletSeed, credIndices: AccountCredentialSeedIndexes, global: CryptographicParameters) throws -> Result<Void, [IdStatementCheckError]> {
         let attributes = statement.map(\.attributeTag)
         let randomness = try attributes.reduce(into: [AttributeTag: Data]()) { acc, tag in
             acc[tag] = try wallet.attributeCommitmentRandomness(accountCredentialIndexes: credIndices, attribute: tag.rawValue)
         }
         let credId = try wallet.id(accountCredentialIndexes: credIndices, commitmentKey: global.onChainCommitmentKey)
-        try verify(statement, values: values, randomness: randomness, credId: credId, issuer: credIndices.identity.providerID)
+        return try verify(statement, values: values, randomness: randomness, credId: credId, issuer: credIndices.identity.providerID)
     }
 
     /// Add a ``VerifiableCredentialProof`` of the supplied statement for the supplied attribute values
@@ -639,16 +696,25 @@ public struct VerifiablePresentationBuilder {
     ///   - randomness: the attribute randomness to use for the proof
     ///   - credId: the credential registration ID to use for the proof
     ///   - issuer: the identity issuer corresponding to the issuer for the credentials underlying identity
-    public mutating func verify(_ statement: [AtomicStatementV1], values: [AttributeTag: String], randomness: [AttributeTag: Data], credId: CredentialRegistrationID, issuer: UInt32) throws {
+    /// - Throws: ``VerifiablePresentationBuilderError`` if the required values were not found for the parameters given
+    /// - Returns: ``Result.error`` if any value provided does not pass a check for whether it can be proven, i.e. is within the bounds of the statement.
+    public mutating func verify(_ statement: [AtomicStatementV1], values: [AttributeTag: String], randomness: [AttributeTag: Data], credId: CredentialRegistrationID, issuer: UInt32) throws -> Result<Void, [IdStatementCheckError]> {
         let attributes = statement.map(\.attributeTag)
         let (values, randomness) = try attributes.reduce(into: ([AttributeTag: String](), [AttributeTag: Data]())) { acc, tag in
-            acc.0[tag] = try values[tag] ?! VerifiablePresentationBuilderError.missingValue(tag: tag.description)
-            acc.1[tag] = try randomness[tag] ?! VerifiablePresentationBuilderError.missingRandomness(tag: tag.description)
+            acc.0[tag] = try values[tag] ?! BuilderError.missingValue(tag: tag.description)
+            acc.1[tag] = try randomness[tag] ?! BuilderError.missingRandomness(tag: tag.description)
+        }
+
+
+        let rejectedAttributes = statement.filter({ !$0.checkValue(value: values[$0.attributeTag]!)})
+                                          .map(\.attributeTag);
+        if (!rejectedAttributes.isEmpty) {
+            return .error(IdStatementCheckError(attributes: rejectedAttributes))
         }
 
         let verifiableStatement = VerifiableCredentialStatement.account(network: network, credId: credId.value, statement: statement)
         let commitmentInputs = VerifiableCredentialCommitmentInputs.account(issuer: issuer, values: values, randomness: randomness)
-        statements.insert(PresentationInput(statement: verifiableStatement, commitmentInputs: commitmentInputs))
+        statements.update(with: PresentationInput(statement: verifiableStatement, commitmentInputs: commitmentInputs))
     }
 
     /// Add a ``VerifiableCredentialProof`` of the supplied statement for the supplied ``Web3IdCredential``
@@ -657,7 +723,9 @@ public struct VerifiablePresentationBuilder {
     ///   - cred: the credential to prove the statement for
     ///   - wallet: the wallet to derive the signing key of the credential
     ///   - credIndex: the credential index of the ``Web3IdCredential``
-    public mutating func verify(_ statement: [AtomicStatementV2], for cred: Web3IdCredential, wallet: WalletSeed, credIndex: UInt32) throws {
+    /// - Throws: ``VerifiablePresentationBuilderError`` if the required values were not found for the parameters given
+    /// - Returns: ``Result.error`` if any value provided does not pass a check for whether it can be proven, i.e. is within the bounds of the statement.
+    public mutating func verify(_ statement: [AtomicStatementV2], for cred: Web3IdCredential, wallet: WalletSeed, credIndex: UInt32) throws -> Result<Void, [Web3IdStatementCheckError]> {
         let signer = try wallet.signingKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes(issuer: IssuerSeedIndexes(index: cred.registry.index, subindex: cred.registry.subindex), index: credIndex))
         return try verify(statement, for: cred, signer: signer)
     }
@@ -667,15 +735,23 @@ public struct VerifiablePresentationBuilder {
     ///   - statement: the statement to prove
     ///   - cred: the credential to prove the statement for
     ///   - signer: the signing key for the credential
-    public mutating func verify(_ statement: [AtomicStatementV2], for cred: Web3IdCredential, signer: Data) throws {
+    /// - Throws: ``VerifiablePresentationBuilderError`` if the required values were not found for the parameters given
+    /// - Returns: ``Result.error`` if any value provided does not pass a check for whether it can be proven, i.e. is within the bounds of the statement.
+    public mutating func verify(_ statement: [AtomicStatementV2], for cred: Web3IdCredential, signer: Data) throws -> Result<Void, [Web3IdStatementCheckError]> {
         let attributes = statement.map(\.attributeTag)
         let (values, randomness) = try attributes.reduce(into: ([String: Web3IdAttribute](), [String: Data]())) { acc, tag in
-            acc.0[tag] = try cred.values[tag] ?! VerifiablePresentationBuilderError.missingValue(tag: tag.description)
-            acc.1[tag] = try cred.randomness[tag] ?! VerifiablePresentationBuilderError.missingRandomness(tag: tag.description)
+            acc.0[tag] = try cred.values[tag] ?! BuilderError.missingValue(tag: tag.description)
+            acc.1[tag] = try cred.randomness[tag] ?! BuilderError.missingRandomness(tag: tag.description)
         }
+        let rejectedAttributes = statement.filter({ !$0.checkValue(value: values[$0.attributeTag]!)})
+                                          .map(\.attributeTag);
+        if (!rejectedAttributes.isEmpty) {
+            return .error(Web3IdStatementCheckError(attributes: rejectedAttributes))
+        }
+
         let verifiableStatement = VerifiableCredentialStatement.web3Id(credType: cred.credentialType, network: network, contract: cred.registry, holderId: cred.holderId, statement: statement)
         let commitmentInputs = VerifiableCredentialCommitmentInputs.web3Issuer(signature: cred.signature, signer: signer, values: values, randomness: randomness)
-        statements.insert(PresentationInput(statement: verifiableStatement, commitmentInputs: commitmentInputs))
+        statements.update(with: PresentationInput(statement: verifiableStatement, commitmentInputs: commitmentInputs))
     }
 
     /// Finalize the ``VerifiablePresentation`` from the added verification rows
