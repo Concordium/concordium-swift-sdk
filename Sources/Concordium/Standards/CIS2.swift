@@ -33,7 +33,7 @@ public enum CIS2 {
         }
 
         /// Convert to ``Amount`` with the given number of decimals which can be accessed from ``CIS2.TokenMetadata``
-        public func amount(decimals: UInt16) -> Amount { Amount(self.value, decimalCount: decimals) }
+        public func amount(decimals: UInt16) -> Amount { Amount(value, decimalCount: decimals) }
     }
 
     /// A token ID for a CIS2 contract token
@@ -49,7 +49,7 @@ public enum CIS2 {
 
         /// Initialize an empty TokenID.
         public init() {
-            self.data = Data()
+            data = Data()
         }
 
         /// Initialize from any integer
