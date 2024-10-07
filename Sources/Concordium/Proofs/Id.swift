@@ -154,7 +154,7 @@ extension AtomicStatementV1 {
     /// Checks that a value can be proven for the atomic statement.
     public func checkValue(value: String) -> Bool {
         switch self {
-        case .revealAttribute(_): return true
+        case .revealAttribute: return true
         case let .attributeInSet(statement): return statement.set.contains(value)
         case let .attributeNotInSet(statement): return !statement.set.contains(value)
         case let .attributeInRange(statement): return statement.lower <= value && value < statement.upper
