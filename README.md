@@ -14,6 +14,9 @@ Features:
 - Support for decrypting and using accounts created using the legacy wallet.
 - Utilities for working with amounts in CCD and fungible CIS-2 tokens of arbitrary size.
 
+### Dependencies
+- swift-protobuf + grpc-swift: `brew install swift-protobuf grpc-swift`
+
 ### Cryptographic functions
 
 Concordium specific cryptographic functions that are implemented in Rust are exposed as a separate Swift library

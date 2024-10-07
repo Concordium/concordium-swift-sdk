@@ -847,12 +847,72 @@ public enum AccountStakingInfo: FromGRPC {
     }
 }
 
+/// Describes a cooldown associated with removal of stake from a baker/delegator account
+public struct Cooldown {
+    /// The time at which the cooldown will end
+    public let timestamp: Date
+    /// The amount that is in cooldown and set to be released at the end of the cooldown period
+    public let amount: CCD
+    /// The status of the cooldown
+    public let status: Status
+
+    /**
+     * The status of a cooldown. When stake is removed from a baker or delegator
+     * (from protocol version 7) it first enters the pre-pre-cooldown state.
+     * The next time the stake snaphot is taken (at the epoch transition before
+     * a payday) it enters the pre-cooldown state. At the subsequent payday, it
+     * enters the cooldown state. At the payday after the end of the cooldown
+     * period, the stake is finally released.
+     */
+    public enum Status {
+        /**
+         * The amount is in cooldown and will expire at the specified time, becoming available
+         * at the subsequent pay day.
+         */
+        case cooldown
+        /**
+         * The amount will enter cooldown at the next pay day. The specified end time is
+         * projected to be the end of the cooldown period, but the actual end time will be
+         * determined at the payday, and may be different if the global cooldown period
+         * changes.
+         */
+        case preCooldown
+        /**
+         * The amount will enter pre-cooldown at the next snapshot epoch (i.e. the epoch
+         * transition before a pay day transition). As with pre-cooldown, the specified
+         * end time is projected, but the actual end time will be determined later.
+         */
+        case prePreCooldown
+    }
+}
+
+extension Cooldown.Status: FromGRPC {
+    static func fromGRPC(_ g: Concordium_V2_Cooldown.CooldownStatus) throws -> Self {
+        switch g {
+        case .cooldown:
+            return .cooldown
+        case .preCooldown:
+            return .preCooldown
+        case .prePreCooldown:
+            return .prePreCooldown
+        case .UNRECOGNIZED:
+            throw GRPCError.valueOutOfBounds
+        }
+    }
+}
+
+extension Cooldown: FromGRPC {
+    static func fromGRPC(_ g: Concordium_V2_Cooldown) throws -> Self {
+        try Self(timestamp: .fromGRPC(g.endTime), amount: .fromGRPC(g.amount), status: .fromGRPC(g.status))
+    }
+}
+
 /// Information about the account at a particular point in time on chain.
 public struct AccountInfo: FromGRPC {
     /// Next sequence number to be used for transactions signed from this account.
     public var sequenceNumber: SequenceNumber
     /// Current (unencrypted) balance of the account.
-    public var amount: MicroCCDAmount
+    public var amount: CCD
     /// Release schedule for any locked up amount. This could be an empty release schedule.
     public var releaseSchedule: ReleaseSchedule
     /// Map of all currently active credentials on the account.
@@ -879,12 +939,46 @@ public struct AccountInfo: FromGRPC {
     /// Canonical address of the account.
     /// This is derived from the first credential that created the account.
     public var address: AccountAddress
+    /**
+     * The stake on the account that is in cooldown.
+     * There can be multiple amounts in cooldown that expire at different times.
+     * This was introduced in protocol version 7, and will be empty in
+     * earlier protocol versions.
+     */
+    public var cooldowns: [Cooldown]
+    /**
+     * The available (unencrypted) balance of the account (i.e. that can be transferred
+     * or used to pay for transactions). This is the balance minus the locked amount.
+     * The locked amount is the maximum of the amount in the release schedule and
+     * the total amount that is actively staked or in cooldown (inactive stake).
+     * This was introduced with node version 7.0
+     */
+    public var availableBalance: CCD
 
     static func fromGRPC(_ grpc: Concordium_V2_AccountInfo) throws -> Self {
         let credentials = try grpc.creds.reduce(into: [:]) { r, v in r[UInt8(v.key)] = try Versioned(version: 0, value: AccountCredentialDeploymentValues.fromGRPC(v.value)) }
+        let releaseSchedule = try ReleaseSchedule.fromGRPC(grpc.schedule)
+        var availableBalance: CCD
+        if grpc.hasAvailableBalance {
+            /// present for node version >=7
+            availableBalance = try .fromGRPC(grpc.availableBalance)
+        } else {
+            /// Node version <7
+            var staked: MicroCCDAmount = 0
+            if let stakingInfo = grpc.stake.stakingInfo {
+                switch stakingInfo {
+                case let .baker(data):
+                    staked = data.stakedAmount.value
+                case let .delegator(data):
+                    staked = data.stakedAmount.value
+                }
+            }
+            availableBalance = CCD(microCCD: grpc.amount.value - max(releaseSchedule.total, staked))
+        }
+
         return try self.init(
             sequenceNumber: grpc.sequenceNumber.value,
-            amount: grpc.amount.value,
+            amount: .fromGRPC(grpc.amount),
             releaseSchedule: .fromGRPC(grpc.schedule),
             credentials: credentials,
             threshold: SignatureThreshold(exactly: grpc.threshold.value) ?! GRPCError.valueOutOfBounds,
@@ -892,7 +986,9 @@ public struct AccountInfo: FromGRPC {
             encryptionKey: grpc.encryptionKey.value,
             index: grpc.index.value,
             stake: grpc.hasStake ? .fromGRPC(grpc.stake) : nil,
-            address: AccountAddress(grpc.address.value)
+            address: AccountAddress(grpc.address.value),
+            cooldowns: grpc.cooldowns.map { try Cooldown.fromGRPC($0) },
+            availableBalance: availableBalance
         )
     }
 }
