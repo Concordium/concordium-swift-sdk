@@ -63,7 +63,7 @@ final class WalletSeedTest: XCTestCase {
 
     func testMainnetAccountCredentialPublicAndSigningKeyMatch() throws {
         let seed = try WalletSeed(seedHex: TEST_SEED, network: .mainnet)
-        let privateKey = try seed.signingKey(
+        let privateKey: Data = try seed.signingKey(
             accountCredentialIndexes: AccountCredentialSeedIndexes(
                 identity: IdentitySeedIndexes(providerID: 0, index: 0),
                 counter: 0
@@ -171,7 +171,7 @@ final class WalletSeedTest: XCTestCase {
 
     func testTestnetAccountCredentialPublicAndSigningKeyMatch() throws {
         let seed = try WalletSeed(seedHex: TEST_SEED, network: .testnet)
-        let privateKey = try seed.signingKey(
+        let privateKey: Data = try seed.signingKey(
             accountCredentialIndexes: AccountCredentialSeedIndexes(
                 identity: IdentitySeedIndexes(providerID: 0, index: 0),
                 counter: 0

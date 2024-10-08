@@ -218,9 +218,9 @@ public struct WalletConnectRequestVerifiablePresentationParam: Decodable, Equata
     /// The statements to prove with associated issuer restrictions
     public enum CredentialStatement: Equatable {
         /// An account statement request
-        case account(issuers: [UInt32], statement: [AtomicStatementV1])
+        case account(issuers: [UInt32], statement: [AtomicIdentityStatement])
         /// A Web3 ID statement request
-        case web3id(issuers: [ContractAddress], statement: [AtomicStatementV2])
+        case web3id(issuers: [ContractAddress], statement: [AtomicWeb3IdStatement])
     }
 
     init(challenge: Data, credentialStatements: [CredentialStatement]) {
@@ -259,11 +259,11 @@ extension WalletConnectRequestVerifiablePresentationParam.CredentialStatement: D
         switch type {
         case .cred:
             let issuers = try nested.decode([UInt32].self, forKey: .issuers)
-            let statement = try container.decode([AtomicStatementV1].self, forKey: .statement)
+            let statement = try container.decode([AtomicIdentityStatement].self, forKey: .statement)
             self = .account(issuers: issuers, statement: statement)
         case .sci:
             let issuers = try nested.decode([ContractAddress].self, forKey: .issuers)
-            let statement = try container.decode([AtomicStatementV2].self, forKey: .statement)
+            let statement = try container.decode([AtomicWeb3IdStatement].self, forKey: .statement)
             self = .web3id(issuers: issuers, statement: statement)
         }
     }

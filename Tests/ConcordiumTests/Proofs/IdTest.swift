@@ -80,14 +80,14 @@ final class IdTest: XCTestCase {
         let identityObject = try decoder.decode(IdentityObject.self, from: IDENTITY_OBJECT)
 
         // Test that we encode/decode statements properly
-        let value = try decoder.decode(StatementV1.self, from: json)
-        let _ = try decoder.decode(StatementV1.self, from: encoder.encode(value))
+        let value = try decoder.decode(IdentityStatement.self, from: json)
+        let _ = try decoder.decode(IdentityStatement.self, from: encoder.encode(value))
 
         // Test that constructing the proof succeeds
         let challenge = try Data(hex: "aabbcc")
         let proof = try value.prove(wallet: WALLET, global: GLOBAL, credentialIndices: CRED_INDICES, identityObject: identityObject, challenge: challenge).value
 
         // Test that we can properly encode/decode proofs
-        XCTAssertEqual(try decoder.decode(ProofV1.self, from: encoder.encode(proof)), proof)
+        XCTAssertEqual(try decoder.decode(IdentityProof.self, from: encoder.encode(proof)), proof)
     }
 }

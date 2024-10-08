@@ -1,4 +1,5 @@
 @testable import Concordium
+import CryptoKit
 import XCTest
 
 private let GLOBAL = CryptographicParameters(
@@ -14,8 +15,8 @@ final class Web3IdTest: XCTestCase {
                 network: .testnet,
                 credId: Data(hex: "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100df4cac5e161fb81aebe3a04300e63f086d0d8"),
                 statement: [
-                    .attributeInRange(statement: AttributeInRangeStatementV1(attributeTag: .dateOfBirth, lower: "81", upper: "1231")),
-                    .revealAttribute(statement: RevealAttributeStatementV1(attributeTag: .firstName)),
+                    .attributeInRange(statement: AttributeInRangeIdentityStatement(attributeTag: .dateOfBirth, lower: "81", upper: "1231")),
+                    .revealAttribute(statement: RevealAttributeIdentityStatement(attributeTag: .firstName)),
                 ]
             ),
         ]
@@ -37,8 +38,7 @@ final class Web3IdTest: XCTestCase {
 
     func testProveWeb3IdStatement() throws {
         let wallet = try WalletSeed(seedHex: "efa5e27326f8fa0902e647b52449bf335b7b605adc387015ec903f41d95080eb71361cbc7fb78721dcd4f3926a337340aa1406df83332c44c1cdcfe100603860", network: Network.testnet)
-        let holderId = try wallet.publicKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes(issuer: IssuerSeedIndexes(index: 1, subindex: 0), index: 1))
-        let signer = try wallet.signingKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes(issuer: IssuerSeedIndexes(index: 1, subindex: 0), index: 1))
+        let signer: Curve25519.Signing.PrivateKey = try wallet.signingKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes(issuer: IssuerSeedIndexes(index: 1, subindex: 0), index: 1))
 
         let challenge = try Data(hex: "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100dAAAA")
         let statements = [
@@ -46,10 +46,10 @@ final class Web3IdTest: XCTestCase {
                 credType: [],
                 network: Network.testnet,
                 contract: ContractAddress(index: 1, subindex: 0),
-                holderId: holderId,
+                holderId: signer.publicKey.rawRepresentation,
                 statement: [
-                    AtomicStatementV2.attributeInSet(statement: AttributeInSetStatementV2(attributeTag: "degreeType", set: [Web3IdAttribute.string(value: "BachelorDegree"), Web3IdAttribute.string(value: "MasterDegree")])),
-                    AtomicStatementV2.revealAttribute(statement: RevealAttributeStatementV2(attributeTag: "degreeName")),
+                    AtomicWeb3IdStatement.attributeInSet(statement: AttributeInSetWeb3IdStatement(attributeTag: "degreeType", set: [Web3IdAttribute.string(value: "BachelorDegree"), Web3IdAttribute.string(value: "MasterDegree")])),
+                    AtomicWeb3IdStatement.revealAttribute(statement: RevealAttributeWeb3IdStatement(attributeTag: "degreeName")),
                 ]
             ),
         ]
@@ -57,7 +57,7 @@ final class Web3IdTest: XCTestCase {
 
         let commitmentInputs = try [VerifiableCredentialCommitmentInputs.web3Issuer(
             signature: Data(hex: "40ced1f01109c7a307fffabdbea7eb37ac015226939eddc05562b7e8a29d4a2cf32ab33b2f76dd879ce69fab7ff3752a73800c9ce41da6d38b189dccffa45906"),
-            signer: signer,
+            signer: signer.rawRepresentation,
             values: [
                 "degreeName": Web3IdAttribute.string(value: "Bachelor of Science and Arts"),
                 "degreeType": Web3IdAttribute.string(value: "BachelorDegree"),
@@ -239,12 +239,12 @@ final class Web3IdTest: XCTestCase {
         let challenge = try Data(hex: "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100dAAAA")
 
         let accountStatements = [
-            AtomicStatementV1.attributeInSet(statement: AttributeInSetStatementV1(attributeTag: .nationality, set: ["NO", "SE", "FI"])),
-            AtomicStatementV1.attributeInRange(statement: AttributeInRangeStatementV1(attributeTag: .dateOfBirth, lower: "19000101", upper: "20000101")),
+            AtomicIdentityStatement.attributeInSet(statement: AttributeInSetIdentityStatement(attributeTag: .nationality, set: ["NO", "SE", "FI"])),
+            AtomicIdentityStatement.attributeInRange(statement: AttributeInRangeIdentityStatement(attributeTag: .dateOfBirth, lower: "19000101", upper: "20000101")),
         ]
         let web3IdStatements = [
-            AtomicStatementV2.attributeNotInSet(statement: AttributeNotInSetStatementV2(attributeTag: "tag", set: [.numeric(value: 0), .numeric(value: 1), .numeric(value: 2)])),
-            AtomicStatementV2.attributeInRange(statement: AttributeInRangeStatementV2(attributeTag: "other", lower: .timestamp(value: .init(timeIntervalSince1970: 1_000_000_000)), upper: .timestamp(value: .init(timeIntervalSince1970: 1_727_870_991)))),
+            AtomicWeb3IdStatement.attributeNotInSet(statement: AttributeNotInSetWeb3IdStatement(attributeTag: "tag", set: [.numeric(value: 0), .numeric(value: 1), .numeric(value: 2)])),
+            AtomicWeb3IdStatement.attributeInRange(statement: AttributeInRangeWeb3IdStatement(attributeTag: "other", lower: .timestamp(value: .init(timeIntervalSince1970: 1_000_000_000)), upper: .timestamp(value: .init(timeIntervalSince1970: 1_727_870_991)))),
         ]
 
         let idValues: [AttributeTag: String] = [
@@ -280,7 +280,7 @@ final class Web3IdTest: XCTestCase {
             randomness: web3Rand,
             signature: Data(hex: "7013df1d6d7a260b2a6c4a2eabe62ab2595cf01a65be0a846cf54d0f24464ad181d47f41ebe1f3fb3b7d78208ba4dc56b8930d0b6218d35d608ddc0a773dbf0c")
         )
-        let signer = try Data(hex: "cfd166ecd740d2aefab053c1dca27e01ad55d3c4a730bced4e3a8ed476ff2fbc")
+        let signer = try Curve25519.Signing.PrivateKey(rawRepresentation: Data(hex: "cfd166ecd740d2aefab053c1dca27e01ad55d3c4a730bced4e3a8ed476ff2fbc"))
 
         var builder = VerifiablePresentationBuilder(challenge: challenge, network: network)
         let accRes = try builder.verify(accountStatements, values: idValues, randomness: idRand, credId: credId, issuer: issuer)
@@ -304,12 +304,12 @@ final class Web3IdTest: XCTestCase {
         let challenge = try Data(hex: "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100dAAAA")
 
         let accountStatements = [
-            AtomicStatementV1.attributeInSet(statement: AttributeInSetStatementV1(attributeTag: .nationality, set: ["DK", "NO", "SE", "FI"])),
-            AtomicStatementV1.attributeInRange(statement: AttributeInRangeStatementV1(attributeTag: .dateOfBirth, lower: "16000101", upper: "20000101")),
+            AtomicIdentityStatement.attributeInSet(statement: AttributeInSetIdentityStatement(attributeTag: .nationality, set: ["DK", "NO", "SE", "FI"])),
+            AtomicIdentityStatement.attributeInRange(statement: AttributeInRangeIdentityStatement(attributeTag: .dateOfBirth, lower: "16000101", upper: "20000101")),
         ]
         let web3IdStatements = [
-            AtomicStatementV2.attributeNotInSet(statement: AttributeNotInSetStatementV2(attributeTag: "tag", set: [.numeric(value: 0), .numeric(value: 1), .numeric(value: 2)])),
-            AtomicStatementV2.attributeInRange(statement: AttributeInRangeStatementV2(attributeTag: "other", lower: .timestamp(value: .init(timeIntervalSince1970: 1_000_000_000)), upper: .timestamp(value: .init(timeIntervalSince1970: 1_727_870_991)))),
+            AtomicWeb3IdStatement.attributeNotInSet(statement: AttributeNotInSetWeb3IdStatement(attributeTag: "tag", set: [.numeric(value: 0), .numeric(value: 1), .numeric(value: 2)])),
+            AtomicWeb3IdStatement.attributeInRange(statement: AttributeInRangeWeb3IdStatement(attributeTag: "other", lower: .timestamp(value: .init(timeIntervalSince1970: 1_000_000_000)), upper: .timestamp(value: .init(timeIntervalSince1970: 1_727_870_991)))),
         ]
 
         let idValues: [AttributeTag: String] = [
@@ -345,7 +345,7 @@ final class Web3IdTest: XCTestCase {
             randomness: web3Rand,
             signature: Data(hex: "7013df1d6d7a260b2a6c4a2eabe62ab2595cf01a65be0a846cf54d0f24464ad181d47f41ebe1f3fb3b7d78208ba4dc56b8930d0b6218d35d608ddc0a773dbf0c")
         )
-        let signer = try Data(hex: "cfd166ecd740d2aefab053c1dca27e01ad55d3c4a730bced4e3a8ed476ff2fbc")
+        let signer = try Curve25519.Signing.PrivateKey(rawRepresentation: Data(hex: "cfd166ecd740d2aefab053c1dca27e01ad55d3c4a730bced4e3a8ed476ff2fbc"))
 
         var builder = VerifiablePresentationBuilder(challenge: challenge, network: network)
         try builder.verify(accountStatements, values: idValues, randomness: idRand, credId: credId, issuer: issuer)

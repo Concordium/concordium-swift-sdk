@@ -221,14 +221,14 @@ final class WalletConnectTest: XCTestCase {
         let value = try decoder.decode(WalletConnectRequestVerifiablePresentationParam.self, from: json)
         let expected = try WalletConnectRequestVerifiablePresentationParam(challenge: Data(hex: "010203"), credentialStatements: [
             .account(issuers: [0, 1, 2], statement: [
-                .revealAttribute(statement: RevealAttributeStatementV1(attributeTag: .firstName)),
-                .attributeInSet(statement: AttributeInSetStatementV1(attributeTag: .nationality, set: ["DK", "NO"])),
+                .revealAttribute(statement: RevealAttributeIdentityStatement(attributeTag: .firstName)),
+                .attributeInSet(statement: AttributeInSetIdentityStatement(attributeTag: .nationality, set: ["DK", "NO"])),
             ]),
             .web3id(issuers: [ContractAddress(index: 1, subindex: 0), ContractAddress(index: 42, subindex: 1337)], statement: [
-                .revealAttribute(statement: RevealAttributeStatementV2(attributeTag: "something")),
-                .attributeInSet(statement: AttributeInSetStatementV2(attributeTag: "arbitrary", set: [.string(value: "first"), .string(value: "second")])),
-                .attributeNotInSet(statement: AttributeNotInSetStatementV2(attributeTag: "another", set: [.numeric(value: 1), .numeric(value: 3)])),
-                .attributeInRange(statement: AttributeInRangeStatementV2(
+                .revealAttribute(statement: RevealAttributeWeb3IdStatement(attributeTag: "something")),
+                .attributeInSet(statement: AttributeInSetWeb3IdStatement(attributeTag: "arbitrary", set: [.string(value: "first"), .string(value: "second")])),
+                .attributeNotInSet(statement: AttributeNotInSetWeb3IdStatement(attributeTag: "another", set: [.numeric(value: 1), .numeric(value: 3)])),
+                .attributeInRange(statement: AttributeInRangeWeb3IdStatement(
                     attributeTag: "time",
                     lower: .timestamp(value: formatter.date(from: "2022-10-03T08:38:18.738Z")!),
                     upper: .timestamp(value: formatter.date(from: "2024-10-03T08:38:18.738Z")!)
