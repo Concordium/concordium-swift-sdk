@@ -2,6 +2,41 @@ import ConcordiumWalletCrypto
 import Foundation
 import NIO
 
+/// Describes the official public networks available for the concordium blockchain
+public typealias Network = ConcordiumWalletCrypto.Network
+
+extension ConcordiumWalletCrypto.Network: Swift.Codable {
+    private enum JSON: String, Codable {
+        case mainnet
+        case testnet
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .mainnet: try container.encode(JSON.mainnet)
+        case .testnet: try container.encode(JSON.testnet)
+        }
+    }
+
+    public init(from decoder: any Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        let value = try container.decode(JSON.self)
+        switch value {
+        case .testnet: self = .testnet
+        case .mainnet: self = .mainnet
+        }
+    }
+
+    public init?(rawValue: String) {
+        switch rawValue {
+        case JSON.mainnet.rawValue: self = .mainnet
+        case JSON.testnet.rawValue: self = .testnet
+        default: return nil
+        }
+    }
+}
+
 /// Energy is used to count exact execution cost.
 /// This cost is then converted to CCD amounts.
 public typealias Energy = UInt64
@@ -377,15 +412,9 @@ extension ScheduledTransfer: FromGRPC {
 }
 
 /// Represents a contract address on chain
-public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, Codable {
-    public var index: UInt64
-    public var subindex: UInt64
+public typealias ContractAddress = ConcordiumWalletCrypto.ContractAddress
 
-    public init(index: UInt64, subindex: UInt64) {
-        self.index = index
-        self.subindex = subindex
-    }
-
+extension ContractAddress: Serialize, Deserialize, FromGRPC, ToGRPC {
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(index) + buffer.writeInteger(subindex)
     }
@@ -408,7 +437,24 @@ public struct ContractAddress: Serialize, Deserialize, Equatable, FromGRPC, ToGR
     }
 }
 
-extension ContractAddress: CustomStringConvertible {
+extension ConcordiumWalletCrypto.ContractAddress: Swift.Codable {
+    public func encode(to encoder: any Encoder) throws {
+        try JSON(index: index, subindex: subindex).encode(to: encoder)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(JSON.self)
+        self = .init(index: value.index, subindex: value.subindex)
+    }
+
+    struct JSON: Codable {
+        var index: UInt64
+        var subindex: UInt64
+    }
+}
+
+extension ConcordiumWalletCrypto.ContractAddress: Swift.CustomStringConvertible {
     public var description: String {
         "<\(index),\(subindex)>"
     }
@@ -540,12 +586,49 @@ extension CredentialDeploymentInfo: Codable {
     }
 }
 
+/// Represents a set of baker key pairs needed to bake blocks
 public typealias BakerKeyPairs = ConcordiumWalletCrypto.BakerKeyPairs
 
 public extension BakerKeyPairs {
     /// Generate a set of baker keys
     static func generate() -> Self {
         generateBakerKeys()
+    }
+}
+
+extension BakerKeyPairs: Codable {
+    private struct JSON: Codable {
+        let signatureSignKey: String
+        let signatureVerifyKey: String
+        let electionPrivateKey: String
+        let electionVerifyKey: String
+        let aggregationSignKey: String
+        let aggregationVerifyKey: String
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(JSON(
+            signatureSignKey: signatureSign.hex,
+            signatureVerifyKey: signatureVerify.hex,
+            electionPrivateKey: electionSign.hex,
+            electionVerifyKey: electionVerify.hex,
+            aggregationSignKey: aggregationSign.hex,
+            aggregationVerifyKey: aggregationVerify.hex
+        ))
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let json = try container.decode(JSON.self)
+        self = try .init(
+            signatureSign: Data(hex: json.signatureSignKey),
+            signatureVerify: Data(hex: json.signatureSignKey),
+            electionSign: Data(hex: json.signatureSignKey),
+            electionVerify: Data(hex: json.signatureSignKey),
+            aggregationSign: Data(hex: json.signatureSignKey),
+            aggregationVerify: Data(hex: json.signatureSignKey)
+        )
     }
 }
 
@@ -581,14 +664,20 @@ public enum ProtocolVersion: FromGRPC {
     }
 }
 
+/// Represents a chain slot in which a block can be included
 public typealias Slot = UInt64
+/// Represents a chain round
 public typealias Round = UInt64
+/// Represents a chain epoch
 public typealias Epoch = UInt64
+/// Represents a genesis index, i.e. the number of protocol updates (re-gensisis') that has happened since the start of the chain
 public typealias GenesisIndex = UInt32
 
 /// Represents either an account or contract address
 public enum Address {
+    /// An account address
     case account(_ address: AccountAddress)
+    /// A contract address
     case contract(_ address: ContractAddress)
 }
 
@@ -598,7 +687,7 @@ extension Address: FromGRPC, ToGRPC {
     static func fromGRPC(_ g: GRPC) throws -> Address {
         let address = try g.type ?! GRPCError.missingRequiredValue("type")
         switch address {
-        case let .account(v): return .account(.fromGRPC(v))
+        case let .account(v): return try .account(.fromGRPC(v))
         case let .contract(v): return .contract(.fromGRPC(v))
         }
     }
@@ -612,5 +701,43 @@ extension Address: FromGRPC, ToGRPC {
             g.type = .contract(address.toGRPC())
         }
         return g
+    }
+}
+
+/// Represents arbitrary versioned values
+public struct Versioned<V> {
+    /// The version of the value
+    public var version: UInt32
+    /// The inner value
+    public var value: V
+
+    private enum CodingKeys: CodingKey {
+        case v
+        case value
+    }
+
+    public init(version: UInt32, value: V) {
+        self.version = version
+        self.value = value
+    }
+}
+
+extension Versioned: Equatable where V: Equatable {}
+
+extension Versioned: Decodable where V: Decodable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            version: container.decode(UInt32.self, forKey: .v),
+            value: container.decode(V.self, forKey: .value)
+        )
+    }
+}
+
+extension Versioned: Encodable where V: Encodable {
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(version, forKey: .v)
+        try container.encode(value, forKey: .value)
     }
 }

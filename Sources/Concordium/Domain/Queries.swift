@@ -14,6 +14,22 @@ extension CryptographicParameters: FromGRPC {
     }
 }
 
+extension ConcordiumWalletCrypto.GlobalContext: Swift.Decodable {
+    private enum CodingKeys: CodingKey {
+        case onChainCommitmentKey
+        case bulletproofGenerators
+        case genesisString
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let key = try Data(hex: container.decode(String.self, forKey: .onChainCommitmentKey))
+        let gen = try Data(hex: container.decode(String.self, forKey: .bulletproofGenerators))
+        let genesisString = try container.decode(String.self, forKey: .genesisString)
+        self = .init(onChainCommitmentKey: key, bulletproofGenerators: gen, genesisString: genesisString)
+    }
+}
+
 /// Describes the possible status variants of a transaction submitted to a node.
 public enum TransactionStatus {
     case received
@@ -1002,7 +1018,7 @@ extension Baker: FromGRPC {
     typealias GRPC = Concordium_V2_ElectionInfo.Baker
 
     static func fromGRPC(_ g: GRPC) throws -> Baker {
-        Self(bakerId: g.baker.value, bakerLotteryPower: g.lotteryPower, bakerAccount: .fromGRPC(g.account))
+        try Self(bakerId: g.baker.value, bakerLotteryPower: g.lotteryPower, bakerAccount: .fromGRPC(g.account))
     }
 }
 

@@ -17,7 +17,7 @@ extension AccountTransactionDetails: FromGRPC {
 
     static func fromGRPC(_ g: GRPC) throws -> AccountTransactionDetails {
         let cost = try CCD.fromGRPC(g.cost)
-        let sender = AccountAddress.fromGRPC(g.sender)
+        let sender = try AccountAddress.fromGRPC(g.sender)
         let effects = try AccountTransactionEffects.fromGRPC(g.effects)
         return Self(cost: cost, sender: sender, effects: effects)
     }
@@ -101,7 +101,7 @@ extension AccountTransactionEffects: FromGRPC {
         case let .transferredWithSchedule(data):
             let schedule = try data.amount.map { try ScheduledTransfer.fromGRPC($0) }
             let memo = data.hasMemo ? try Memo.fromGRPC(data.memo) : nil
-            return .transferredWithSchedule(to: .fromGRPC(data.receiver), schedule: schedule, memo: memo)
+            return try .transferredWithSchedule(to: .fromGRPC(data.receiver), schedule: schedule, memo: memo)
         }
     }
 }
@@ -158,8 +158,8 @@ public struct BakerKeysEvent {
 extension BakerKeysEvent: FromGRPC {
     typealias GRPC = Concordium_V2_BakerKeysEvent
 
-    static func fromGRPC(_ g: GRPC) -> BakerKeysEvent {
-        .init(bakerId: g.bakerID.value, account: .fromGRPC(g.account), signKey: g.signKey.value, electionKey: g.electionKey.value, aggregationKey: g.aggregationKey.value)
+    static func fromGRPC(_ g: GRPC) throws -> BakerKeysEvent {
+        try .init(bakerId: g.bakerID.value, account: .fromGRPC(g.account), signKey: g.signKey.value, electionKey: g.electionKey.value, aggregationKey: g.aggregationKey.value)
     }
 }
 
@@ -196,7 +196,7 @@ extension BakerEvent: FromGRPC {
         case let .bakerStakeIncreased(data):
             return try .bakerStakeIncreased(bakerId: data.bakerID.value, newStake: .fromGRPC(data.newStake))
         case let .bakerKeysUpdated(keys):
-            return .bakerSetKeys(.fromGRPC(keys))
+            return try .bakerSetKeys(.fromGRPC(keys))
         case let .bakerSetBakingRewardCommission(data):
             return .bakerSetBakingRewardCommission(bakerId: data.bakerID.value, commission: .fromGRPC(data.bakingRewardCommission))
         case let .bakerSetFinalizationRewardCommission(data):
@@ -377,7 +377,7 @@ extension RejectReason: FromGRPC {
         case let .duplicateCredIds(v):
             return try .duplicateCredIDs(contents: v.ids.map { try .fromGRPC($0) })
         case let .encryptedAmountSelfTransfer(v):
-            return .encryptedAmountSelfTransfer(contents: .fromGRPC(v))
+            return try .encryptedAmountSelfTransfer(contents: .fromGRPC(v))
         case .finalizationRewardCommissionNotInRange:
             return .finalizationRewardCommissionNotInRange
         case .firstScheduledReleaseExpired:
@@ -389,7 +389,7 @@ extension RejectReason: FromGRPC {
         case .insufficientDelegationStake:
             return .insufficientDelegationStake
         case let .invalidAccountReference(v):
-            return .invalidAccountReference(contents: .fromGRPC(v))
+            return try .invalidAccountReference(contents: .fromGRPC(v))
         case .invalidAccountThreshold:
             return .invalidAccountThreshold
         case let .invalidContractAddress(v):
@@ -429,9 +429,9 @@ extension RejectReason: FromGRPC {
         case .nonIncreasingSchedule:
             return .nonIncreasingSchedule
         case let .notABaker(v):
-            return .notABaker(contents: .fromGRPC(v))
+            return try .notABaker(contents: .fromGRPC(v))
         case let .notADelegator(v):
-            return .notADelegator(contents: .fromGRPC(v))
+            return try .notADelegator(contents: .fromGRPC(v))
         case .notAllowedMultipleCredentials:
             return .notAllowedMultipleCredentials
         case .notAllowedToHandleEncrypted:
@@ -453,7 +453,7 @@ extension RejectReason: FromGRPC {
         case .runtimeFailure:
             return .runtimeFailure
         case let .scheduledSelfTransfer(v):
-            return .scheduledSelfTransfer(contents: .fromGRPC(v))
+            return try .scheduledSelfTransfer(contents: .fromGRPC(v))
         case .serializationFailure:
             return .serializationFailure
         case .stakeOverMaximumThresholdForPool:
@@ -541,6 +541,6 @@ extension EncryptedAmountRemovedEvent: FromGRPC {
     typealias GRPC = Concordium_V2_EncryptedAmountRemovedEvent
 
     static func fromGRPC(_ g: GRPC) throws -> EncryptedAmountRemovedEvent {
-        .init(account: .fromGRPC(g.account), newAmount: g.newAmount.value, inputAmount: g.inputAmount.value, upToIndex: g.upToIndex)
+        try .init(account: .fromGRPC(g.account), newAmount: g.newAmount.value, inputAmount: g.inputAmount.value, upToIndex: g.upToIndex)
     }
 }

@@ -30,7 +30,7 @@ struct WalletProxyOptions: ParsableArguments {
     }
 }
 
-extension BlockIdentifier: ExpressibleByArgument {
+extension Concordium.BlockIdentifier: ArgumentParser.ExpressibleByArgument {
     public init?(argument: String) {
         do {
             self = try .hash(BlockHash(fromHex: argument))
@@ -40,7 +40,7 @@ extension BlockIdentifier: ExpressibleByArgument {
     }
 }
 
-extension AccountAddress: ExpressibleByArgument {
+extension Concordium.AccountAddress: ArgumentParser.ExpressibleByArgument {
     public init?(argument: String) {
         do {
             try self.init(base58Check: argument)
@@ -50,7 +50,7 @@ extension AccountAddress: ExpressibleByArgument {
     }
 }
 
-extension ModuleReference: ExpressibleByArgument {
+extension Concordium.ModuleReference: ArgumentParser.ExpressibleByArgument {
     public init?(argument: String) {
         do {
             try self.init(Data(hex: argument))
@@ -60,7 +60,7 @@ extension ModuleReference: ExpressibleByArgument {
     }
 }
 
-extension ReceiveName: ExpressibleByArgument {
+extension Concordium.ReceiveName: ArgumentParser.ExpressibleByArgument {
     public init?(argument: String) {
         do {
             try self.init(argument)
@@ -70,7 +70,7 @@ extension ReceiveName: ExpressibleByArgument {
     }
 }
 
-extension CCD: ExpressibleByArgument {
+extension Concordium.CCD: ArgumentParser.ExpressibleByArgument {
     public init?(argument: String) {
         do {
             try self.init(argument, decimalSeparator: ".")
@@ -726,7 +726,7 @@ struct Root: AsyncParsableCommand {
                     print("Deriving account.")
                     let account = try accountDerivation.deriveAccount(credentials: [idxs])
                     print("Signing credential deployment.")
-                    let signedTx = try account.keys.sign(deployment: credential, expiry: expiry)
+                    let signedTx = try account.keys.sign(deployment: credential.credential, expiry: expiry)
                     print("Serializing credential deployment.")
                     let serializedTx = try signedTx.serialize()
                     print("Sending credential deployment.")
@@ -915,17 +915,18 @@ func makeIdentityRecoveryRequest(
 
 func withGRPCClient<T>(_ opts: GRPCOptions, _ f: (GRPCNodeClient) async throws -> T) async throws -> T {
     let group = PlatformSupport.makeEventLoopGroup(loopCount: 1)
-    defer {
-        try! group.syncShutdownGracefully()
-    }
     // Flip comment to use TLS (required for the official gRPC endpoints "grpc.testnet.concordium.com" etc.).
     let builder = opts.insecure
         ? ClientConnection.insecure(group: group)
         : ClientConnection.usingPlatformAppropriateTLS(for: group)
     let connection = builder.connect(host: opts.host, port: opts.port)
-    defer {
-        try! connection.close().wait()
-    }
     let client = GRPCNodeClient(channel: connection)
-    return try await f(client)
+
+    let res = try await f(client)
+
+    // cleanup
+    try! await connection.close().get()
+    try! await group.shutdownGracefully()
+
+    return res
 }

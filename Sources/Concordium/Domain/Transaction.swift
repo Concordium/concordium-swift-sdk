@@ -545,7 +545,7 @@ public struct SecToPubTransferData: Equatable {
 
     init(fromCryptoType cryptoType: ConcordiumWalletCrypto.SecToPubTransferData) {
         remainingAmount = cryptoType.remainingAmount
-        transferAmount = CCD(microCCD: MicroCCDAmount(cryptoType.transferAmount)!)
+        transferAmount = CCD(microCCD: cryptoType.transferAmount)
         index = cryptoType.index
         proof = cryptoType.proof
     }

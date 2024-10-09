@@ -172,27 +172,130 @@ extension WalletConnectSendTransactionParam: Decodable {
 
 /// Describes parameter supplied to a walletconnect "sign_message" request
 /// as produced by the NPM package `@concordium/wallet-connectors`
-public enum WalletConnectSignMessageParam {
+public enum WalletConnectSignMessageParam: Equatable {
     case string(message: String)
-    case binary(message: Data, schema: Data)
+    case binary(data: Data, schema: Data)
 }
 
 extension WalletConnectSignMessageParam: Decodable {
     private enum CodingKeys: String, CodingKey {
         case message
-        case schema
+    }
+
+    private struct DataJSON: Decodable {
+        /// Hex
+        let data: String
+        /// Hex
+        let schema: String
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: Self.CodingKeys.self)
-        let message = try container.decode(String.self, forKey: .message)
-        let schema = try container.decodeIfPresent(String.self, forKey: .schema).map { try Data(hex: $0) }
-
-        if let schema = schema {
-            let binaryMessage = try Data(hex: message) ?! DecodingError.dataCorruptedError(forKey: Self.CodingKeys.message, in: container, debugDescription: "Expected message to be a hex string")
-            self = .binary(message: binaryMessage, schema: schema)
-        } else {
+        if let message = try? container.decode(String.self, forKey: .message) {
             self = .string(message: message)
+            return
+        }
+
+        let message = try container.decode(DataJSON.self, forKey: .message) ?! DecodingError.dataCorruptedError(forKey: .message, in: container, debugDescription: "Expected either 'String' or '{data: String, schema: String}'")
+        self = try .binary(data: Data(hex: message.data), schema: Data(hex: message.schema))
+    }
+}
+
+/// Describes parameter supplied to a walletconnect "sign_message" request
+/// as produced by the NPM package `@concordium/wallet-connectors`
+public struct WalletConnectRequestVerifiablePresentationParam: Decodable, Equatable {
+    /// The challenge to use for the ``VerifiablePresentation``
+    public let challenge: Data
+    /// The list of statements to prove
+    public let credentialStatements: [CredentialStatement]
+
+    private struct JSON: Decodable {
+        /// Hex
+        let challenge: String
+        let credentialStatements: [CredentialStatement]
+    }
+
+    /// The statements to prove with associated issuer restrictions
+    public enum CredentialStatement: Equatable {
+        /// An account statement request
+        case account(issuers: [UInt32], statement: [AtomicIdentityStatement])
+        /// A Web3 ID statement request
+        case web3id(issuers: [ContractAddress], statement: [AtomicWeb3IdStatement])
+    }
+
+    init(challenge: Data, credentialStatements: [CredentialStatement]) {
+        self.challenge = challenge
+        self.credentialStatements = credentialStatements
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let json = try container.decode(JSON.self)
+
+        self = try .init(challenge: Data(hex: json.challenge), credentialStatements: json.credentialStatements)
+    }
+}
+
+extension WalletConnectRequestVerifiablePresentationParam.CredentialStatement: Decodable {
+    private enum TypeValue: String, Codable {
+        case sci
+        case cred
+    }
+
+    private enum NestedKeys: CodingKey {
+        case type
+        case issuers
+    }
+
+    private enum CodingKeys: CodingKey {
+        case idQualifier
+        case statement
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let nested = try container.nestedContainer(keyedBy: NestedKeys.self, forKey: .idQualifier)
+        let type = try nested.decode(TypeValue.self, forKey: .type)
+        switch type {
+        case .cred:
+            let issuers = try nested.decode([UInt32].self, forKey: .issuers)
+            let statement = try container.decode([AtomicIdentityStatement].self, forKey: .statement)
+            self = .account(issuers: issuers, statement: statement)
+        case .sci:
+            let issuers = try nested.decode([ContractAddress].self, forKey: .issuers)
+            let statement = try container.decode([AtomicWeb3IdStatement].self, forKey: .statement)
+            self = .web3id(issuers: issuers, statement: statement)
+        }
+    }
+}
+
+/// Describes wallet connect requests commonly supported
+/// as produced by the NPM package `@concordium/wallet-connectors`
+public enum WalletConnectRequest: Equatable {
+    case signMessage(param: WalletConnectSignMessageParam)
+    case sendTransaction(param: WalletConnectSendTransactionParam)
+    case requestVerifiableCredential(param: WalletConnectRequestVerifiablePresentationParam)
+}
+
+extension WalletConnectRequest: Decodable {
+    public enum Method: String, Codable {
+        case signAndSendTransaction = "sign_and_send_transaction"
+        case signMessage = "sign_message"
+        case requestVerifiablePresentation = "request_verifiable_presentation"
+    }
+
+    private enum CodingKeys: CodingKey {
+        case method
+        case params
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let method = try container.decode(Method.self, forKey: .method)
+        switch method {
+        case .signMessage: self = try .signMessage(param: container.decode(WalletConnectSignMessageParam.self, forKey: .params))
+        case .signAndSendTransaction: self = try .sendTransaction(param: container.decode(WalletConnectSendTransactionParam.self, forKey: .params))
+        case .requestVerifiablePresentation: self = try .requestVerifiableCredential(param: container.decode(WalletConnectRequestVerifiablePresentationParam.self, forKey: .params))
         }
     }
 }

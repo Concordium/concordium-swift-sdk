@@ -61,7 +61,7 @@ public struct CredentialRegistrationID: Serialize, Deserialize, FromGRPC, ToGRPC
     /// Get the ``AccountAddress`` corresonding to the credential registration ID.
     public var accountAddress: AccountAddress {
         let hash = SHA256.hash(data: value)
-        return AccountAddress(Data(hash))
+        return try! AccountAddress(Data(hash))
     }
 
     public var hex: String { value.hex }
@@ -95,7 +95,7 @@ public typealias SignatureThreshold = UInt8
 public typealias RevocationThreshold = UInt8
 
 /// Amount of uCCD.
-public typealias MicroCCDAmount = UInt64
+public typealias MicroCCDAmount = ConcordiumWalletCrypto.MicroCCDAmount
 
 public typealias EncryptedAmount = Data
 
@@ -171,7 +171,8 @@ public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC
     }
 
     /// Construct address directly from a 32-byte data buffer.
-    public init(_ data: Data) {
+    public init(_ data: Data) throws {
+        guard data.count == Self.SIZE else { throw ExactSizeError(actual: UInt(data.count), expected: UInt(Self.SIZE)) }
         self.data = data
     }
 
@@ -187,15 +188,15 @@ public struct AccountAddress: Hashable, Serialize, Deserialize, ToGRPC, FromGRPC
         if version != Self.base58CheckVersion {
             throw GRPCError.unexpectedBase58CheckVersion(expected: Self.base58CheckVersion, actual: version)
         }
-        self.init(data) // excludes initial version byte
+        try self.init(data) // excludes initial version byte
     }
 
     public static func deserialize(_ data: inout Cursor) -> AccountAddress? {
-        data.read(num: SIZE).map { AccountAddress(Data($0)) }
+        try? data.read(num: SIZE).map { try AccountAddress(Data($0)) }
     }
 
-    static func fromGRPC(_ grpc: GRPC) -> Self {
-        .init(grpc.value)
+    static func fromGRPC(_ grpc: GRPC) throws -> Self {
+        try .init(grpc.value)
     }
 
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
@@ -405,7 +406,7 @@ extension VerifyKey: Codable {
     }
 }
 
-extension VerifyKey: CustomStringConvertible {
+extension ConcordiumWalletCrypto.VerifyKey: Swift.CustomStringConvertible {
     public var description: String { "\(key.hex)" }
 }
 
@@ -426,7 +427,7 @@ extension Policy: FromGRPC {
                 let attr = try UInt8(exactly: e.key)
                     .flatMap { AttributeTag(rawValue: $0) }
                     ?! GRPCError.valueOutOfBounds
-                res["\(attr)"] = String(data: e.value, encoding: .utf8) // TODO: correct to treat attribute value as UTF-8?
+                res[attr] = String(data: e.value, encoding: .utf8) // TODO: correct to treat attribute value as UTF-8?
             }
         )
     }
@@ -451,7 +452,7 @@ extension Policy: Codable {
 
         let createdAtYearMonth = try container.decode(String.self, forKey: .createdAt)
         let validToYearMonth = try container.decode(String.self, forKey: .validTo)
-        let revealedAttributes = try container.decode([String: String].self, forKey: .revealedAttributes)
+        let revealedAttributes = try container.decode([AttributeTag: String].self, forKey: .revealedAttributes)
 
         self.init(createdAtYearMonth: createdAtYearMonth, validToYearMonth: validToYearMonth, revealedAttributes: revealedAttributes)
     }
@@ -1014,6 +1015,9 @@ extension CredentialType: FromGRPC {
     }
 }
 
+/// Details of an account creation. These transactions are free, and we only
+/// ever get a response for them if the account is created, hence no failure
+/// cases.
 public struct AccountCreationDetails {
     /// Whether this is an initial or normal account.
     public let credentialType: CredentialType
@@ -1028,8 +1032,25 @@ extension AccountCreationDetails: FromGRPC {
 
     static func fromGRPC(_ g: GRPC) throws -> AccountCreationDetails {
         let credentialType = try CredentialType.fromGRPC(g.credentialType)
-        let address = AccountAddress.fromGRPC(g.address)
+        let address = try AccountAddress.fromGRPC(g.address)
         let regId = try CredentialRegistrationID.fromGRPC(g.regID)
         return Self(credentialType: credentialType, address: address, regId: regId)
     }
+}
+
+/// Encryption keypair for an account, used to handle the encrypted amount associated with a specific account.
+public typealias EncryptionKeys = ConcordiumWalletCrypto.EncryptionKeys
+
+/// Decrypt a single encrypted amount using the secret key corresponding to the public key used for the encryption.
+public func decryptAmount(encryptedAmount: Data, encryptionSecretKey: Data) throws -> CCD {
+    let amount = try ConcordiumWalletCrypto.decryptAmount(encryptedAmount: encryptedAmount, encryptionSecretKey: encryptionSecretKey)
+    return CCD(microCCD: amount)
+}
+
+/// Combine two encrypted amounts into one.
+///
+/// This is only meaningful if both encrypted amounts are encrypted with the
+/// same public key, otherwise the result is meaningless.
+public func combineEncryptedAmounts(left: Data, right: Data) throws -> Data {
+    try ConcordiumWalletCrypto.combineEncryptedAmounts(left: left, right: right)
 }

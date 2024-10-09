@@ -43,7 +43,7 @@ extension AnonymityRevokerInfo: FromGRPC {
     }
 }
 
-extension IdentityObject: Decodable {
+extension ConcordiumWalletCrypto.IdentityObject: Swift.Decodable {
     enum CodingKeys: CodingKey {
         case preIdentityObject
         case attributeList
@@ -60,7 +60,7 @@ extension IdentityObject: Decodable {
     }
 }
 
-extension PreIdentityObject: Decodable {
+extension ConcordiumWalletCrypto.PreIdentityObject: Swift.Decodable {
     enum CodingKeys: CodingKey {
         case idCredPub
         case ipArData
@@ -90,7 +90,7 @@ extension PreIdentityObject: Decodable {
     }
 }
 
-extension AnonymityRevokerData: Decodable {
+extension ConcordiumWalletCrypto.ArData: Swift.Decodable {
     enum CodingKeys: CodingKey {
         case encPrfKeyShare
         case proofComEncEq
@@ -105,7 +105,7 @@ extension AnonymityRevokerData: Decodable {
     }
 }
 
-extension ChoiceArParameters: Decodable {
+extension ConcordiumWalletCrypto.ChoiceArParameters: Swift.Decodable {
     enum CodingKeys: CodingKey {
         case arIdentities
         case threshold
@@ -120,7 +120,7 @@ extension ChoiceArParameters: Decodable {
     }
 }
 
-extension AttributeList: Decodable {
+extension ConcordiumWalletCrypto.AttributeList: Swift.Decodable {
     enum CodingKeys: CodingKey {
         case validTo
         case createdAt
@@ -134,7 +134,7 @@ extension AttributeList: Decodable {
             validToYearMonth: container.decode(String.self, forKey: .validTo),
             createdAtYearMonth: container.decode(String.self, forKey: .createdAt),
             maxAccounts: container.decode(UInt8.self, forKey: .maxAccounts),
-            chosenAttributes: container.decode([String: String].self, forKey: .chosenAttributes)
+            chosenAttributes: container.decode([AttributeTag: String].self, forKey: .chosenAttributes)
         )
     }
 }
@@ -145,7 +145,7 @@ extension Description: FromGRPC {
     }
 }
 
-extension Description: Decodable {
+extension ConcordiumWalletCrypto.Description: Swift.Decodable {
     /// Fields used in Wallet Proxy response.
     enum CodingKeys: CodingKey {
         case name
@@ -283,55 +283,40 @@ public struct IdentityRecoveryError: Decodable, Error {
 /// Use the appropriate initializer of this type to convert it.
 /// All attribute values are strings of 31 bytes or less. The expected format of the values is documented
 /// [here](https://docs.google.com/spreadsheets/d/1CxpFvtAoUcylHQyeBtRBaRt1zsibtpmQOVsk7bsHPGA/edit).
-public enum AttributeTag: UInt8, CustomStringConvertible, CaseIterable {
-    /// First name (format: string up to 31 bytes).
-    case firstName = 0
-    /// Last name (format: string up to 31 bytes).
-    case lastName = 1
-    /// Sex (format: ISO/IEC 5218).
-    case sex = 2
-    /// Date of birth (format: ISO8601 YYYYMMDD).
-    case dateOfBirth = 3
-    /// Country of residence (format: ISO3166-1 alpha-2).
-    case countryOfResidence = 4
-    /// Country of nationality (format: ISO3166-1 alpha-2).
-    case nationality = 5
-    /// Identity document type
-    ///
-    /// Format:
-    /// - 0 : na
-    /// - 1 : passport
-    /// - 2 : national ID card
-    /// - 3 : driving license
-    /// - 4 : immigration card
-    /// - eID string (see below)
-    ///
-    /// eID strings as of Apr 2024:
-    /// - DK:MITID        : Danish MitId
-    /// - SE:BANKID       : Swedish BankID
-    /// - NO:BANKID       : Norwegian BankID
-    /// - NO:VIPPS        : Norwegian Vipps
-    /// - FI:TRUSTNETWORK : Finnish Trust Network
-    /// - NL:DIGID        : Netherlands DigiD
-    /// - NL:IDIN         : Netherlands iDIN
-    /// - BE:EID          : Belgian eID
-    /// - ITSME           : (Cross-national) ItsME
-    /// - SOFORT          : (Cross-national) Sofort
-    case idDocType = 6
-    /// Identity document number (format: string up to 31 bytes).
-    case idDocNo = 7
-    /// Identity document issuer (format: ISO3166-1 alpha-2 or ISO3166-2 if applicable).
-    case idDocIssuer = 8
-    /// Time from which the ID is valid (format: ISO8601 YYYYMMDD).
-    case idDocIssuedAt = 9
-    /// Time to which the ID is valid (format: ISO8601 YYYYMMDD).
-    case idDocExpiresAt = 10
-    /// National ID number (format: string up to 31 bytes).
-    case nationalIdNo = 11
-    /// Tax ID number (format: string up to 31 bytes).
-    case taxIdNo = 12
-    /// LEI-code - companies only (format: ISO17442).
-    case legalEntityId = 13
+public typealias AttributeTag = ConcordiumWalletCrypto.AttributeTag
+
+extension ConcordiumWalletCrypto.AttributeTag: Swift.CustomStringConvertible, Swift.CaseIterable, Swift.CodingKeyRepresentable {
+    public enum CodingKeys: CodingKey {
+        case firstName
+        case lastName
+        case sex
+        case dob
+        case countryOfResidence
+        case nationality
+        case idDocType
+        case idDocNo
+        case idDocIssuer
+        case idDocIssuedAt
+        case idDocExpiresAt
+        case nationalIdNo
+        case taxIdNo
+        case lei
+        case legalName
+        case legalCountry
+        case businessNumber
+        case registrationAuth
+    }
+
+    public var codingKey: any CodingKey {
+        CodingKeys(stringValue: description)!
+    }
+
+    public init?<T>(codingKey: T) where T: CodingKey {
+        guard let value = Self(codingKey.stringValue) else { return nil }
+        self = value
+    }
+
+    public static var allCases: [AttributeTag] = [.firstName, .lastName, .sex, .dateOfBirth, .countryOfResidence, .nationality, .idDocType, .idDocNo, .idDocIssuer, .idDocIssuedAt, .idDocExpiresAt, .nationalIdNo, .taxIdNo, .legalEntityId, .legalName, .legalCountry, .businessNumber, .registrationAuth]
 
     public init?(_ description: String) {
         switch description {
@@ -349,6 +334,34 @@ public enum AttributeTag: UInt8, CustomStringConvertible, CaseIterable {
         case "nationalIdNo": self = .nationalIdNo
         case "taxIdNo": self = .taxIdNo
         case "lei": self = .legalEntityId
+        case "legalName": self = .legalName
+        case "legalCountry": self = .legalCountry
+        case "businessNumber": self = .businessNumber
+        case "registrationAuth": self = .registrationAuth
+        default: return nil
+        }
+    }
+
+    init?(rawValue: UInt8) {
+        switch rawValue {
+        case 0: self = .firstName
+        case 1: self = .lastName
+        case 2: self = .sex
+        case 3: self = .dateOfBirth
+        case 4: self = .countryOfResidence
+        case 5: self = .nationality
+        case 6: self = .idDocType
+        case 7: self = .idDocNo
+        case 8: self = .idDocIssuer
+        case 9: self = .idDocIssuedAt
+        case 10: self = .idDocExpiresAt
+        case 11: self = .nationalIdNo
+        case 12: self = .taxIdNo
+        case 13: self = .legalEntityId
+        case 14: self = .legalName
+        case 15: self = .legalCountry
+        case 16: self = .businessNumber
+        case 17: self = .registrationAuth
         default: return nil
         }
     }
@@ -369,7 +382,47 @@ public enum AttributeTag: UInt8, CustomStringConvertible, CaseIterable {
         case .nationalIdNo: return "nationalIdNo"
         case .taxIdNo: return "taxIdNo"
         case .legalEntityId: return "lei"
+        case .legalName: return "legalName"
+        case .legalCountry: return "legalCountry"
+        case .businessNumber: return "businessNumber"
+        case .registrationAuth: return "registrationAuth"
         }
+    }
+
+    public var rawValue: UInt8 {
+        switch self {
+        case .firstName: return 0
+        case .lastName: return 1
+        case .sex: return 2
+        case .dateOfBirth: return 3
+        case .countryOfResidence: return 4
+        case .nationality: return 5
+        case .idDocType: return 6
+        case .idDocNo: return 7
+        case .idDocIssuer: return 8
+        case .idDocIssuedAt: return 9
+        case .idDocExpiresAt: return 10
+        case .nationalIdNo: return 11
+        case .taxIdNo: return 12
+        case .legalEntityId: return 13
+        case .legalName: return 14
+        case .legalCountry: return 15
+        case .businessNumber: return 16
+        case .registrationAuth: return 17
+        }
+    }
+}
+
+extension AttributeTag: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+        self = try .init(value) ?! DecodingError.dataCorruptedError(in: container, debugDescription: "Unexpected value \(value) when decoding 'AttributeTag'")
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(description)
     }
 }
 

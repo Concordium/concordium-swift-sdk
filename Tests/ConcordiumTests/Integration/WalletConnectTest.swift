@@ -139,4 +139,103 @@ final class WalletConnectTest: XCTestCase {
         let expected = makeExpectedPayload(type: type, transactionPayload: tExpected)
         XCTAssertEqual(decoded, expected)
     }
+
+    func testWalletConnectRequestDecode() throws {
+        let decoder = JSONDecoder()
+
+        var json = """
+        {
+            "method": "request_verifiable_presentation",
+            "params": {
+                "challenge": "010203",
+                "credentialStatements": [{
+                    "idQualifier": {"type": "cred", "issuers": [0]},
+                    "statement": [
+                        {"type": "RevealAttribute", "attributeTag": "firstName"},
+                    ]
+                }]
+            }
+        }
+        """.data(using: .utf8)!
+        let _ = try decoder.decode(WalletConnectRequest.self, from: json)
+
+        json = """
+        {
+            "method": "sign_message",
+            "params": {
+                "message": "This is the message"
+            }
+        }
+        """.data(using: .utf8)!
+        let _ = try decoder.decode(WalletConnectRequest.self, from: json)
+
+        json = """
+        {
+            "method": "sign_message",
+            "params": {
+                "message": {"schema": "0103", "data": "02020202"}
+            }
+        }
+        """.data(using: .utf8)!
+        let _ = try decoder.decode(WalletConnectRequest.self, from: json)
+
+        json = """
+        {
+            "method": "sign_and_send_transaction",
+            "params": {
+                "type": "\(TransactionTypeString.registerData)",
+                "sender": "\(account)",
+                "payload": {"data":"010203"},
+            }
+        }
+        """.data(using: .utf8)!
+        let _ = try decoder.decode(WalletConnectRequest.self, from: json)
+    }
+
+    func testRequestVerifiablePresentationDecode() throws {
+        let decoder = JSONDecoder()
+
+        let json = """
+        {
+            "challenge": "010203",
+            "credentialStatements": [{
+                "idQualifier": {"type": "cred", "issuers": [0,1,2]},
+                "statement": [
+                    {"type": "RevealAttribute", "attributeTag": "firstName"},
+                    {"type": "AttributeInSet", "attributeTag": "nationality", "set": ["DK", "NO"]}
+                ]
+            },{
+                "idQualifier": {"type": "sci", "issuers": [{"index": 1, "subindex": 0}, {"index": 42, "subindex": 1337}]},
+                "statement": [
+                    {"type": "RevealAttribute", "attributeTag": "something"},
+                    {"type": "AttributeInSet", "attributeTag": "arbitrary", "set": ["first", "second"]},
+                    {"type": "AttributeNotInSet", "attributeTag": "another", "set": [1, 3]},
+                    {"type": "AttributeInRange", "attributeTag": "time", "lower": {"type": "date-time", "timestamp": "2022-10-03T08:38:18.738Z"}, "upper": {"type": "date-time", "timestamp": "2024-10-03T08:38:18.738Z"}}
+                ]
+            }]
+        }
+        """.data(using: .utf8)!
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        let value = try decoder.decode(WalletConnectRequestVerifiablePresentationParam.self, from: json)
+        let expected = try WalletConnectRequestVerifiablePresentationParam(challenge: Data(hex: "010203"), credentialStatements: [
+            .account(issuers: [0, 1, 2], statement: [
+                .revealAttribute(statement: RevealAttributeIdentityStatement(attributeTag: .firstName)),
+                .attributeInSet(statement: AttributeInSetIdentityStatement(attributeTag: .nationality, set: ["DK", "NO"])),
+            ]),
+            .web3id(issuers: [ContractAddress(index: 1, subindex: 0), ContractAddress(index: 42, subindex: 1337)], statement: [
+                .revealAttribute(statement: RevealAttributeWeb3IdStatement(attributeTag: "something")),
+                .attributeInSet(statement: AttributeInSetWeb3IdStatement(attributeTag: "arbitrary", set: [.string(value: "first"), .string(value: "second")])),
+                .attributeNotInSet(statement: AttributeNotInSetWeb3IdStatement(attributeTag: "another", set: [.numeric(value: 1), .numeric(value: 3)])),
+                .attributeInRange(statement: AttributeInRangeWeb3IdStatement(
+                    attributeTag: "time",
+                    lower: .timestamp(value: formatter.date(from: "2022-10-03T08:38:18.738Z")!),
+                    upper: .timestamp(value: formatter.date(from: "2024-10-03T08:38:18.738Z")!)
+                )
+                ),
+            ]),
+        ])
+        XCTAssertEqual(value, expected)
+    }
 }
