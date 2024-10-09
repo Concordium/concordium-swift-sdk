@@ -1121,12 +1121,18 @@ extension TokenomicsInfo: FromGRPC {
     }
 }
 
+/// Describes the info returned for V0 contract instances
 public struct InstanceInfoV0 {
     public let model: Data
+    /// The account address of the contract owner
     public let owner: AccountAddress
+    /// The amount of CCD held by the contract isntance
     public let amount: CCD
+    /// The entrypoints of the contract
     public let methods: Set<ReceiveName>
+    /// The name of the init function of the contract
     public let name: InitName
+    /// A hash of the module source
     public let sourceModule: ModuleReference
 }
 
@@ -1146,11 +1152,17 @@ extension InstanceInfoV0: FromGRPC {
     }
 }
 
+/// Describes the info returned for V1 contract instances
 public struct InstanceInfoV1 {
+    /// The account address of the contract owner
     public let owner: AccountAddress
+    /// The amount of CCD held by the contract isntance
     public let amount: CCD
+    /// The entrypoints of the contract
     public let methods: Set<ReceiveName>
+    /// The name of the init function of the contract
     public let name: InitName
+    /// A hash of the module source
     public let sourceModule: ModuleReference
 }
 
@@ -1171,15 +1183,58 @@ extension InstanceInfoV1: FromGRPC {
 
 /// Holds information of a contract instance
 public enum InstanceInfo {
+    /// A V0 contract
     case v0(_ info: InstanceInfoV0)
+    /// A V1 contract
     case v1(_ info: InstanceInfoV1)
 }
 
 public extension InstanceInfo {
+    /// The name of the contract
     var name: ContractName {
         switch self {
         case let .v0(info): return info.name.contractName
         case let .v1(info): return info.name.contractName
+        }
+    }
+
+    /// The account address of the contract owner
+    var owner: AccountAddress {
+        switch self {
+        case let .v0(info): return info.owner
+        case let .v1(info): return info.owner
+        }
+    }
+
+    /// The amount of CCD held by the contract isntance
+    var amount: CCD {
+        switch self {
+        case let .v0(info): return info.amount
+        case let .v1(info): return info.amount
+        }
+    }
+
+    /// The entrypoints of the contract
+    var methods: Set<ReceiveName> {
+        switch self {
+        case let .v0(info): return info.methods
+        case let .v1(info): return info.methods
+        }
+    }
+
+    /// The name of the init function of the contract
+    var initName: InitName {
+        switch self {
+        case let .v0(info): return info.name
+        case let .v1(info): return info.name
+        }
+    }
+
+    /// A hash of the module source
+    var sourceModule: ModuleReference {
+        switch self {
+        case let .v0(info): return info.sourceModule
+        case let .v1(info): return info.sourceModule
         }
     }
 }
@@ -1197,22 +1252,34 @@ extension InstanceInfo: FromGRPC {
     }
 }
 
+/// Describes the outcome of a successful contract invocation
 public struct InvokeContractSuccess {
+    /// The value returned from the invocation
     public let returnValue: Data?
+    /// The events that were produced as a result of the transaction
     public let events: [ContractTraceElement]
+    /// The energy used for the invocation
     public let usedEnergy: Energy
 }
 
+/// Describes the outcome of an unsuccessful contract invocation
 public struct InvokeContractFailure: Error {
+    /// The value returned from the invocation
     public let returnValue: Data?
+    /// The rejection reason explaining why the invocation failed
     public let rejectReason: RejectReason
+    /// The energy used for the invocation
     public let usedEnergy: Energy
 }
 
+/// The result of a contract invocation expressed as success and failure variants
 public enum InvokeContractResult {
+    /// The invocation was successful with detailed outcome
     case success(_ value: InvokeContractSuccess)
+    /// The invocation was unsuccessful with detailed outcome
     case failure(_ value: InvokeContractFailure)
 
+    /// The energy used for the invocation
     public var usedEnergy: Energy {
         switch self {
         case let .success(v): return v.usedEnergy
