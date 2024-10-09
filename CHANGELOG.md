@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `decryptAmount` and `combineEncryptedAmounts` to handle encrypted amounts
 
 #### ID proofs
-- `Statement` and `Proof` types for constructing ID statements and their corresponding proofs
+- `IdentityStatement` and `IdentityProof` types for constructing ID statements and their corresponding proofs
 - `VerifiablePresentation`, `Web3IdCredential`, and `VerifiableCredentialStatement` types for representing verifiable credentials and constructing
   verifiable presentations for these.
   - `VerifiablePresentationBuilder` has been added to ease the construction of `VerifiablePresentation`s of a given statement in the context of a verifiable credential.
@@ -27,9 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WalletConnectRequest` represents and decodes walletconnect request variants
 
 #### Contract standards (CIS)
+- `CIS0Client` and `CIS2Client` which provides a default implementation of the respective contract standard functionality for any type which conforms to them.
 - `CIS0` and `CIS2` (wallet MVP) namespaces for functionality related to the 2 standards. 
-  - `CIS0` includes a `Client` protocol, as CIS-0 is mostly meant to be an extension of other contract standards
-  - `CIS2` includes a `Client` protocol and a `Contract` class for interacting with specific (i.e. conforming to `CIS2.Client`) and arbitrary (i.e. `CIS2.Contract`) CIS-2 contracts.
+  - `CIS2` includes a `Contract` class for interacting with arbitrary (i.e. `CIS2.Contract`) CIS-2 contracts.
 
 
 #### GRPC client
