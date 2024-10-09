@@ -5,7 +5,7 @@ import NIO
 /// Describes the official public networks available for the concordium blockchain
 public typealias Network = ConcordiumWalletCrypto.Network
 
-extension Network: @retroactive Codable {
+extension ConcordiumWalletCrypto.Network: Swift.Codable {
     private enum JSON: String, Codable {
         case mainnet
         case testnet
@@ -414,22 +414,7 @@ extension ScheduledTransfer: FromGRPC {
 /// Represents a contract address on chain
 public typealias ContractAddress = ConcordiumWalletCrypto.ContractAddress
 
-extension ContractAddress: Serialize, Deserialize, FromGRPC, ToGRPC, @retroactive Codable {
-    public func encode(to encoder: any Encoder) throws {
-        try JSON(index: index, subindex: subindex).encode(to: encoder)
-    }
-
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let value = try container.decode(JSON.self)
-        self = .init(index: value.index, subindex: value.subindex)
-    }
-
-    struct JSON: Codable {
-        var index: UInt64
-        var subindex: UInt64
-    }
-
+extension ContractAddress: Serialize, Deserialize, FromGRPC, ToGRPC {
     public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(index) + buffer.writeInteger(subindex)
     }
@@ -452,7 +437,24 @@ extension ContractAddress: Serialize, Deserialize, FromGRPC, ToGRPC, @retroactiv
     }
 }
 
-extension ContractAddress: @retroactive CustomStringConvertible {
+extension ConcordiumWalletCrypto.ContractAddress: Swift.Codable {
+    public func encode(to encoder: any Encoder) throws {
+        try JSON(index: index, subindex: subindex).encode(to: encoder)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(JSON.self)
+        self = .init(index: value.index, subindex: value.subindex)
+    }
+
+    struct JSON: Codable {
+        var index: UInt64
+        var subindex: UInt64
+    }
+}
+
+extension ConcordiumWalletCrypto.ContractAddress: Swift.CustomStringConvertible {
     public var description: String {
         "<\(index),\(subindex)>"
     }

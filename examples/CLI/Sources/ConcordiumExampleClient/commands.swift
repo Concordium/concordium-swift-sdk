@@ -30,7 +30,7 @@ struct WalletProxyOptions: ParsableArguments {
     }
 }
 
-extension BlockIdentifier: @retroactive ExpressibleByArgument {
+extension Concordium.BlockIdentifier: ArgumentParser.ExpressibleByArgument {
     public init?(argument: String) {
         do {
             self = try .hash(BlockHash(fromHex: argument))
@@ -40,7 +40,7 @@ extension BlockIdentifier: @retroactive ExpressibleByArgument {
     }
 }
 
-extension AccountAddress: @retroactive ExpressibleByArgument {
+extension Concordium.AccountAddress: ArgumentParser.ExpressibleByArgument {
     public init?(argument: String) {
         do {
             try self.init(base58Check: argument)
@@ -50,7 +50,7 @@ extension AccountAddress: @retroactive ExpressibleByArgument {
     }
 }
 
-extension ModuleReference: @retroactive ExpressibleByArgument {
+extension Concordium.ModuleReference: ArgumentParser.ExpressibleByArgument {
     public init?(argument: String) {
         do {
             try self.init(Data(hex: argument))
@@ -60,7 +60,7 @@ extension ModuleReference: @retroactive ExpressibleByArgument {
     }
 }
 
-extension ReceiveName: @retroactive ExpressibleByArgument {
+extension Concordium.ReceiveName: ArgumentParser.ExpressibleByArgument {
     public init?(argument: String) {
         do {
             try self.init(argument)
@@ -70,7 +70,7 @@ extension ReceiveName: @retroactive ExpressibleByArgument {
     }
 }
 
-extension CCD: @retroactive ExpressibleByArgument {
+extension Concordium.CCD: ArgumentParser.ExpressibleByArgument {
     public init?(argument: String) {
         do {
             try self.init(argument, decimalSeparator: ".")

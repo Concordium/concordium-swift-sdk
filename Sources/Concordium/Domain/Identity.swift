@@ -43,7 +43,7 @@ extension AnonymityRevokerInfo: FromGRPC {
     }
 }
 
-extension IdentityObject: @retroactive Decodable {
+extension ConcordiumWalletCrypto.IdentityObject: Swift.Decodable {
     enum CodingKeys: CodingKey {
         case preIdentityObject
         case attributeList
@@ -60,7 +60,7 @@ extension IdentityObject: @retroactive Decodable {
     }
 }
 
-extension PreIdentityObject: @retroactive Decodable {
+extension ConcordiumWalletCrypto.PreIdentityObject: Swift.Decodable {
     enum CodingKeys: CodingKey {
         case idCredPub
         case ipArData
@@ -90,7 +90,7 @@ extension PreIdentityObject: @retroactive Decodable {
     }
 }
 
-extension AnonymityRevokerData: @retroactive Decodable {
+extension ConcordiumWalletCrypto.ArData: Swift.Decodable {
     enum CodingKeys: CodingKey {
         case encPrfKeyShare
         case proofComEncEq
@@ -105,7 +105,7 @@ extension AnonymityRevokerData: @retroactive Decodable {
     }
 }
 
-extension ChoiceArParameters: @retroactive Decodable {
+extension ConcordiumWalletCrypto.ChoiceArParameters: Swift.Decodable {
     enum CodingKeys: CodingKey {
         case arIdentities
         case threshold
@@ -120,7 +120,7 @@ extension ChoiceArParameters: @retroactive Decodable {
     }
 }
 
-extension AttributeList: @retroactive Decodable {
+extension ConcordiumWalletCrypto.AttributeList: Swift.Decodable {
     enum CodingKeys: CodingKey {
         case validTo
         case createdAt
@@ -145,7 +145,7 @@ extension Description: FromGRPC {
     }
 }
 
-extension Description: @retroactive Decodable {
+extension ConcordiumWalletCrypto.Description: Swift.Decodable {
     /// Fields used in Wallet Proxy response.
     enum CodingKeys: CodingKey {
         case name
@@ -285,7 +285,7 @@ public struct IdentityRecoveryError: Decodable, Error {
 /// [here](https://docs.google.com/spreadsheets/d/1CxpFvtAoUcylHQyeBtRBaRt1zsibtpmQOVsk7bsHPGA/edit).
 public typealias AttributeTag = ConcordiumWalletCrypto.AttributeTag
 
-extension AttributeTag: @retroactive CustomStringConvertible, @retroactive CaseIterable, @retroactive CodingKeyRepresentable {
+extension ConcordiumWalletCrypto.AttributeTag: Swift.CustomStringConvertible, Swift.CaseIterable, Swift.CodingKeyRepresentable {
     public enum CodingKeys: CodingKey {
         case firstName
         case lastName
