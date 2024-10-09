@@ -159,6 +159,11 @@ public extension SchemaCodable {
     init(json: String, schema: TypeSchema) throws {
         self = try schema.encode(json: json, as: Self.self)
     }
+
+    /// Initialize from a ``Codable`` and a corresponding ``TypeSchema``
+    init(json: any Codable, schema: TypeSchema) throws {
+        self = try schema.encode(json: String(data: JSONEncoder().encode(json), encoding: .utf8)!, as: Self.self)
+    }
 }
 
 /// Describes the different versions of contract module schemas.
@@ -251,12 +256,17 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC, Sc
         self.init(unchecked: value)
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    /// Initialize from a type which conforms to ``ContractSerialize``
+    public init(serializable: any ContractSerialize) throws {
+        try self.init(serializable.contractSerialize())
+    }
+
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(UInt16(value.count)) + buffer.writeData(value)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Parameter? {
-        guard let value = data.read(prefixLength: UInt16.self) else { return nil }
+        guard let value = data.read(prefix: LengthPrefix.BE(size: UInt16.self)) else { return nil }
         return try? self.init(value)
     }
 
@@ -276,6 +286,11 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC, Sc
         return try decode(schema: schema)
     }
 
+    /// Init from from a JSON string for a parameter meant for a contract init function
+    /// - Parameters:
+    ///   - json: the JSON string
+    ///   - contractName: the name of the contract to inititalize with the parameter
+    ///   - schema: the module schema of the contract module
     public init(json: String, contractName: ContractName, schema: ModuleSchema) throws {
         let schema = try schema.initParameterSchema(contractName: contractName)
         self = try .init(json: json, schema: schema)
@@ -287,6 +302,11 @@ public struct Parameter: Equatable, Serialize, Deserialize, FromGRPC, ToGRPC, Sc
         return try decode(schema: schema)
     }
 
+    /// Init from from a JSON string for a parameter meant for a specific entrypoint.
+    /// - Parameters:
+    ///   - json: the JSON string
+    ///   - receiveName: the receive name of the contract
+    ///   - schema: the module schema of the contract module
     public init(json: String, receiveName: ReceiveName, schema: ModuleSchema) throws {
         let schema = try schema.receiveParameterSchema(receiveName: receiveName)
         self = try .init(json: json, schema: schema)
@@ -324,6 +344,11 @@ public struct ReturnValue: Equatable, SchemaCodable {
         let schema = try schema.receiveReturnValueSchema(receiveName: receiveName)
         return try decode(schema: schema)
     }
+
+    /// Deserialize into the given type
+    public func deserialize<D: ContractDeserialize>(_: D.Type) throws -> D {
+        try D.contractDeserialize(value)
+    }
 }
 
 extension ReturnValue: Codable {
@@ -357,6 +382,11 @@ public struct ContractError: Equatable, SchemaCodable {
         let schema = try schema.receiveErrorSchema(receiveName: receiveName)
         return try decode(schema: schema)
     }
+
+    /// Deserialize into the given type
+    public func deserialize<D: ContractDeserialize>(_: D.Type) throws -> D {
+        try D.contractDeserialize(value)
+    }
 }
 
 extension ContractError: Codable {
@@ -383,6 +413,11 @@ public struct ContractEvent: SchemaCodable {
 
     public init(_ value: Data) {
         self.value = value
+    }
+
+    /// Deserialize into the given type
+    public func deserialize<D: ContractDeserialize>(_: D.Type) throws -> D {
+        try D.contractDeserialize(value)
     }
 }
 
@@ -444,12 +479,12 @@ public struct InitName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, Has
         try self.init("init_".appending(contractName.value))
     }
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, prefixLength: UInt16.self)
+    @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeString(value, prefix: LengthPrefix.BE(size: UInt16.self))
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefix: LengthPrefix.BE(size: UInt16.self)) else { return nil }
         return try? Self(parsed)
     }
 
@@ -518,12 +553,12 @@ public struct ContractName: Serialize, Deserialize, Equatable, Hashable {
         try ReceiveName(contractName: self, entrypoint: ep)
     }
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, prefixLength: UInt16.self)
+    @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeString(value, prefix: LengthPrefix.BE(size: UInt16.self))
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefix: LengthPrefix.BE(size: UInt16.self)) else { return nil }
         return try? Self(parsed)
     }
 }
@@ -547,7 +582,7 @@ extension ContractName: CustomStringConvertible {
 }
 
 /// A wrapper around a contract entrypoint name, corresponding to the receive function in the contract without the contract name prefix
-public struct EntrypointName: Serialize, Deserialize, Equatable, Hashable {
+public struct EntrypointName: Equatable, Hashable {
     public let value: String
 
     public init(unchecked value: String) {
@@ -568,13 +603,19 @@ public struct EntrypointName: Serialize, Deserialize, Equatable, Hashable {
     public func receiveName(forContractName contractName: ContractName) throws -> ReceiveName {
         try ReceiveName(contractName: contractName, entrypoint: self)
     }
+}
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, prefixLength: UInt16.self)
+extension EntrypointName: Serialize, Deserialize, ContractSerialize {
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeString(value, prefix: LengthPrefix.LE(size: UInt16.self))
+    }
+
+    public func serialize(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeString(value, prefix: LengthPrefix.BE(size: UInt16.self))
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
+        guard let parsed = data.readString(prefix: LengthPrefix.BE(size: UInt16.self)) else { return nil }
         return try? Self(parsed)
     }
 }
@@ -599,7 +640,7 @@ extension EntrypointName: CustomStringConvertible {
 
 /// A wrapper around a receive name, consisting of a ``ContractName`` and an ``EntrypointName`` in
 /// the format `<contract-name>.<entrypoint-name>`
-public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, Hashable {
+public struct ReceiveName: Equatable, FromGRPC, ToGRPC, Hashable {
     typealias GRPC = Concordium_V2_ReceiveName
     public let value: String
 
@@ -620,15 +661,6 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, 
     /// - Throws: ``ContractNameError`` if passed value is invalid
     public init(contractName: ContractName, entrypoint: EntrypointName) throws {
         try self.init(contractName.value.appending(".\(entrypoint.value)"))
-    }
-
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(value, prefixLength: UInt16.self)
-    }
-
-    public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let parsed = data.readString(prefixLength: UInt16.self) else { return nil }
-        return try? Self(parsed)
     }
 
     func toGRPC() -> GRPC {
@@ -653,6 +685,21 @@ public struct ReceiveName: Serialize, Deserialize, Equatable, FromGRPC, ToGRPC, 
     }
 }
 
+extension ReceiveName: Serialize, Deserialize, ContractSerialize {
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeString(value, prefix: LengthPrefix.LE(size: UInt16.self))
+    }
+
+    public func serialize(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeString(value, prefix: LengthPrefix.BE(size: UInt16.self))
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> Self? {
+        guard let parsed = data.readString(prefix: LengthPrefix.BE(size: UInt16.self)) else { return nil }
+        return try? Self(parsed)
+    }
+}
+
 extension ReceiveName: Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -668,5 +715,281 @@ extension ReceiveName: Codable {
 extension ReceiveName: CustomStringConvertible {
     public var description: String {
         value
+    }
+}
+
+/// Represent a contract update not yet sent to a node.
+public struct ContractUpdateProposal {
+    /// The transacton sender
+    public let sender: AccountAddress
+    /// The CCD amount to supply to the update (if payable, otherwise 0)
+    public let amount: CCD
+    /// the contract address of the update
+    public let address: ContractAddress
+    /// the receive name of the update
+    public let receiveName: ReceiveName
+    /// The serialized parameter
+    public let parameter: Parameter
+    /// The node client used to send the transaction
+    public var client: NodeClient
+    /// The energy to supply to the transaction
+    public var energy: Energy
+}
+
+public extension ContractUpdateProposal {
+    /// Add extra energy to the transaction
+    mutating func add(energy: Energy) {
+        self.energy += energy
+    }
+
+    /// Send the proposal to the node
+    /// - Parameters:
+    ///   - sender: the sender account
+    ///   - signer: the signer for the transaction. This should match the keys for the sender account
+    ///   - expiry: An optional expiry. Defaults to 5 minutes in the future.
+    /// - Throws: If the client fails to submit the transaction
+    /// - Returns: A submitted transaction
+    func send(signer: any Signer, expiry: Date = Date(timeIntervalSinceNow: 5 * 60)) async throws -> SubmittedTransaction {
+        let nonce = try await client.nextAccountSequenceNumber(address: sender)
+        let transaction = AccountTransaction.updateContract(sender: sender, amount: amount, contractAddress: address, receiveName: receiveName, param: parameter, maxEnergy: energy)
+        return try await client.send(transaction: signer.sign(transaction: transaction, sequenceNumber: nonce.sequenceNumber, expiry: UInt64(expiry.timeIntervalSince1970)))
+    }
+}
+
+/// Protocol for interacting with arbitrary smart contracts.
+/// - Example
+///   ```
+///   public struct SomeContract: CotractClient { // now you have a contract client.
+///     public let name: ContractName
+///     public let address: ContractAddress
+///     public let client: NodeClient
+///   }
+///   let client = GRPCNodeClient(...)
+///   let contract = SomeContract(name: ContractName("test"), address: ContractAddress(index: 3, subindex: 0), client: client)
+///   ```
+public protocol ContractClient {
+    /// The name of the contract
+    var name: ContractName { get }
+    /// The contract address used to query
+    var address: ContractAddress { get }
+    /// The node client used to query the contract at `address`
+    var client: NodeClient { get }
+    /// Initialize the contract client
+    /// - Parameters:
+    ///   - client: the node client to use
+    ///   - name: the contract name
+    ///   - address: the contract address
+    init(client: any NodeClient, name: ContractName, address: ContractAddress)
+}
+
+/// Describes errors happening while invoking contract client methods.
+public enum ContractClientError: Error {
+    /// The return value could not be deserialized.
+    case noReturnValue
+}
+
+public extension ContractClient {
+    /// Initialize the contract client
+    /// - Parameters:
+    ///   - client: the node client to use
+    ///   - address: the contract address
+    init(client: NodeClient, address: ContractAddress) async throws {
+        let info = try await client.info(contractAddress: address, block: .lastFinal)
+        self = .init(client: client, name: info.name, address: address)
+    }
+
+    /// Invoke a contract view entrypoint
+    /// - Parameters:
+    ///   - entrypoint: the entrypoint to invoke
+    ///   - param: the parameter for the query to invoke the entrypoint with
+    ///   - block: the block to invoke the entrypoint at. Defaults to `.lastFinal`
+    /// - Throws: If the query cannot be serialized, if node client request fails, or if the response is nil or cannot be deserialized.
+    func view(entrypoint: EntrypointName, param: Parameter, block: BlockIdentifier = .lastFinal) async throws -> ReturnValue {
+        var request = try ContractInvokeRequest(contract: address, method: ReceiveName(contractName: name, entrypoint: entrypoint))
+        request.parameter = param
+        let res = try await client.invokeInstance(request: request, block: block).success()
+        guard let response = res.returnValue else { throw ContractClientError.noReturnValue }
+        return ReturnValue(response)
+    }
+
+    /// Construct a ``ContractUpdateProposal`` by invoking the contract entrypoint. The proposal can then subsequently be signed and submitted to the node.
+    /// - Parameters:
+    ///   - entrypoint: the entrypoint to invoke
+    ///   - param: the parameter for the query to invoke the entrypoint with
+    ///   - amount: An optional ``CCD`` amount to add to the query, if it is payable. Defaults to 0 CCD.
+    /// - Throws: If the query cannot be serialized, if node client request fails.
+    /// - Returns: A corresponding ``ContractUpdateProposal`` which can be signed and submitted.
+    func proposal(entrypoint: EntrypointName, param: Parameter, amount: CCD = CCD(microCCD: 0), sender: AccountAddress) async throws -> ContractUpdateProposal {
+        var request = try ContractInvokeRequest(contract: address, method: ReceiveName(contractName: name, entrypoint: entrypoint))
+        request.parameter = param
+        request.invoker = Address.account(sender)
+        request.amount = amount
+        let res = try await client.invokeInstance(request: request, block: .lastFinal).success()
+        return ContractUpdateProposal(sender: sender, amount: amount, address: address, receiveName: request.method, parameter: request.parameter, client: client, energy: res.usedEnergy)
+    }
+}
+
+/// Represents generic contracts, exposing the default interface of ``ContractClient``
+public class GenericContract: ContractClient {
+    public var name: ContractName
+    public var address: ContractAddress
+    public var client: any NodeClient
+
+    public required init(client: any NodeClient, name: ContractName, address: ContractAddress) {
+        self.client = client
+        self.name = name
+        self.address = address
+    }
+}
+
+/// Details serialization into format commonly used in smart contracts
+public protocol ContractSerialize {
+    /// Serialize the implementing type into the supplied ``ByteBuffer``. Returns the number of bytes written.
+    @discardableResult func contractSerialize(into buffer: inout ByteBuffer) -> Int
+}
+
+public extension ContractSerialize {
+    /// Serialize the implementing type to ``Data``
+    func contractSerialize() -> Data {
+        var buf = ByteBuffer()
+        contractSerialize(into: &buf)
+        return Data(buffer: buf)
+    }
+
+    /// Static version of ``self.serialize(into: inout ByteBuffer)
+    static func contractSerialize(_ value: Self, _ buffer: inout ByteBuffer) -> Int {
+        value.contractSerialize(into: &buffer)
+    }
+}
+
+public extension Array where Element: ContractSerialize {
+    /// Serializes the list with the number of elements prefixed into the buffer
+    /// - Parameters:
+    ///   - buffer: The buffer to write the data to
+    ///   - elements: The serializable elements to write
+    ///   - _: the integer size used to describe the number of elements serialized.
+    func contractSerialize<P: UnsignedInteger & FixedWidthInteger>(into buffer: inout NIOCore.ByteBuffer, prefixLength _: P.Type) -> Int {
+        buffer.writeSerializable(list: self, prefix: LengthPrefix.LE(size: P.self), with: Element.contractSerialize)
+    }
+
+    /// Serializes the list with the number of elements prefixed
+    /// - Parameters:
+    ///   - elements: The serializable elements to write
+    ///   - _: the integer size used to describe the number of elements serialized.
+    func contractSerialize<P: UnsignedInteger & FixedWidthInteger>(prefixLength _: P.Type) -> Data {
+        var buf = ByteBuffer()
+        let _ = contractSerialize(into: &buf, prefixLength: P.self)
+        return Data(buffer: buf)
+    }
+}
+
+/// Describes common serialization of data for contracts
+public protocol ContractDeserialize {
+    /// Deserializes part of the data in the cursor into the implementing type.
+    /// - Returns: The corresponding type, or `nil` if the type could not be parsed due running out of bytes to read.
+    static func contractDeserialize(_ data: inout Cursor) -> Self?
+}
+
+public extension ContractDeserialize {
+    /// Deserializes the data into the implementing type.
+    /// - Returns: The corresponding type, or `nil` if the type could not be parsed due to mismatch between the expected/found number of bytes in the buffer.
+    static func contractDeserialize(_ data: Data) throws -> Self {
+        var parser = Cursor(data: data)
+        guard let result = Self.contractDeserialize(&parser), parser.empty else { throw DeserializeError(Self.self, data: data) }
+        return result
+    }
+}
+
+extension Array where Element: ContractDeserialize {
+    /// Deserialize data into a list of ``Element``s
+    /// - Parameters:
+    ///   - data: The data to deserialize
+    ///   - _: the integer size used to describe the number of elements serialized.
+    static func contractDeserialize<P: UnsignedInteger & FixedWidthInteger>(_ data: inout Cursor, prefixLength _: P.Type) -> [Element]? {
+        data.contractDeserialize(listOf: Element.self, prefixLength: P.self)
+    }
+}
+
+public extension Cursor {
+    /// Deserialize a deserializable type from the inner data.
+    mutating func contractDeserialize<T: ContractDeserialize>(_ _: T) -> T? {
+        deserialize(with: T.contractDeserialize)
+    }
+
+    /// Deserialize a list of deserializable types. This will completely exhaust the data in the cursor.
+    mutating func contractDeserialize<T: ContractDeserialize>(listOf _: T.Type) -> [T]? {
+        deserialize(listOf: T.self, with: T.contractDeserialize)
+    }
+
+    /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
+    mutating func contractDeserialize<T: ContractDeserialize, P: UnsignedInteger & FixedWidthInteger>(listOf _: T.Type, prefixLength _: P.Type) -> [T]? {
+        deserialize(listOf: T.self, prefix: LengthPrefix.LE(size: P.self), with: T.contractDeserialize)
+    }
+
+    /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
+    mutating func contractDeserialize<K: ContractDeserialize, V: ContractDeserialize>(mapOf _: V.Type, keys _: K.Type) -> [K: V]? {
+        deserialize(mapOf: V.self, keys: K.self, deserializeKey: K.contractDeserialize, deserializeValue: V.contractDeserialize)
+    }
+
+    /// Deserialize a list of deserializable types, prefixed with an associated length from the inner data.
+    mutating func contractDeserialize<K: ContractDeserialize, V: ContractDeserialize, P: UnsignedInteger & FixedWidthInteger>(mapOf _: V.Type, keys _: K.Type, prefixLength _: P.Type) -> [K: V]? {
+        deserialize(mapOf: V.self, keys: K.self, prefix: LengthPrefix.LE(size: P.self), deserializeKey: K.contractDeserialize, deserializeValue: V.contractDeserialize)
+    }
+}
+
+extension ByteBuffer {
+    /// Writes a ``ContractSerialize`` type into the buffer, returning the number of bytes written.
+    @discardableResult mutating func writeContractSerializable<T: ContractSerialize>(_ value: T) -> Int {
+        writeSerializable(value, with: T.contractSerialize)
+    }
+
+    /// Writes a list of ``ContractSerialize`` type into the buffer, returning the number of bytes written.
+    @discardableResult mutating func writeContractSerializable<T: ContractSerialize>(list: [T]) -> Int {
+        writeSerializable(list: list, with: T.contractSerialize)
+    }
+
+    /// Writes a map of ``ContractSerialize`` type into the buffer, returning the number of bytes written.
+    @discardableResult mutating func writeContractSerializable<K: ContractSerialize, V: ContractSerialize>(map: [K: V]) -> Int {
+        writeSerializable(map: map, serializeKey: K.contractSerialize, serializeValue: V.contractSerialize)
+    }
+
+    /// Writes a list of ``ContractSerialize`` type into the buffer, returning the number of bytes written.
+    @discardableResult mutating func writeContractSerializable<T: ContractSerialize, P: UnsignedInteger & FixedWidthInteger>(list: [T], prefixLength _: P.Type) -> Int {
+        writeSerializable(list: list, prefix: LengthPrefix.LE(size: P.self), with: T.contractSerialize)
+    }
+
+    /// Writes a map of ``ContractSerialize`` type into the buffer, returning the number of bytes written.
+    @discardableResult mutating func writeContractSerializable<K: ContractSerialize, V: ContractSerialize, P: UnsignedInteger & FixedWidthInteger>(map: [K: V], prefixLength _: P.Type) -> Int {
+        writeSerializable(map: map, prefix: LengthPrefix.LE(size: P.self), serializeKey: K.contractSerialize, serializeValue: V.contractSerialize)
+    }
+}
+
+/// Error thrown when result count does not match the query count for a contract query
+public struct ListQueryMismatch: Error {
+    /// The number of input query parameters
+    let queriesCount: UInt
+    /// The number of return values in the response
+    let responseCount: UInt
+}
+
+/// List that serializes prefixed with length of the list.
+struct PrefixListLE<E, P: UnsignedInteger & FixedWidthInteger> {
+    let elements: [E]
+
+    init(_ elements: [E]) {
+        self.elements = elements
+    }
+}
+
+extension PrefixListLE: ContractDeserialize where E: ContractDeserialize {
+    static func contractDeserialize(_ data: inout Cursor) -> PrefixListLE<E, P>? {
+        guard let elements = [E].contractDeserialize(&data, prefixLength: P.self) else { return nil }
+        return .init(elements)
+    }
+}
+
+extension PrefixListLE: ContractSerialize where E: ContractSerialize {
+    func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        elements.contractSerialize(into: &buffer, prefixLength: P.self)
     }
 }

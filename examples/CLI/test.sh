@@ -33,11 +33,14 @@ cli_path="${dir_path}/concordium-example-client"
 "${cli_path}" generate-seed-phrase --strength=64
 "${cli_path}" generate-seed-phrase --strength=128
 "${cli_path}" generate-seed-phrase
+
 "${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters
 "${cli_path}" --host="${host}" --port="${port}" cryptographic-parameters --block="${some_block_hash}"
+
 "${cli_path}" account --address="${some_account_address}" next-sequence-number
 "${cli_path}" account --address="${some_account_address}" info
 "${cli_path}" account --address="${some_account_address}" info --block="${some_block_hash}"
+
 "${cli_path}" --host="${host}" --port="${port}" identity-providers
 "${cli_path}" --host="${host}" --port="${port}" anonymity-revokers
 "${cli_path}" --host="${host}" --port="${port}" consensus-info
@@ -53,3 +56,6 @@ cli_path="${dir_path}/concordium-example-client"
 "${cli_path}" --host="${host}" --port="${port}" bakers --block="${some_block_hash}"
 "${cli_path}" --host="${host}" --port="${port}" pool-info --block="${some_block_hash}" --baker-id 9999
 "${cli_path}" --host="${host}" --port="${port}" passive-pool-info --block="${some_block_hash}"
+
+"${cli_path}" --host="${host}" --port="${port}" cis2 --index 2059 -- subindex 0 balance-of --account 4UC8o4m8AgTxt5VBFMdLwMCwwJQVJwjesNzW7RPXkACynrULmd
+"${cli_path}" --host="${host}" --port="${port}" cis2 --index 2059 -- subindex 0 token-metadata

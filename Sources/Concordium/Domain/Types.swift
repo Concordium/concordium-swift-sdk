@@ -204,7 +204,7 @@ public struct ModuleReference: HashBytes, Serialize, Deserialize, ToGRPC, FromGR
         self.value = value
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeData(value)
     }
 
@@ -248,7 +248,7 @@ public enum WasmVersion: UInt8, Serialize, Deserialize, Codable {
     case v0
     case v1
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
+    @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
         buffer.writeInteger(UInt32(rawValue))
     }
 
@@ -270,13 +270,13 @@ public struct WasmModule: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
     public var version: WasmVersion
     public var source: Data
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
-        buffer.writeSerializable(version) + buffer.writeData(source, prefixLength: UInt32.self)
+    @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeSerializable(version) + buffer.writeData(source, prefix: LengthPrefix.BE(size: UInt32.self))
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
         guard let version = WasmVersion.deserialize(&data),
-              let source = data.read(prefixLength: UInt32.self) else { return nil }
+              let source = data.read(prefix: LengthPrefix.BE(size: UInt32.self)) else { return nil }
 
         return Self(version: version, source: Data(source))
     }
@@ -337,12 +337,12 @@ public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
         self.value = value
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeData(value, prefixLength: UInt16.self)
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeData(value, prefix: LengthPrefix.BE(size: UInt16.self))
     }
 
     public static func deserialize(_ data: inout Cursor) -> Memo? {
-        data.read(prefixLength: UInt16.self).map { Self(Data($0)) }
+        data.read(prefix: LengthPrefix.BE(size: UInt16.self)).map { Self(Data($0)) }
     }
 
     static func fromGRPC(_ gRPC: Concordium_V2_Memo) throws -> Memo {
@@ -380,7 +380,7 @@ public struct ScheduledTransfer: Serialize, Deserialize, Equatable, Codable {
         self.amount = amount
     }
 
-    @discardableResult public func serializeInto(buffer: inout ByteBuffer) -> Int {
+    @discardableResult public func serialize(into buffer: inout ByteBuffer) -> Int {
         buffer.writeInteger(timestamp) + buffer.writeSerializable(amount)
     }
 
@@ -414,17 +414,7 @@ extension ScheduledTransfer: FromGRPC {
 /// Represents a contract address on chain
 public typealias ContractAddress = ConcordiumWalletCrypto.ContractAddress
 
-extension ContractAddress: Serialize, Deserialize, FromGRPC, ToGRPC {
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
-        buffer.writeInteger(index) + buffer.writeInteger(subindex)
-    }
-
-    public static func deserialize(_ data: inout Cursor) -> ContractAddress? {
-        guard let index = data.parseUInt(UInt64.self),
-              let subindex = data.parseUInt(UInt64.self) else { return nil }
-        return Self(index: index, subindex: subindex)
-    }
-
+extension ContractAddress: FromGRPC, ToGRPC {
     func toGRPC() -> Concordium_V2_ContractAddress {
         var g = GRPC()
         g.index = index
@@ -434,6 +424,28 @@ extension ContractAddress: Serialize, Deserialize, FromGRPC, ToGRPC {
 
     static func fromGRPC(_ gRPC: Concordium_V2_ContractAddress) -> Self {
         Self(index: gRPC.index, subindex: gRPC.subindex)
+    }
+}
+
+extension ContractAddress: Serialize, Deserialize, ContractSerialize, ContractDeserialize {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(index) + buffer.writeInteger(subindex)
+    }
+
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        buffer.writeInteger(index, endianness: .little) + buffer.writeInteger(subindex, endianness: .little)
+    }
+
+    public static func deserialize(_ data: inout Cursor) -> ContractAddress? {
+        guard let index = data.parseUInt(UInt64.self),
+              let subindex = data.parseUInt(UInt64.self) else { return nil }
+        return Self(index: index, subindex: subindex)
+    }
+
+    public static func contractDeserialize(_ data: inout Cursor) -> ContractAddress? {
+        guard let index = data.parseUInt(UInt64.self, endianness: .little),
+              let subindex = data.parseUInt(UInt64.self, endianness: .little) else { return nil }
+        return ContractAddress(index: index, subindex: subindex)
     }
 }
 
@@ -486,12 +498,12 @@ public struct RegisteredData: Equatable, Serialize, Deserialize, FromGRPC, ToGRP
         self.init(unchecked: value)
     }
 
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(UInt16(value.count)) + buffer.writeData(value)
     }
 
     public static func deserialize(_ data: inout Cursor) -> Self? {
-        guard let value = data.read(prefixLength: UInt16.self) else { return nil }
+        guard let value = data.read(prefix: LengthPrefix.BE(size: UInt16.self)) else { return nil }
         return try? self.init(value)
     }
 
@@ -531,7 +543,7 @@ public typealias SecToPubAmountTransferProof = Data
 public typealias CredentialDeploymentInfo = ConcordiumWalletCrypto.CredentialDeploymentInfo
 
 extension CredentialDeploymentInfo: Serialize {
-    public func serializeInto(buffer: inout NIOCore.ByteBuffer) -> Int {
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         let bytes = try! serializeCredentialDeploymentInfo(credInfo: self) // In practice, this will type will never be generated manually, so unwrap is relatively safe...
         return buffer.writeData(Data(bytes))
     }
@@ -679,6 +691,22 @@ public enum Address {
     case account(_ address: AccountAddress)
     /// A contract address
     case contract(_ address: ContractAddress)
+}
+
+extension Address: Serialize, ContractSerialize {
+    public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        switch self {
+        case let .account(address): return buffer.writeInteger(UInt8(0)) + address.serialize(into: &buffer)
+        case let .contract(address): return buffer.writeInteger(UInt8(1)) + address.contractSerialize(into: &buffer)
+        }
+    }
+
+    public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
+        switch self {
+        case let .account(address): return buffer.writeInteger(UInt8(0)) + address.serialize(into: &buffer)
+        case let .contract(address): return buffer.writeInteger(UInt8(1)) + address.serialize(into: &buffer)
+        }
+    }
 }
 
 extension Address: FromGRPC, ToGRPC {
