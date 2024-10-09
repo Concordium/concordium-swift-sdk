@@ -1178,8 +1178,8 @@ public enum InstanceInfo {
 public extension InstanceInfo {
     var name: ContractName {
         switch self {
-        case let .v0(info): info.name.contractName
-        case let .v1(info): info.name.contractName
+        case let .v0(info): return info.name.contractName
+        case let .v1(info): return info.name.contractName
         }
     }
 }

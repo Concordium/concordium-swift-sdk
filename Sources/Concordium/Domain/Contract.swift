@@ -964,6 +964,14 @@ extension ByteBuffer {
     }
 }
 
+/// Error thrown when result count does not match the query count for a contract query
+public struct ListQueryMismatch: Error {
+    /// The number of input query parameters
+    let queriesCount: UInt
+    /// The number of return values in the response
+    let responseCount: UInt
+}
+
 /// List that serializes prefixed with length of the list.
 struct PrefixListLE<E, P: UnsignedInteger & FixedWidthInteger> {
     let elements: [E]

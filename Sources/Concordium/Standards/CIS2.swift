@@ -2,12 +2,8 @@ import BigInt
 import Foundation
 import NIO
 
-public struct ListQueryMismatch: Error {
-    /// The number of input query parameters
-    let queriesCount: UInt
-    /// The number of return values in the response
-    let responseCount: UInt
-}
+/// Can be used by contracts conforming to the CIS2 standard
+public protocol CIS2Client: CIS0Client {}
 
 /// Namespace for any CIS2 related type
 public enum CIS2 {
@@ -200,11 +196,8 @@ public enum CIS2 {
     typealias BalanceOfResponse = PrefixListLE<TokenAmount, UInt16>
     typealias TokenMetadataResponse = PrefixListLE<TokenMetadataUrl, UInt16>
 
-    /// Can be used by contracts conforming to the CIS2 standard
-    public protocol Client: ContractClient, CIS0.Client {}
-
     /// Represents an arbitrary CIS2 contract
-    public class Contract: GenericContract, CIS0.Client, Client {}
+    public class Contract: GenericContract, CIS2Client {}
 }
 
 public extension CIS2.TokenMetadataUrl {
@@ -222,7 +215,7 @@ public extension CIS2.TokenMetadataUrl {
     }
 }
 
-public extension CIS2.Client {
+public extension CIS2Client {
     /// Initialize the contract client if the contract supports CIS-2 (queries support through CIS-0 standard)
     /// - Parameters:
     ///   - client: the node client to use
@@ -339,9 +332,9 @@ extension CIS2.Receiver: ContractSerialize {
     public func contractSerialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         switch self {
         case let .account(address):
-            buffer.writeInteger(UInt8(0)) + address.serialize(into: &buffer)
+            return buffer.writeInteger(UInt8(0)) + address.serialize(into: &buffer)
         case let .contract(address, hookName):
-            buffer.writeInteger(UInt8(1)) + address.contractSerialize(into: &buffer) + hookName.contractSerialize(into: &buffer)
+            return buffer.writeInteger(UInt8(1)) + address.contractSerialize(into: &buffer) + hookName.contractSerialize(into: &buffer)
         }
     }
 }

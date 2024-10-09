@@ -1,6 +1,9 @@
 import Foundation
 import NIO
 
+/// Can be used in any contract which conforms to the CIS-0 standard
+public protocol CIS0Client: ContractClient {}
+
 /// CIS0 namespace containing CIS-0 related functionality
 public enum CIS0 {
     /// Describes a contract standard identifier
@@ -29,12 +32,9 @@ public enum CIS0 {
     }
 
     typealias SupportsResponse = PrefixListLE<SupportResult, UInt16>
-
-    /// Can be used in any contract that conforms to the CIS0 standard
-    public protocol Client: ContractClient {}
 }
 
-public extension CIS0.Client {
+public extension CIS0Client {
     /// Query the contract for support of a standard
     /// - Parameter query: The standard to query support for
     /// - Throws: If the client invocation fails
