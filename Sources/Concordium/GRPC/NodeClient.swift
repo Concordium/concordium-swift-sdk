@@ -40,9 +40,9 @@ public protocol NodeClient {
     func anonymityRevokers(block: BlockIdentifier) -> AsyncThrowingStream<AnonymityRevokerInfo, Error>
     /// Get the next account sequence number for the account
     func nextAccountSequenceNumber(address: AccountAddress) async throws -> NextAccountSequenceNumber
-    /// Get the account info for an account
+    /// Get the ``AccountInfo`` for an account
     func info(account: AccountIdentifier, block: BlockIdentifier) async throws -> AccountInfo
-    /// Get the account info for a block
+    /// Get the ``BlockInfo`` for a block
     func info(block: BlockIdentifier) async throws -> BlockInfo
     /// Submit a transaction to the node
     func send(transaction: SignedAccountTransaction) async throws -> SubmittedTransaction

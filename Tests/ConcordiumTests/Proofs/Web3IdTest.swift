@@ -1,4 +1,5 @@
 @testable import Concordium
+import CryptoKit
 import XCTest
 
 private let GLOBAL = CryptographicParameters(
@@ -14,8 +15,8 @@ final class Web3IdTest: XCTestCase {
                 network: .testnet,
                 credId: Data(hex: "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100df4cac5e161fb81aebe3a04300e63f086d0d8"),
                 statement: [
-                    .attributeInRange(statement: AttributeInRangeStatementV1(attributeTag: .dateOfBirth, lower: "81", upper: "1231")),
-                    .revealAttribute(statement: RevealAttributeStatementV1(attributeTag: .firstName)),
+                    .attributeInRange(statement: AttributeInRangeIdentityStatement(attributeTag: .dateOfBirth, lower: "81", upper: "1231")),
+                    .revealAttribute(statement: RevealAttributeIdentityStatement(attributeTag: .firstName)),
                 ]
             ),
         ]
@@ -37,8 +38,7 @@ final class Web3IdTest: XCTestCase {
 
     func testProveWeb3IdStatement() throws {
         let wallet = try WalletSeed(seedHex: "efa5e27326f8fa0902e647b52449bf335b7b605adc387015ec903f41d95080eb71361cbc7fb78721dcd4f3926a337340aa1406df83332c44c1cdcfe100603860", network: Network.testnet)
-        let holderId = try wallet.publicKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes(issuer: IssuerSeedIndexes(index: 1, subindex: 0), index: 1))
-        let signer = try wallet.signingKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes(issuer: IssuerSeedIndexes(index: 1, subindex: 0), index: 1))
+        let signer: Curve25519.Signing.PrivateKey = try wallet.signingKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes(issuer: IssuerSeedIndexes(index: 1, subindex: 0), index: 1))
 
         let challenge = try Data(hex: "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100dAAAA")
         let statements = [
@@ -46,10 +46,10 @@ final class Web3IdTest: XCTestCase {
                 credType: [],
                 network: Network.testnet,
                 contract: ContractAddress(index: 1, subindex: 0),
-                holderId: holderId,
+                holderId: signer.publicKey.rawRepresentation,
                 statement: [
-                    AtomicStatementV2.attributeInSet(statement: AttributeInSetStatementV2(attributeTag: "degreeType", set: [Web3IdAttribute.string(value: "BachelorDegree"), Web3IdAttribute.string(value: "MasterDegree")])),
-                    AtomicStatementV2.revealAttribute(statement: RevealAttributeStatementV2(attributeTag: "degreeName")),
+                    AtomicWeb3IdStatement.attributeInSet(statement: AttributeInSetWeb3IdStatement(attributeTag: "degreeType", set: [Web3IdAttribute.string(value: "BachelorDegree"), Web3IdAttribute.string(value: "MasterDegree")])),
+                    AtomicWeb3IdStatement.revealAttribute(statement: RevealAttributeWeb3IdStatement(attributeTag: "degreeName")),
                 ]
             ),
         ]
@@ -57,7 +57,7 @@ final class Web3IdTest: XCTestCase {
 
         let commitmentInputs = try [VerifiableCredentialCommitmentInputs.web3Issuer(
             signature: Data(hex: "40ced1f01109c7a307fffabdbea7eb37ac015226939eddc05562b7e8a29d4a2cf32ab33b2f76dd879ce69fab7ff3752a73800c9ce41da6d38b189dccffa45906"),
-            signer: signer,
+            signer: signer.rawRepresentation,
             values: [
                 "degreeName": Web3IdAttribute.string(value: "Bachelor of Science and Arts"),
                 "degreeType": Web3IdAttribute.string(value: "BachelorDegree"),
@@ -234,18 +234,82 @@ final class Web3IdTest: XCTestCase {
         XCTAssertEqual(parsed, try decoder.decode(Web3IdCredential.self, from: encoder.encode(parsed)))
     }
 
+    func testRejectsInvalidValues() throws {
+        let network = Network.testnet
+        let challenge = try Data(hex: "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100dAAAA")
+
+        let accountStatements = [
+            AtomicIdentityStatement.attributeInSet(statement: AttributeInSetIdentityStatement(attributeTag: .nationality, set: ["NO", "SE", "FI"])),
+            AtomicIdentityStatement.attributeInRange(statement: AttributeInRangeIdentityStatement(attributeTag: .dateOfBirth, lower: "19000101", upper: "20000101")),
+        ]
+        let web3IdStatements = [
+            AtomicWeb3IdStatement.attributeNotInSet(statement: AttributeNotInSetWeb3IdStatement(attributeTag: "tag", set: [.numeric(value: 0), .numeric(value: 1), .numeric(value: 2)])),
+            AtomicWeb3IdStatement.attributeInRange(statement: AttributeInRangeWeb3IdStatement(attributeTag: "other", lower: .timestamp(value: .init(timeIntervalSince1970: 1_000_000_000)), upper: .timestamp(value: .init(timeIntervalSince1970: 1_727_870_991)))),
+        ]
+
+        let idValues: [AttributeTag: String] = [
+            .nationality: "DK",
+            .dateOfBirth: "18000101",
+        ]
+        let idRand: [AttributeTag: Data] = try [
+            .dateOfBirth: Data(hex: "237205f67b5dd0b87a3f45bea51e55de0dda64af6082dceafc43855a317249d6"),
+            .nationality: Data(hex: "25de8bfad4a90ca67d7c0be368355b3401f24dc2172f05b610001299d3c84898"),
+        ]
+        let credId = try CredentialRegistrationID(Data(hex: "94b55cf320993917927c77c1e8037b868e279ca7a97905115516c8366d8ad1fc27bbe5fd9c87e1ac27d7166216f6afbc"))
+        let issuer = UInt32(17)
+
+        let web3Values: [String: Web3IdAttribute] = [
+            "tag": .numeric(value: 2),
+            "other": .timestamp(value: .init(timeIntervalSince1970: 927_870_891)),
+        ]
+        let web3Rand: [String: Data] = try [
+            "other": Data(hex: "2a989b5b483bcb7adcf070617c83c8daea8536282946b616bb78db179ed606aa"),
+            "tag": Data(hex: "6a0951d214b82be6a26f6f5abadff0f22788f6b5bf5c08f1799d65addcc464e4"),
+        ]
+
+        let web3IdCred = try Web3IdCredential(
+            holderId: Data(hex: "1dce1025acbc8002ee9403f635073b49f1b93cb43cf9509fefc43d14bedb6834"),
+            network: Network.testnet,
+            registry: ContractAddress(index: 1337, subindex: 42),
+            credentialType: ["VerifiableCredential", "TestCredential", "ConcordiumVerifiableCredential"],
+            credentialSchema: "N/A",
+            issuerKey: Data(hex: "c954ee1e182b2ff7cdefd25bfab25437d184e45c20df0a94b9e8f60143929575"),
+            validFrom: Date(),
+            validUntil: nil,
+            values: web3Values,
+            randomness: web3Rand,
+            signature: Data(hex: "7013df1d6d7a260b2a6c4a2eabe62ab2595cf01a65be0a846cf54d0f24464ad181d47f41ebe1f3fb3b7d78208ba4dc56b8930d0b6218d35d608ddc0a773dbf0c")
+        )
+        let signer = try Curve25519.Signing.PrivateKey(rawRepresentation: Data(hex: "cfd166ecd740d2aefab053c1dca27e01ad55d3c4a730bced4e3a8ed476ff2fbc"))
+
+        var builder = VerifiablePresentationBuilder(challenge: challenge, network: network)
+        let accRes = try builder.verify(accountStatements, values: idValues, randomness: idRand, credId: credId, issuer: issuer)
+        let web3Res = try builder.verify(web3IdStatements, for: web3IdCred, signer: signer)
+
+        switch accRes {
+        case .success(): XCTFail()
+        case let .failure(err):
+            XCTAssertEqual(err, VerifiablePresentationBuilder.IdStatementCheckError(attributes: [.nationality, .dateOfBirth]))
+        }
+        switch web3Res {
+        case .success(): XCTFail()
+        case let .failure(err):
+            XCTAssertEqual(err, VerifiablePresentationBuilder.Web3IdStatementCheckError(attributes: ["tag", "other"]))
+        }
+    }
+
     // Cryptographic values have been generated with the rust SDK.
     func testProveStatement() throws {
         let network = Network.testnet
         let challenge = try Data(hex: "94d3e85bbc8ff0091e562ad8ef6c30d57f29b19f17c98ce155df2a30100dAAAA")
 
         let accountStatements = [
-            AtomicStatementV1.attributeInSet(statement: AttributeInSetStatementV1(attributeTag: .nationality, set: ["DK", "NO", "SE", "FI"])),
-            AtomicStatementV1.attributeInRange(statement: AttributeInRangeStatementV1(attributeTag: .dateOfBirth, lower: "16000101", upper: "20000101")),
+            AtomicIdentityStatement.attributeInSet(statement: AttributeInSetIdentityStatement(attributeTag: .nationality, set: ["DK", "NO", "SE", "FI"])),
+            AtomicIdentityStatement.attributeInRange(statement: AttributeInRangeIdentityStatement(attributeTag: .dateOfBirth, lower: "16000101", upper: "20000101")),
         ]
         let web3IdStatements = [
-            AtomicStatementV2.attributeNotInSet(statement: AttributeNotInSetStatementV2(attributeTag: "tag", set: [.numeric(value: 0), .numeric(value: 1), .numeric(value: 2)])),
-            AtomicStatementV2.attributeInRange(statement: AttributeInRangeStatementV2(attributeTag: "other", lower: .timestamp(value: .init(timeIntervalSince1970: 1_000_000_000)), upper: .timestamp(value: .init(timeIntervalSince1970: 1_727_870_991)))),
+            AtomicWeb3IdStatement.attributeNotInSet(statement: AttributeNotInSetWeb3IdStatement(attributeTag: "tag", set: [.numeric(value: 0), .numeric(value: 1), .numeric(value: 2)])),
+            AtomicWeb3IdStatement.attributeInRange(statement: AttributeInRangeWeb3IdStatement(attributeTag: "other", lower: .timestamp(value: .init(timeIntervalSince1970: 1_000_000_000)), upper: .timestamp(value: .init(timeIntervalSince1970: 1_727_870_991)))),
         ]
 
         let idValues: [AttributeTag: String] = [
@@ -281,7 +345,7 @@ final class Web3IdTest: XCTestCase {
             randomness: web3Rand,
             signature: Data(hex: "7013df1d6d7a260b2a6c4a2eabe62ab2595cf01a65be0a846cf54d0f24464ad181d47f41ebe1f3fb3b7d78208ba4dc56b8930d0b6218d35d608ddc0a773dbf0c")
         )
-        let signer = try Data(hex: "cfd166ecd740d2aefab053c1dca27e01ad55d3c4a730bced4e3a8ed476ff2fbc")
+        let signer = try Curve25519.Signing.PrivateKey(rawRepresentation: Data(hex: "cfd166ecd740d2aefab053c1dca27e01ad55d3c4a730bced4e3a8ed476ff2fbc"))
 
         var builder = VerifiablePresentationBuilder(challenge: challenge, network: network)
         try builder.verify(accountStatements, values: idValues, randomness: idRand, credId: credId, issuer: issuer)

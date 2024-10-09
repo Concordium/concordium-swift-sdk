@@ -122,7 +122,7 @@ public class WalletSeed {
     }
 
     /// Compute the signing key for the account credential corresponding to the account credential indices
-    public func signingKey(accountCredentialIndexes: AccountCredentialSeedIndexes) throws -> Data {
+    func signingKey(accountCredentialIndexes: AccountCredentialSeedIndexes) throws -> Data {
         try accountCredentialSigningKey(
             seed: seed,
             network: network,
@@ -132,8 +132,13 @@ public class WalletSeed {
         )
     }
 
+    /// Compute the signing key for the account credential corresponding to the account credential indices
+    public func signingKey(accountCredentialIndexes: AccountCredentialSeedIndexes) throws -> Curve25519.Signing.PrivateKey {
+        try Curve25519.Signing.PrivateKey(rawRepresentation: signingKey(accountCredentialIndexes: accountCredentialIndexes))
+    }
+
     /// Compute the public key for the account credential corresponding to the account credential indices
-    public func publicKey(accountCredentialIndexes: AccountCredentialSeedIndexes) throws -> Data {
+    func publicKey(accountCredentialIndexes: AccountCredentialSeedIndexes) throws -> Data {
         try accountCredentialPublicKey(
             seed: seed,
             network: network,
@@ -187,7 +192,7 @@ public class WalletSeed {
     }
 
     /// Compute the signing key for the Web3 ID credential corresponding to the credential indices
-    public func signingKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes) throws -> Data {
+    func signingKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes) throws -> Data {
         try verifiableCredentialSigningKey(
             seed: seed,
             network: network,
@@ -197,8 +202,13 @@ public class WalletSeed {
         )
     }
 
+    /// Compute the signing key for the Web3 ID credential corresponding to the credential indices
+    public func signingKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes) throws -> Curve25519.Signing.PrivateKey {
+        try Curve25519.Signing.PrivateKey(rawRepresentation: signingKey(verifiableCredentialIndexes: verifiableCredentialIndexes))
+    }
+
     /// Compute the public key for the Web3 ID credential corresponding to the credential indices
-    public func publicKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes) throws -> Data {
+    func publicKey(verifiableCredentialIndexes: VerifiableCredentialSeedIndexes) throws -> Data {
         try verifiableCredentialPublicKey(
             seed: seed,
             network: network,
@@ -209,11 +219,16 @@ public class WalletSeed {
     }
 
     /// Compute the verifiable credential backup key for the wallet seed
-    public func verifiableCredentialBackupEncryptionKey() throws -> Data {
+    func verifiableCredentialBackupEncryptionKey() throws -> Data {
         try ConcordiumWalletCrypto.verifiableCredentialBackupEncryptionKey(
             seed: seed,
             network: network
         )
+    }
+
+    /// Compute the verifiable credential backup key for the wallet seed
+    public func verifiableCredentialBackupEncryptionKey() throws -> Curve25519.Signing.PrivateKey {
+        try Curve25519.Signing.PrivateKey(rawRepresentation: verifiableCredentialBackupEncryptionKey())
     }
 }
 
@@ -302,7 +317,7 @@ public class SeedBasedAccountDerivation {
         try AccountKeysCurve25519(
             Dictionary(
                 uniqueKeysWithValues: credentials.enumerated().map { idx, cred in
-                    let key = try Curve25519.Signing.PrivateKey(rawRepresentation: seed.signingKey(accountCredentialIndexes: cred))
+                    let key: Curve25519.Signing.PrivateKey = try seed.signingKey(accountCredentialIndexes: cred)
                     return (CredentialIndex(idx), [KeyIndex(0): key])
                 }
             )
