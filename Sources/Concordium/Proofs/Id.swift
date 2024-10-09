@@ -162,7 +162,7 @@ extension AtomicIdentityStatement {
     }
 }
 
-extension AtomicIdentityStatement: @retroactive Codable {
+extension ConcordiumWalletCrypto.AtomicIdentityStatement: Swift.Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(toSDK())
@@ -329,7 +329,7 @@ extension AtomicIdentityProof {
     }
 }
 
-extension AtomicIdentityProof: @retroactive Codable {
+extension ConcordiumWalletCrypto.AtomicIdentityProof: Swift.Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(toSDK())
@@ -346,7 +346,7 @@ extension AtomicIdentityProof: @retroactive Codable {
  */
 public typealias IdentityProof = ConcordiumWalletCrypto.IdentityProof
 
-extension IdentityProof: @retroactive Codable {
+extension ConcordiumWalletCrypto.IdentityProof: Swift.Codable {
     private struct JSON: Codable {
         let proofs: [AtomicIdentityProof]
     }
@@ -368,7 +368,7 @@ extension IdentityProof: @retroactive Codable {
  */
 public typealias VersionedIdentityProof = ConcordiumWalletCrypto.VersionedIdentityProof
 
-extension VersionedIdentityProof: @retroactive Codable {
+extension ConcordiumWalletCrypto.VersionedIdentityProof: Swift.Codable {
     private typealias JSON = Versioned<IdentityProof>
 
     public func encode(to encoder: any Encoder) throws {

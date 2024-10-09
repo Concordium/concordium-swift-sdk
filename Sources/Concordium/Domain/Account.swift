@@ -406,7 +406,7 @@ extension VerifyKey: Codable {
     }
 }
 
-extension VerifyKey: @retroactive CustomStringConvertible {
+extension ConcordiumWalletCrypto.VerifyKey: Swift.CustomStringConvertible {
     public var description: String { "\(key.hex)" }
 }
 

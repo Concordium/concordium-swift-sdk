@@ -8,7 +8,7 @@ import Foundation
 /// proofs.
 public typealias Web3IdAttribute = ConcordiumWalletCrypto.Web3IdAttribute
 
-extension Web3IdAttribute: @retroactive Codable {
+extension ConcordiumWalletCrypto.Web3IdAttribute: Swift.Codable {
     private enum AttributeType: String, Codable {
         case dateTime = "date-time"
     }
@@ -130,7 +130,7 @@ extension AtomicWeb3IdStatement {
     }
 }
 
-extension AtomicWeb3IdStatement: @retroactive Codable {
+extension ConcordiumWalletCrypto.AtomicWeb3IdStatement: Swift.Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(toSDK())
@@ -161,7 +161,7 @@ public typealias Web3IdStatementWithProof = ConcordiumWalletCrypto.Web3IdStateme
 /// Commitments signed by the issuer.
 public typealias SignedCommitments = ConcordiumWalletCrypto.SignedCommitments
 
-extension SignedCommitments: @retroactive Codable {
+extension ConcordiumWalletCrypto.SignedCommitments: Swift.Codable {
     private struct JSON: Codable {
         let signature: String // HexString
         let commitments: [String: String] // [String: HexString]
@@ -188,7 +188,7 @@ extension SignedCommitments: @retroactive Codable {
 /// Describes the differnet decentralized identifier variants
 public typealias DID = ConcordiumWalletCrypto.Did
 
-extension DID: @retroactive Codable {
+extension ConcordiumWalletCrypto.Did: Swift.Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         let value = try container.decode(String.self)
@@ -215,7 +215,7 @@ func getDateFormatter() -> ISO8601DateFormatter {
  * `Account` proof.
  */
 public typealias VerifiableCredentialProof = ConcordiumWalletCrypto.VerifiableCredentialProof
-extension VerifiableCredentialProof: @retroactive Codable {
+extension ConcordiumWalletCrypto.VerifiableCredentialProof: Swift.Codable {
     private enum CodingKeys: CodingKey {
         case credentialSubject
         case type
@@ -370,7 +370,7 @@ extension VerifiableCredentialProof: @retroactive Codable {
 /// the presentation. At present this is a list of signatures.
 public typealias LinkingProof = ConcordiumWalletCrypto.LinkingProof
 
-extension LinkingProof: @retroactive Codable {
+extension ConcordiumWalletCrypto.LinkingProof: Swift.Codable {
     private struct JSON: Codable {
         /// Always "ConcordiumWeakLinkingProofV1"
         let type: String
@@ -423,7 +423,7 @@ public extension VerifiablePresentation {
     }
 }
 
-extension VerifiablePresentation: @retroactive Codable {
+extension ConcordiumWalletCrypto.VerifiablePresentation: Swift.Codable {
     private struct JSON: Codable {
         /// Always "VerifiablePresentation"
         let type: String
@@ -798,7 +798,7 @@ extension AtomicWeb3IdProof {
     }
 }
 
-extension AtomicWeb3IdProof: @retroactive Codable {
+extension ConcordiumWalletCrypto.AtomicWeb3IdProof: Swift.Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(toSDK())

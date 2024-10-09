@@ -14,7 +14,7 @@ extension CryptographicParameters: FromGRPC {
     }
 }
 
-extension CryptographicParameters: @retroactive Decodable {
+extension ConcordiumWalletCrypto.GlobalContext: Swift.Decodable {
     private enum CodingKeys: CodingKey {
         case onChainCommitmentKey
         case bulletproofGenerators
