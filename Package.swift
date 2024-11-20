@@ -1,4 +1,4 @@
-// swift-tools-version: 5.6
+// swift-tools-version: 5.7
 
 import Foundation
 import PackageDescription
@@ -7,7 +7,7 @@ let package = Package(
     name: "Concordium",
     platforms: [
         // To be kept in sync with README.
-        .iOS(.v15),
+        .iOS(.v16),
         .macOS(.v10_15),
     ],
     products: [
