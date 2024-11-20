@@ -30,7 +30,7 @@ This SDK is intended to replace this old library, but hasn't yet reached full fe
 
 ### Supported platforms
 
-- iOS 15+
+- iOS 16+
 - macOS 10.15+ (macOS 12+ to build)
 
 ## Usage
