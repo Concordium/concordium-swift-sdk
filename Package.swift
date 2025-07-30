@@ -6,7 +6,6 @@ import PackageDescription
 let package = Package(
     name: "Concordium",
     platforms: [
-        // To be kept in sync with README.
         .iOS(.v16),
         .macOS(.v10_15),
     ],
@@ -21,6 +20,7 @@ let package = Package(
         .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.21.1"),
         .package(url: "https://github.com/nicklockwood/SwiftFormat.git", exact: "0.53.7"),
         .package(url: "https://github.com/bisgardo/Hextension.git", from: "1.0.1"),
+        .package(url: "https://github.com/valpackett/SwiftCBOR.git", branch: "master"),
         overridableCryptoDependency(
             url: "https://github.com/Concordium/concordium-wallet-crypto-swift.git",
             from: "5.0.0"
@@ -33,6 +33,7 @@ let package = Package(
                 "Base58Check",
                 "Hextension",
                 "SwiftFormat",
+                "SwiftCBOR",
                 .product(name: "ConcordiumWalletCrypto", package: "concordium-wallet-crypto-swift"),
                 .product(name: "GRPC", package: "grpc-swift"),
             ]

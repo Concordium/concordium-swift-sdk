@@ -354,6 +354,10 @@ public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
         m.value = value
         return m
     }
+    
+    public var stringValue: String {
+        String(data: value, encoding: .utf8) ?? ""
+    }
 }
 
 extension Memo: Codable {
@@ -653,6 +657,8 @@ public enum ProtocolVersion: FromGRPC {
     case p5 // = 4
     case p6 // = 5
     case p7 // = 6
+    case p8 // = 7
+    case p9 // = 8
 
     static func fromGRPC(_ gRPC: Concordium_V2_ProtocolVersion) throws -> ProtocolVersion {
         switch gRPC {
@@ -670,6 +676,10 @@ public enum ProtocolVersion: FromGRPC {
             return .p6
         case .protocolVersion7:
             return .p7
+        case .protocolVersion8:
+            return .p8
+        case .protocolVersion9:
+            return .p9
         case .UNRECOGNIZED:
             throw GRPCError.valueOutOfBounds
         }
