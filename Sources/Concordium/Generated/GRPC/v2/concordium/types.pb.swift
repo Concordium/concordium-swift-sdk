@@ -268,6 +268,7 @@ enum Concordium_V2_TransactionType: SwiftProtobuf.Enum, Swift.CaseIterable {
     
     /// Introduced in protocol version 9.
     case pltTokenUpdate // = 21
+    
     case UNRECOGNIZED(Int)
     
     init() {
