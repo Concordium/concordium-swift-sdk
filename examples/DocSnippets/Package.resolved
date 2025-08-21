@@ -172,6 +172,15 @@
       }
     },
     {
+      "identity" : "swiftcbor",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/valpackett/SwiftCBOR.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "ea5ece79b0efde241495bfaa74eccceeffc382bc"
+      }
+    },
+    {
       "identity" : "swiftformat",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/nicklockwood/SwiftFormat.git",
