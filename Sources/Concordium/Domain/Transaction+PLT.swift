@@ -19,10 +19,46 @@ public enum TokenUpdateOperation: Equatable {
             return payload.asCBOR()
         }
     }
+    
+    // Return as a list of operations to match Android SDK's List<TokenOperation>
+    public func toCBORList() -> CBOR {
+        return .array([toCBOR()])
+    }
 
     public func toCBORData() -> Data { Data(toCBOR().encode()) }
 }
 
+extension TokenUpdateOperation {
+    public static func fromCBORData(_ data: Data) -> TokenUpdateOperation? {
+        guard let cbor = try? CBOR.decode(Array(data)) else { return nil }
+        return fromCBOR(cbor)
+    }
+    
+    public static func fromCBOR(_ cbor: CBOR) -> TokenUpdateOperation? {
+        guard case let .map(map) = cbor else { return nil }
+        
+        if let transferData = map[.utf8String("transfer")] {
+            guard case let .map(transferMap) = transferData else { return nil }
+            
+            guard let amountData = transferMap[.utf8String("amount")],
+                  let receiverData = transferMap[.utf8String("recipient")] else { return nil }
+            
+            guard let amount = PLT.TokenOperationAmount.fromCBOR(amountData),
+                  let receiver = PLT.TaggedTokenHolderAccount.fromCBOR(receiverData) else { return nil }
+            
+            let memo = transferMap[.utf8String("memo")].flatMap { PLT.CborMemo.fromCBOR($0) }
+            
+            let payload = ConfigureTransferPLTPayload(
+                amount: amount,
+                receiver: receiver,
+                memo: memo
+            )
+            return .transfer(payload)
+        }
+        
+        return nil
+    }
+}
 
 extension AccountTransaction {
     public static func transfer(
@@ -41,6 +77,8 @@ extension AccountTransaction {
             receiver: recipient,
             memo: memoPayload
         )
+        
+        let energy = TransactionCost.pltTransferCost()
 
         return AccountTransaction(
             sender: sender,
@@ -48,7 +86,7 @@ extension AccountTransaction {
                 tokenId: tokenId,
                 operation: .transfer(transferPayload)
             ),
-            energy: TransactionCost.TRANSFER
+            energy: energy
         )
     }
 }
@@ -73,16 +111,17 @@ public struct ConfigureTransferPLTPayload: Equatable, Codable {
     }
 
     public func asCBOR() -> CBOR {
-        var innerMap: [CBOR: CBOR] = [
+        // Match Android SDK structure: operation wrapped in type map
+        var operationMap: [CBOR: CBOR] = [
             .utf8String("amount"): amount.asCBOR(),
             .utf8String("recipient"): receiver.asCBOR()
         ]
         if let memo {
-            innerMap[.utf8String("memo")] = memo.asCBOR()
+            operationMap[.utf8String("memo")] = memo.asCBOR()
         }
 
         return .map([
-            .utf8String("transfer"): CBOR.map(innerMap)
+            .utf8String("transfer"): CBOR.map(operationMap)
         ])
     }
 }
@@ -110,6 +149,36 @@ public enum PLT {
                 .map(CBOR.unsignedInt) ?? .byteString(Array(value.serialize()))
             return .tagged(Self.tag, .array([exponent, mantissa]))
         }
+        
+        public static func fromCBOR(_ cbor: CBOR) -> TokenOperationAmount? {
+            guard case let .tagged(tag, .array(array)) = cbor,
+                  tag == Self.tag,
+                  array.count == 2 else { return nil }
+            
+            let exponent: Int
+            let mantissa: BigUInt
+            
+            switch array[0] {
+            case let .negativeInt(negInt):
+                exponent = Int(negInt)
+            case let .unsignedInt(posInt):
+                exponent = -Int(posInt)
+            default:
+                return nil
+            }
+            
+            switch array[1] {
+            case let .unsignedInt(uint):
+                mantissa = BigUInt(uint)
+            case let .byteString(bytes):
+                mantissa = BigUInt(Data(bytes))
+            default:
+                return nil
+            }
+            
+            let decimals = exponent + 1
+            return TokenOperationAmount(value: mantissa, decimals: decimals)
+        }
     }
 
     public struct TaggedTokenHolderAccount: Equatable, Hashable, Codable {
@@ -130,6 +199,13 @@ public enum PLT {
             .tagged(Self.cborTag, .map([
                 .unsignedInt(Self.fieldId): .byteString(data)
             ]))
+        }
+        
+        public static func fromCBOR(_ cbor: CBOR) -> TaggedTokenHolderAccount? {
+            guard case let .tagged(tag, .map(map)) = cbor,
+                  tag == Self.cborTag,
+                  case let .byteString(data) = map[.unsignedInt(Self.fieldId)] else { return nil }
+            return TaggedTokenHolderAccount(data: data)
         }
     }
 
@@ -164,6 +240,12 @@ public enum PLT {
         public func asCBOR() -> CBOR {
             .tagged(Self.tag, .byteString(content))
         }
+        
+        public static func fromCBOR(_ cbor: CBOR) -> CborMemo? {
+            guard case let .tagged(tag, .byteString(content)) = cbor,
+                  tag == Self.tag else { return nil }
+            return CborMemo(rawCBOR: content)
+        }
     }
 
     public struct AccountAddress: Equatable, Hashable {
@@ -197,12 +279,18 @@ public enum PLT {
     }
 }
 
-extension String: Serialize {
+extension String: Serialize, Deserialize {
     public func serialize(into buffer: inout ByteBuffer) -> Int {
         let bytes = Array(self.utf8)
         var res = 0
         res += buffer.writeInteger(UInt8(bytes.count)) // 1-byte length prefix
         res += buffer.writeBytes(bytes)
         return res
+    }
+    
+    public static func deserialize(_ data: inout Cursor) -> String? {
+        guard let length = data.parseUInt(UInt8.self),
+              let bytes = data.read(num: length) else { return nil }
+        return String(decoding: bytes, as: UTF8.self)
     }
 }
