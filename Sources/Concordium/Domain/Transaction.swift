@@ -63,8 +63,17 @@ public enum TransactionCost {
     /// The amount of additional energy required for a "configure delegation" transaction
     public static let CONFIGURE_DELEGATION: Energy = 300
     
-    public static func pltTransferCost() -> Energy {
-        4050
+    /// Calculate the cost for PLT token operations
+    public static func pltTransferCost(tokenId: String, operation: TokenUpdateOperation) -> Energy {
+        // Create the TokenUpdate structure
+        let tokenUpdate = TokenUpdate(tokenSymbol: tokenId, operations: [operation])
+        
+        // Create the payload to calculate its size
+        let payload = AccountTransactionPayload.updatePLT(tokenId: tokenId, operation: operation)
+        let serializedPayload = payload.serialize()
+        
+        // Base transaction cost + operations base cost
+        return TransactionCost.base(headerByteCount: 0, payloadByteCount: serializedPayload.count, signatureCount: 1) + tokenUpdate.getOperationsBaseCost()
     }
 }
 
@@ -501,7 +510,6 @@ extension TransactionType: FromGRPC {
         case .configureDelegation: return .configureDelegation
         case .pltTokenUpdate: return .pltTokenUpdate
         case .UNRECOGNIZED(let value):
-            // Handle Android SDK's TOKEN_UPDATE = 27 for PLT tokens
             if value == 27 {
                 return .pltTokenUpdate
             }
@@ -991,15 +999,10 @@ extension AccountTransactionPayload: Serialize, Deserialize {
             res += buffer.writeSerializable(TransactionType.configureDelegation)
             res += buffer.writeSerializable(data)
         case let .updatePLT(tokenId, operation):
-            // EXACTLY like Android SDK: TOKEN_UPDATE = 27
-            res += buffer.writeInteger(UInt8(27))
-            
-            // EXACTLY like Android SDK: 1-byte length + UTF-8 bytes
+            res += buffer.writeInteger(UInt8(27))            
             let symbolBytes = Array(tokenId.utf8)
             res += buffer.writeInteger(UInt8(symbolBytes.count))
-            res += buffer.writeBytes(symbolBytes)
-            
-            // EXACTLY like Android SDK: 4-byte BE length + CBOR bytes
+            res += buffer.writeBytes(symbolBytes)            
             let operationsBytes = operation.toCBORList().encode()
             res += buffer.writeInteger(UInt32(operationsBytes.count), endianness: .big)
             res += buffer.writeData(Data(operationsBytes))

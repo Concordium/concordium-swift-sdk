@@ -10,22 +10,74 @@ import BigInt
 import SwiftCBOR
 import NIO
 
-public enum TokenUpdateOperation: Equatable {
+/// A protocol-level token (PLT) operation used in TokenUpdate (matches Android SDK)
+public protocol TokenOperation {
+    /// Operation type name, e.g. "transfer", "mint", etc.
+    var type: String { get }
+    
+    /// A CBOR-serializable operation body
+    var body: CBOR { get }
+    
+    /// The base energy cost of this operation
+    var baseCost: Energy { get }
+}
+
+public enum TokenUpdateOperation: Equatable, TokenOperation {
     case transfer(ConfigureTransferPLTPayload)
 
-    public func toCBOR() -> CBOR {
+    public var type: String {
+        switch self {
+        case .transfer:
+            return "transfer"
+        }
+    }
+    
+    public var body: CBOR {
         switch self {
         case .transfer(let payload):
             return payload.asCBOR()
         }
     }
     
-    // Return as a list of operations to match Android SDK's List<TokenOperation>
+    public var baseCost: Energy {
+        switch self {
+        case .transfer:
+            return Energy(100)
+        }
+    }
+
+    public func toCBOR() -> CBOR {
+        return .map([.utf8String(type): body])
+    }
+    
     public func toCBORList() -> CBOR {
         return .array([toCBOR()])
     }
 
     public func toCBORData() -> Data { Data(toCBOR().encode()) }
+}
+
+/// A protocol-level token (PLT) transaction payload containing operations (matches Android SDK)
+public struct TokenUpdate: Equatable {
+    /// Symbol (ID) of the token to execute operations on
+    public let tokenSymbol: String
+    
+    /// Operations to execute
+    public let operations: [TokenUpdateOperation]
+    
+    public init(tokenSymbol: String, operations: [TokenUpdateOperation]) {
+        self.tokenSymbol = tokenSymbol
+        self.operations = operations
+    }
+    
+    /// Get the total base cost for all operations
+    public func getOperationsBaseCost() -> Energy {
+        var total = Energy(0)
+        for operation in operations {
+            total += operation.baseCost
+        }
+        return total
+    }
 }
 
 extension TokenUpdateOperation {
@@ -78,7 +130,7 @@ extension AccountTransaction {
             memo: memoPayload
         )
         
-        let energy = TransactionCost.pltTransferCost()
+        let energy = TransactionCost.pltTransferCost(tokenId: tokenId, operation: .transfer(transferPayload))
 
         return AccountTransaction(
             sender: sender,
@@ -111,7 +163,6 @@ public struct ConfigureTransferPLTPayload: Equatable, Codable {
     }
 
     public func asCBOR() -> CBOR {
-        // Match Android SDK structure: operation wrapped in type map
         var operationMap: [CBOR: CBOR] = [
             .utf8String("amount"): amount.asCBOR(),
             .utf8String("recipient"): receiver.asCBOR()
