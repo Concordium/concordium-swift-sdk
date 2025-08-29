@@ -171,9 +171,7 @@ public struct ConfigureTransferPLTPayload: Equatable, Codable {
             operationMap[.utf8String("memo")] = memo.asCBOR()
         }
 
-        return .map([
-            .utf8String("transfer"): CBOR.map(operationMap)
-        ])
+        return .map(operationMap)
     }
 }
 

@@ -72,8 +72,22 @@ public enum TransactionCost {
         let payload = AccountTransactionPayload.updatePLT(tokenId: tokenId, operation: operation)
         let serializedPayload = payload.serialize()
         
-        // Base transaction cost + operations base cost
-        return TransactionCost.base(headerByteCount: 0, payloadByteCount: serializedPayload.count, signatureCount: 1) + tokenUpdate.getOperationsBaseCost()
+        // Create a temporary header to calculate its size (same approach as prepare method)
+        let tempHeader = AccountTransactionHeader(sender: try! AccountAddress(Data(repeating: 0, count: 32)), sequenceNumber: 0, maxEnergy: 0, expiry: 0)
+        let headerSize = tempHeader.serialize(serializedPayloadSize: 0).count
+        
+        // Calculate energy cost following Android SDK's Payload.calculateEnergyCost formula:
+        // CONSTANT_A * noOfSignatures + CONSTANT_B * (TRANSACTION_HEADER_SIZE + payloadSize) + transactionSpecificCost
+        let constantA = 100 // energy per signature
+        let constantB = 1   // energy per byte
+        let signatureCost = constantA * 1 // 1 signature
+        let sizeCost = constantB * (headerSize + serializedPayload.count)
+        let operationsCost = tokenUpdate.getOperationsBaseCost()
+        
+        // Add base cost for PLT transaction type (similar to TRANSFER = 300)
+        let pltBaseCost = Energy(300)
+        
+        return Energy(signatureCost + sizeCost) + operationsCost + pltBaseCost
     }
 }
 
