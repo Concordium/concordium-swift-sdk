@@ -122,7 +122,7 @@ extension AccountTransaction {
     ) -> Self {
         let tokenAmount = PLT.TokenOperationAmount(amount: amount)
         let recipient = PLT.TaggedTokenHolderAccount(accountAddress: PLT.AccountAddress(data: receiver.data))
-        let memoPayload = memo.flatMap { PLT.CborMemo(cborObject: .utf8String($0.stringValue)) }
+        let memoPayload = memo.flatMap { PLT.CborMemo(string: $0.stringValue) }
 
         let transferPayload = ConfigureTransferPLTPayload(
             amount: tokenAmount,
@@ -280,10 +280,9 @@ public enum PLT {
         }
         
         public init?(string: String) {
-            let cbor = CBOR.utf8String(string)
-            let encoded = cbor.encode()
-            guard encoded.count <= Self.maxLength else { return nil }
-            self.content = encoded
+            let stringBytes = Array(string.utf8)
+            guard stringBytes.count <= Self.maxLength else { return nil }
+            self.content = stringBytes
         }
 
         public func asCBOR() -> CBOR {
