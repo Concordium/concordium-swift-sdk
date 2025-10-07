@@ -467,7 +467,7 @@ public enum TransactionType: UInt8, Serialize, Deserialize, Codable {
     case transferWithSchedule = 13
     case updateCredentials = 14
     case registerData = 15
-    case transferWithMemo = 16
+    case transferWithMemo = 22
     /// Only effective prior to protocol version 7
     case encryptedAmountTransferWithMemo = 17
     case transferWithScheduleAndMemo = 18
