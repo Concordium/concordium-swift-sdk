@@ -10,7 +10,7 @@ import BigInt
 import SwiftCBOR
 import NIO
 
-/// A protocol-level token (PLT) operation used in TokenUpdate (matches Android SDK)
+/// A protocol-level token (PLT) operation used in TokenUpdate
 public protocol TokenOperation {
     /// Operation type name, e.g. "transfer", "mint", etc.
     var type: String { get }
@@ -57,7 +57,7 @@ public enum TokenUpdateOperation: Equatable, TokenOperation {
     public func toCBORData() -> Data { Data(toCBOR().encode()) }
 }
 
-/// A protocol-level token (PLT) transaction payload containing operations (matches Android SDK)
+/// A protocol-level token (PLT) transaction payload containing operations
 public struct TokenUpdate: Equatable {
     /// Symbol (ID) of the token to execute operations on
     public let tokenSymbol: String
