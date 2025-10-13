@@ -107,7 +107,7 @@ public extension TokenUpdateOperation {
             )
             return .transfer(payload)
         }
-        
+
         return nil
     }
 }
