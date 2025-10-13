@@ -38,12 +38,10 @@ final class PLTTransactionCostTests: XCTestCase {
         let receiver = PLT.TaggedTokenHolderAccount(
             accountAddress: PLT.AccountAddress(data: receiverData)
         )
-
         let payload = ConfigureTransferPLTPayload(amount: amount, receiver: receiver)
         let operation = TokenUpdateOperation.transfer(payload)
-
         let cost = TransactionCost.pltTransferCost(tokenId: "TEST", operation: operation)
-        
+
         // Should be base cost + operations cost
         let expectedOperationsCost = Energy(100)
         let actualPayload = AccountTransactionPayload.updatePLT(tokenId: "TEST", operation: operation)
@@ -67,7 +65,7 @@ final class PLTTransactionCostTests: XCTestCase {
         let operation = TokenUpdateOperation.transfer(payload)
 
         let cost = TransactionCost.pltTransferCost(tokenId: "TEST", operation: operation)
-        
+
         // Should be base cost + operations cost (memo affects payload size)
         let expectedOperationsCost = Energy(100)
         let actualPayload = AccountTransactionPayload.updatePLT(tokenId: "TEST", operation: operation)
@@ -103,7 +101,7 @@ final class PLTTransactionCostTests: XCTestCase {
 
         let amount1 = PLT.TokenOperationAmount(value: BigUInt(1), decimals: 2)
         let amount2 = PLT.TokenOperationAmount(value: BigUInt(1_000_000_000_000), decimals: 12)
-        
+
         let payload1 = ConfigureTransferPLTPayload(amount: amount1, receiver: receiver)
         let payload2 = ConfigureTransferPLTPayload(amount: amount2, receiver: receiver)
 

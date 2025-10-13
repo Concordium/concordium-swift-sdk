@@ -14,10 +14,10 @@ import SwiftCBOR
 public protocol TokenOperation {
     /// Operation type name, e.g. "transfer", "mint", etc.
     var type: String { get }
-    
+
     /// A CBOR-serializable operation body
     var body: CBOR { get }
-    
+
     /// The base energy cost of this operation
     var baseCost: Energy { get }
 }
@@ -31,14 +31,14 @@ public enum TokenUpdateOperation: Equatable, TokenOperation {
             return "transfer"
         }
     }
-    
+
     public var body: CBOR {
         switch self {
-        case .transfer(let payload):
+        case let .transfer(payload):
             return payload.asCBOR()
         }
     }
-    
+
     public var baseCost: Energy {
         switch self {
         case .transfer:
@@ -47,11 +47,11 @@ public enum TokenUpdateOperation: Equatable, TokenOperation {
     }
 
     public func toCBOR() -> CBOR {
-        return .map([.utf8String(type): body])
+        .map([.utf8String(type): body])
     }
-    
+
     public func toCBORList() -> CBOR {
-        return .array([toCBOR()])
+        .array([toCBOR()])
     }
 
     public func toCBORData() -> Data { Data(toCBOR().encode()) }
@@ -61,15 +61,15 @@ public enum TokenUpdateOperation: Equatable, TokenOperation {
 public struct TokenUpdate: Equatable {
     /// Symbol (ID) of the token to execute operations on
     public let tokenSymbol: String
-    
+
     /// Operations to execute
     public let operations: [TokenUpdateOperation]
-    
+
     public init(tokenSymbol: String, operations: [TokenUpdateOperation]) {
         self.tokenSymbol = tokenSymbol
         self.operations = operations
     }
-    
+
     /// Get the total base cost for all operations
     public func getOperationsBaseCost() -> Energy {
         var total = Energy(0)
@@ -80,26 +80,26 @@ public struct TokenUpdate: Equatable {
     }
 }
 
-extension TokenUpdateOperation {
-    public static func fromCBORData(_ data: Data) -> TokenUpdateOperation? {
+public extension TokenUpdateOperation {
+    static func fromCBORData(_ data: Data) -> TokenUpdateOperation? {
         guard let cbor = try? CBOR.decode(Array(data)) else { return nil }
         return fromCBOR(cbor)
     }
-    
-    public static func fromCBOR(_ cbor: CBOR) -> TokenUpdateOperation? {
+
+    static func fromCBOR(_ cbor: CBOR) -> TokenUpdateOperation? {
         guard case let .map(map) = cbor else { return nil }
-        
+
         if let transferData = map[.utf8String("transfer")] {
             guard case let .map(transferMap) = transferData else { return nil }
-            
+
             guard let amountData = transferMap[.utf8String("amount")],
                   let receiverData = transferMap[.utf8String("recipient")] else { return nil }
-            
+
             guard let amount = PLT.TokenOperationAmount.fromCBOR(amountData),
                   let receiver = PLT.TaggedTokenHolderAccount.fromCBOR(receiverData) else { return nil }
-            
+
             let memo = transferMap[.utf8String("memo")].flatMap { PLT.CborMemo.fromCBOR($0) }
-            
+
             let payload = ConfigureTransferPLTPayload(
                 amount: amount,
                 receiver: receiver,
@@ -112,8 +112,8 @@ extension TokenUpdateOperation {
     }
 }
 
-extension AccountTransaction {
-    public static func transfer(
+public extension AccountTransaction {
+    static func transfer(
         plt tokenId: String,
         sender: AccountAddress,
         receiver: AccountAddress,
@@ -129,7 +129,7 @@ extension AccountTransaction {
             receiver: recipient,
             memo: memoPayload
         )
-        
+
         let energy = TransactionCost.pltTransferCost(tokenId: tokenId, operation: .transfer(transferPayload))
 
         return AccountTransaction(
@@ -165,7 +165,7 @@ public struct ConfigureTransferPLTPayload: Equatable, Codable {
     public func asCBOR() -> CBOR {
         var operationMap: [CBOR: CBOR] = [
             .utf8String("amount"): amount.asCBOR(),
-            .utf8String("recipient"): receiver.asCBOR()
+            .utf8String("recipient"): receiver.asCBOR(),
         ]
         if let memo {
             operationMap[.utf8String("memo")] = memo.asCBOR()
@@ -176,7 +176,6 @@ public struct ConfigureTransferPLTPayload: Equatable, Codable {
 }
 
 public enum PLT {
-
     public struct TokenOperationAmount: Equatable, Hashable, Codable {
         public let value: BigUInt
         public let decimals: Int
@@ -252,8 +251,8 @@ public enum PLT {
 
         public static func fromCBOR(_ cbor: CBOR) -> TaggedTokenHolderAccount? {
             guard case let .tagged(tag, .map(map)) = cbor,
-                  tag == Self.cborTag,
-                  case let .byteString(data) = map[.unsignedInt(Self.fieldId)] else { return nil }
+                  tag == cborTag,
+                  case let .byteString(data) = map[.unsignedInt(fieldId)] else { return nil }
             return TaggedTokenHolderAccount(data: data)
         }
     }

@@ -159,7 +159,7 @@ public struct AccountKeysJSON: Decodable {
             self.signKey = signKey
             self.verifyKey = verifyKey
         }
-        
+
         public var signKey: String
         public var verifyKey: String
 
