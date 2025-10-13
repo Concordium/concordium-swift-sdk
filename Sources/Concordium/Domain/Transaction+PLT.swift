@@ -198,15 +198,15 @@ public enum PLT {
                 .map(CBOR.unsignedInt) ?? .byteString(Array(value.serialize()))
             return .tagged(Self.tag, .array([exponent, mantissa]))
         }
-        
+
         public static func fromCBOR(_ cbor: CBOR) -> TokenOperationAmount? {
             guard case let .tagged(tag, .array(array)) = cbor,
                   tag == Self.tag,
                   array.count == 2 else { return nil }
-            
+
             let exponent: Int
             let mantissa: BigUInt
-            
+
             switch array[0] {
             case let .negativeInt(negInt):
                 exponent = Int(negInt)
@@ -237,7 +237,7 @@ public enum PLT {
         public let data: [UInt8]
 
         public init(accountAddress: AccountAddress) {
-            self.data = accountAddress.bytes
+            data = accountAddress.bytes
         }
 
         public init(data: [UInt8]) {
@@ -246,7 +246,7 @@ public enum PLT {
 
         public func asCBOR() -> CBOR {
             .tagged(Self.cborTag, .map([
-                .unsignedInt(Self.fieldId): .byteString(data)
+                .unsignedInt(Self.fieldId): .byteString(data),
             ]))
         }
 
@@ -276,13 +276,13 @@ public enum PLT {
         public init?(cborObject: CBOR) {
             let encoded = cborObject.encode()
             guard encoded.count <= Self.maxLength else { return nil }
-            self.content = encoded
+            content = encoded
         }
 
         public init?(string: String) {
             let stringBytes = Array(string.utf8)
             guard stringBytes.count <= Self.maxLength else { return nil }
-            self.content = stringBytes
+            content = stringBytes
         }
 
         public func asCBOR() -> CBOR {
@@ -304,7 +304,7 @@ public enum PLT {
         }
 
         public init(data: Data) {
-            self.bytes = Array(data)
+            bytes = Array(data)
         }
 
         public init?(hex: String) {
@@ -316,11 +316,11 @@ public enum PLT {
             var idx = s.startIndex
             while idx < s.endIndex {
                 let next = s.index(idx, offsetBy: 2)
-                guard let b = UInt8(s[idx..<next], radix: 16) else { return nil }
+                guard let b = UInt8(s[idx ..< next], radix: 16) else { return nil }
                 out.append(b)
                 idx = next
             }
-            self.bytes = out
+            bytes = out
         }
 
         public var data: Data { Data(bytes) }

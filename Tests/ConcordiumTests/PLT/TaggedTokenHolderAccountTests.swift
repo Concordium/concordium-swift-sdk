@@ -4,7 +4,6 @@ import XCTest
 @testable import Concordium
 
 final class TaggedTokenHolderAccountTests: XCTestCase {
-
     func testTaggedTokenHolderAccountSerialization() {
         let addressBytes = [UInt8](repeating: 0x15, count: 32)
         let account = PLT.TaggedTokenHolderAccount(data: addressBytes)
