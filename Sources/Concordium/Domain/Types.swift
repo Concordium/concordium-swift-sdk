@@ -354,7 +354,7 @@ public struct Memo: Serialize, Deserialize, ToGRPC, FromGRPC, Equatable {
         m.value = value
         return m
     }
-    
+
     public var stringValue: String {
         String(data: value, encoding: .utf8) ?? ""
     }

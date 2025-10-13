@@ -116,10 +116,10 @@ extension AccountKeys: Decodable where Key == AccountKeyCurve25519 {
 }
 
 public struct AccountKeysJSON: Decodable {
-    public init(keys: [String : AccountKeysJSON.CredentialKeys]) {
+    public init(keys: [String: AccountKeysJSON.CredentialKeys]) {
         self.keys = keys
     }
-    
+
     public var keys: [String: CredentialKeys]
 
     public func toSDKType() throws -> AccountKeysCurve25519 {
@@ -136,10 +136,10 @@ public struct AccountKeysJSON: Decodable {
     }
 
     public struct CredentialKeys: Decodable {
-        public init(keys: [String : AccountKeysJSON.Key]) {
+        public init(keys: [String: AccountKeysJSON.Key]) {
             self.keys = keys
         }
-        
+
         public var keys: [String: Key]
 
         public func toSDKType() throws -> [KeyIndex: AccountKeyCurve25519] {

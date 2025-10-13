@@ -1,14 +1,14 @@
 //
-//  File.swift
+//  Transaction+PLT.swift
 //  Concordium
 //
 //  Created by Max on 30.07.2025.
 //
 
-import Foundation
 import BigInt
-import SwiftCBOR
+import Foundation
 import NIO
+import SwiftCBOR
 
 /// A protocol-level token (PLT) operation used in TokenUpdate
 public protocol TokenOperation {
@@ -329,7 +329,7 @@ public enum PLT {
 
 extension String: Serialize, Deserialize {
     public func serialize(into buffer: inout ByteBuffer) -> Int {
-        let bytes = Array(self.utf8)
+        let bytes = Array(utf8)
         var res = 0
         res += buffer.writeInteger(UInt8(bytes.count)) // 1-byte length prefix
         res += buffer.writeBytes(bytes)
