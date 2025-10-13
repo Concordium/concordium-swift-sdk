@@ -1,23 +1,22 @@
-import XCTest
 import Foundation
 import SwiftCBOR
+import XCTest
 @testable import Concordium
 
 final class CborMemoTests: XCTestCase {
-    
     func testMemoTextStringSerialization() {
         let memo1 = PLT.CborMemo(string: "Hello world")!
         XCTAssertEqual(
             Data(memo1.asCBOR().encode()).hexEncodedString(),
             "d8184b48656c6c6f20776f726c64"
         )
-        
+
         let memo2 = PLT.CborMemo(string: "My memo")!
         XCTAssertEqual(
             Data(memo2.asCBOR().encode()).hexEncodedString(),
             "d818474d79206d656d6f"
         )
-        
+
         let russianText = "Неплохо сработано, мистер Раз-Два 👩🏻‍🔬"
         let memo3 = PLT.CborMemo(string: russianText)!
         XCTAssertEqual(

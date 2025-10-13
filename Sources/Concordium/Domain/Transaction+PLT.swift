@@ -215,7 +215,7 @@ public enum PLT {
             default:
                 return nil
             }
-            
+
             switch array[1] {
             case let .unsignedInt(uint):
                 mantissa = BigUInt(uint)
@@ -224,7 +224,7 @@ public enum PLT {
             default:
                 return nil
             }
-            
+
             let decimals = exponent + 1
             return TokenOperationAmount(value: mantissa, decimals: decimals)
         }
@@ -249,7 +249,7 @@ public enum PLT {
                 .unsignedInt(Self.fieldId): .byteString(data)
             ]))
         }
-        
+
         public static func fromCBOR(_ cbor: CBOR) -> TaggedTokenHolderAccount? {
             guard case let .tagged(tag, .map(map)) = cbor,
                   tag == Self.cborTag,
@@ -278,7 +278,7 @@ public enum PLT {
             guard encoded.count <= Self.maxLength else { return nil }
             self.content = encoded
         }
-        
+
         public init?(string: String) {
             let stringBytes = Array(string.utf8)
             guard stringBytes.count <= Self.maxLength else { return nil }
@@ -288,7 +288,7 @@ public enum PLT {
         public func asCBOR() -> CBOR {
             .tagged(Self.tag, .byteString(content))
         }
-        
+
         public static func fromCBOR(_ cbor: CBOR) -> CborMemo? {
             guard case let .tagged(tag, .byteString(content)) = cbor,
                   tag == Self.tag else { return nil }
@@ -335,7 +335,7 @@ extension String: Serialize, Deserialize {
         res += buffer.writeBytes(bytes)
         return res
     }
-    
+
     public static func deserialize(_ data: inout Cursor) -> String? {
         guard let length = data.parseUInt(UInt8.self),
               let bytes = data.read(num: length) else { return nil }

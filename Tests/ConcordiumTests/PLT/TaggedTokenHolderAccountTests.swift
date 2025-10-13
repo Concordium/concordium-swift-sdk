@@ -1,6 +1,6 @@
-import XCTest
 import Foundation
 import SwiftCBOR
+import XCTest
 @testable import Concordium
 
 final class TaggedTokenHolderAccountTests: XCTestCase {

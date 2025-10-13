@@ -1,7 +1,7 @@
-import XCTest
+import BigInt
 import Foundation
 import SwiftCBOR
-import BigInt
+import XCTest
 @testable import Concordium
 
 final class ConfigureTransferPLTPayloadTests: XCTestCase {

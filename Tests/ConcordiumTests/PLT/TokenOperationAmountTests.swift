@@ -1,21 +1,20 @@
-import XCTest
+import BigInt
 import Foundation
 import SwiftCBOR
-import BigInt
+import XCTest
 @testable import Concordium
 
 final class TokenOperationAmountTests: XCTestCase {
-    
     func testTokenOperationAmountSerialization() {
         // Test 1500000 with 6 decimals -> exponent = -6, value = 1500000
-        let amount1 = PLT.TokenOperationAmount(value: BigUInt(1500000), decimals: 6)
+        let amount1 = PLT.TokenOperationAmount(value: BigUInt(1_500_000), decimals: 6)
         XCTAssertEqual(
             Data(amount1.asCBOR().encode()).hexEncodedString(),
             "c482251a0016e360"
         )
 
         // Test 1234567 with 3 decimals -> exponent = -3
-        let amount2 = PLT.TokenOperationAmount(value: BigUInt(1234567), decimals: 3)
+        let amount2 = PLT.TokenOperationAmount(value: BigUInt(1_234_567), decimals: 3)
         XCTAssertEqual(
             Data(amount2.asCBOR().encode()).hexEncodedString(),
             "c482221a0012d687"
