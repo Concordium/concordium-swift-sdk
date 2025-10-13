@@ -10,7 +10,6 @@ jobs:
     strategy:
       matrix:
         runner:
-        - macos-12 # X64
         - macos-13 # X64
         - macos-14 # ARM64
         include:
