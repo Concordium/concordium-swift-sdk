@@ -1,8 +1,8 @@
 import BigInt
+@testable import Concordium
 import Foundation
 import SwiftCBOR
 import XCTest
-@testable import Concordium
 
 final class ConfigureTransferPLTPayloadTests: XCTestCase {
     func testConfigureTransferPLTPayloadWithMemo() throws {

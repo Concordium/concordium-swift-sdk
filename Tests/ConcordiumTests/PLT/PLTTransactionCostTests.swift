@@ -1,7 +1,7 @@
 import BigInt
+@testable import Concordium
 import Foundation
 import XCTest
-@testable import Concordium
 
 final class PLTTransactionCostTests: XCTestCase {
     func testTransferOperationBaseCost() {

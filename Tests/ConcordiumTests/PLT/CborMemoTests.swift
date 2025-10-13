@@ -1,7 +1,7 @@
+@testable import Concordium
 import Foundation
 import SwiftCBOR
 import XCTest
-@testable import Concordium
 
 final class CborMemoTests: XCTestCase {
     func testMemoTextStringSerialization() {
