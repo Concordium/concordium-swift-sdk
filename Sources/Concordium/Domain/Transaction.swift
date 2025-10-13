@@ -2,6 +2,7 @@ import ConcordiumWalletCrypto
 import CryptoKit
 import Foundation
 import NIO
+import SwiftCBOR
 
 public enum TransactionCost {
     /// Get the base transaction cost for any transaction
@@ -61,6 +62,33 @@ public enum TransactionCost {
 
     /// The amount of additional energy required for a "configure delegation" transaction
     public static let CONFIGURE_DELEGATION: Energy = 300
+
+    /// Calculate the cost for PLT token operations
+    public static func pltTransferCost(tokenId: String, operation: TokenUpdateOperation) -> Energy {
+        // Create the TokenUpdate structure
+        let tokenUpdate = TokenUpdate(tokenSymbol: tokenId, operations: [operation])
+
+        // Create the payload to calculate its size
+        let payload = AccountTransactionPayload.updatePLT(tokenId: tokenId, operation: operation)
+        let serializedPayload = payload.serialize()
+
+        // Create a temporary header to calculate its size (same approach as prepare method)
+        let tempHeader = AccountTransactionHeader(sender: try! AccountAddress(Data(repeating: 0, count: 32)), sequenceNumber: 0, maxEnergy: 0, expiry: 0)
+        let headerSize = tempHeader.serialize(serializedPayloadSize: 0).count
+
+        // Calculate energy cost following Android SDK's Payload.calculateEnergyCost formula:
+        // CONSTANT_A * noOfSignatures + CONSTANT_B * (TRANSACTION_HEADER_SIZE + payloadSize) + transactionSpecificCost
+        let constantA = 100 // energy per signature
+        let constantB = 1 // energy per byte
+        let signatureCost = constantA * 1 // 1 signature
+        let sizeCost = constantB * (headerSize + serializedPayload.count)
+        let operationsCost = tokenUpdate.getOperationsBaseCost()
+
+        // Add base cost for PLT transaction type (similar to TRANSFER = 300)
+        let pltBaseCost = Energy(300)
+
+        return Energy(signatureCost + sizeCost) + operationsCost + pltBaseCost
+    }
 }
 
 /// Represents an account transaction consisting of the transaction components necessary for submission
@@ -209,6 +237,11 @@ public struct PreparedAccountTransaction {
         let data = Data(buffer: buf)
         return .init(data: data)
     }
+
+    /// Hex string of the raw payload (no header), useful for debugging
+    public var serializedPayloadHex: String {
+        serializedPayload.hex
+    }
 }
 
 /// Represents a serialized account transaction
@@ -306,6 +339,8 @@ enum TransactionTypeString: String, Codable {
     case configureBaker
     /// Effective from protocol version 4
     case configureDelegation
+    /// Effective from protocol version 9
+    case pltTokenUpdate
 
     init(type: TransactionType) {
         switch type {
@@ -351,6 +386,8 @@ enum TransactionTypeString: String, Codable {
             self = .configureBaker
         case .configureDelegation:
             self = .configureDelegation
+        case .pltTokenUpdate:
+            self = .pltTokenUpdate
         }
     }
 
@@ -398,6 +435,8 @@ enum TransactionTypeString: String, Codable {
             return .configureBaker
         case .configureDelegation:
             return .configureDelegation
+        case .pltTokenUpdate:
+            return .pltTokenUpdate
         }
     }
 }
@@ -436,6 +475,8 @@ public enum TransactionType: UInt8, Serialize, Deserialize, Codable {
     case configureBaker = 25
     /// Effective from protocol version 4
     case configureDelegation = 26
+    /// Effective from protocol version 9
+    case pltTokenUpdate = 27
 
     public func serialize(into buffer: inout NIOCore.ByteBuffer) -> Int {
         buffer.writeInteger(rawValue)
@@ -481,7 +522,12 @@ extension TransactionType: FromGRPC {
         case .transferWithScheduleAndMemo: return .transferWithScheduleAndMemo
         case .configureBaker: return .configureBaker
         case .configureDelegation: return .configureDelegation
-        case .UNRECOGNIZED: throw GRPCError.valueOutOfBounds
+        case .pltTokenUpdate: return .pltTokenUpdate
+        case let .UNRECOGNIZED(value):
+            if value == 27 {
+                return .pltTokenUpdate
+            }
+            throw GRPCError.valueOutOfBounds
         }
     }
 }
@@ -862,6 +908,7 @@ public enum AccountTransactionPayload: Equatable {
     case registerData(_ data: RegisteredData)
     case configureBaker(_ data: ConfigureBakerPayload)
     case configureDelegation(_ data: ConfigureDelegationPayload)
+    case updatePLT(tokenId: String, operation: TokenUpdateOperation)
 }
 
 public extension AccountTransactionPayload {
@@ -965,6 +1012,14 @@ extension AccountTransactionPayload: Serialize, Deserialize {
         case let .configureDelegation(data):
             res += buffer.writeSerializable(TransactionType.configureDelegation)
             res += buffer.writeSerializable(data)
+        case let .updatePLT(tokenId, operation):
+            res += buffer.writeInteger(UInt8(27))
+            let symbolBytes = Array(tokenId.utf8)
+            res += buffer.writeInteger(UInt8(symbolBytes.count))
+            res += buffer.writeBytes(symbolBytes)
+            let operationsBytes = operation.toCBORList().encode()
+            res += buffer.writeInteger(UInt32(operationsBytes.count), endianness: .big)
+            res += buffer.writeData(Data(operationsBytes))
         }
 
         return res
@@ -1027,10 +1082,26 @@ extension AccountTransactionPayload: Serialize, Deserialize {
         case .configureDelegation:
             guard let payload = ConfigureDelegationPayload.deserialize(&data) else { return nil }
             return .configureDelegation(payload)
+
         case .addBaker, .removeBaker, .updateBakerStake, .updateBakerRestakeEarnings, .updateBakerKeys:
             return nil // Not supported, invalid since protocol version 4
         case .encryptedAmountTransfer, .encryptedAmountTransferWithMemo, .transferToEncrypted:
             return nil // Not supported, invalid since protocol version 7
+        case .pltTokenUpdate:
+            guard let symbolLength = data.parseUInt(UInt8.self),
+                  let symbolBytes = data.read(num: symbolLength),
+                  let operationsLength = data.parseUInt(UInt32.self),
+                  let operationsBytes = data.read(num: UInt(operationsLength)) else { return nil }
+
+            let tokenId = String(decoding: symbolBytes, as: UTF8.self)
+
+            // Parse as list of operations
+            guard let cbor = try? CBOR.decode(Array(operationsBytes)),
+                  case let .array(operations) = cbor,
+                  operations.count == 1,
+                  let operation = TokenUpdateOperation.fromCBOR(operations[0]) else { return nil }
+
+            return .updatePLT(tokenId: tokenId, operation: operation)
         }
     }
 }
