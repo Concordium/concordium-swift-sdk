@@ -86,6 +86,41 @@ public extension TokenUpdateOperation {
         return fromCBOR(cbor)
     }
 
+    /// Parse operations from hex-encoded CBOR array
+    /// - Parameter hexString: Hex-encoded string containing CBOR-encoded array of operations
+    /// - Returns: Array of parsed operations, or nil if parsing fails
+    static func parseOperationsFromHex(_ hexString: String) -> [TokenUpdateOperation]? {
+        // Convert hex string to Data
+        var hex = hexString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if hex.hasPrefix("0x") {
+            hex.removeFirst(2)
+        }
+
+        guard hex.count % 2 == 0 else { return nil }
+
+        var data = Data()
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let nextIndex = hex.index(index, offsetBy: 2)
+            guard let byte = UInt8(hex[index ..< nextIndex], radix: 16) else { return nil }
+            data.append(byte)
+            index = nextIndex
+        }
+
+        // Decode CBOR array
+        guard let cbor = try? CBOR.decode(Array(data)),
+              case let .array(operations) = cbor else { return nil }
+
+        // Parse each operation
+        var parsedOperations: [TokenUpdateOperation] = []
+        for operationCBOR in operations {
+            guard let operation = fromCBOR(operationCBOR) else { return nil }
+            parsedOperations.append(operation)
+        }
+
+        return parsedOperations
+    }
+
     static func fromCBOR(_ cbor: CBOR) -> TokenUpdateOperation? {
         guard case let .map(map) = cbor else { return nil }
 
@@ -292,6 +327,26 @@ public enum PLT {
             guard case let .tagged(tag, .byteString(content)) = cbor,
                   tag == Self.tag else { return nil }
             return CborMemo(rawCBOR: content)
+        }
+
+        /// Attempts to convert the memo content to a readable string.
+        /// First tries to decode as CBOR and extract a UTF-8 string, then falls back to direct UTF-8 decoding.
+        /// Returns nil if the content cannot be decoded as a string.
+        public func asString() -> String? {
+            // Try to decode the content as CBOR first
+            if let decoded = try? CBOR.decode(content) {
+                // If it's a UTF-8 string, extract it
+                if case let .utf8String(string) = decoded {
+                    return string
+                }
+            }
+
+            // Fall back to trying to decode the raw bytes as UTF-8
+            if let string = String(data: Data(content), encoding: .utf8), !string.isEmpty {
+                return string
+            }
+
+            return nil
         }
     }
 
