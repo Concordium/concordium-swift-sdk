@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-11-7
+
+### Added
+- Add parseOperationsFromHex() to TokenUpdateOperation for parsing hex-encoded CBOR arrays of operations
+- Add asString() to CborMemo to decode memo content to readable string
+- Enables WalletConnect PLT transfer support
+
 ## [1.1.0] - 2025-10-13
 
 ### Changed
