@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-02-2
+
+- Added ZKPPresentationV1 DTO to map PresentationV1 into expected JSON shape.
+- Added ZKPFactory.makeVerifiablePresentationV1 to create + map presentations in one place.
+
 ## [1.2.0] - 2025-11-7
 
 ### Added
