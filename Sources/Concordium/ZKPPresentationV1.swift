@@ -190,7 +190,7 @@ public extension ZKPPresentationV1 {
 
         let credentials: [VerifiableCredential] = core.verifiableCredentials.map { cred in
             switch cred {
-            case .account(let account):
+            case let .account(account):
                 let subject = CredentialSubject(
                     id: didForAccountCredential(network: account.subject.network, credId: account.subject.credId),
                     statement: account.subject.statements.map(mapStatement)
@@ -213,7 +213,7 @@ public extension ZKPPresentationV1 {
                     issuer: issuer,
                     proof: proof
                 )
-            case .identity(let identity):
+            case let .identity(identity):
                 let subject = CredentialSubject(
                     id: didForIdentityCredential(network: identity.subject.network, credId: identity.subject.credId),
                     statement: identity.subject.statements.map(mapStatement)
