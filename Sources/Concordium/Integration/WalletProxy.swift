@@ -16,7 +16,7 @@ public class WalletProxy {
             try HTTPRequest(url: URL(string: "/v1/ip_info", relativeTo: baseURL) ?! WalletProxyError.cannotConstructURL)
         }
     }
-    
+
     public func getSubmissionStatus(transactionRef: String) throws -> HTTPRequest<SubmissionStatusJSON> {
         try HTTPRequest(url: URL(string: "/v0/submissionStatus/\(transactionRef)", relativeTo: baseURL) ?! WalletProxyError.cannotConstructURL)
     }
@@ -98,14 +98,14 @@ public struct SubmissionStatusJSON: Decodable {
     public var encryptedAmount: String?
     public var aggregatedIndex: Int?
     public var registeredData: String?
-    
+
     public enum SubmissionStatus: String, Decodable {
         case received
         case absent
         case committed
         case finalized
     }
-    
+
     public enum Outcome: String, Decodable {
         case success
         case reject

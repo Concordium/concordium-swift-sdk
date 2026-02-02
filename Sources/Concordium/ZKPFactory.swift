@@ -1,5 +1,5 @@
-import Foundation
 import ConcordiumWalletCrypto
+import Foundation
 
 public enum ZKPFactory {
     public static func makeVerifiablePresentationV1(
@@ -15,5 +15,3 @@ public enum ZKPFactory {
         return try ZKPPresentationV1(from: core)
     }
 }
-
-

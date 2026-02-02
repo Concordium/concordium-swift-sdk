@@ -1,5 +1,5 @@
-import Foundation
 import ConcordiumWalletCrypto
+import Foundation
 
 public struct ZKPPresentationV1: Codable {
     private static let verifiableCredentialType = "VerifiableCredential"
@@ -109,7 +109,8 @@ public extension ZKPPresentationV1 {
         func hexStringFromHexOrBytes(_ data: Data) -> String {
             if let ascii = String(data: data, encoding: .utf8),
                ascii.count % 2 == 0,
-               ascii.range(of: #"^[0-9a-fA-F]+$"#, options: .regularExpression) != nil {
+               ascii.range(of: #"^[0-9a-fA-F]+$"#, options: .regularExpression) != nil
+            {
                 return ascii.lowercased()
             }
             return hexString(data)
@@ -136,7 +137,7 @@ public extension ZKPPresentationV1 {
 
         func mapStatement(_ stmt: AtomicStatementV1) -> Statement {
             switch stmt {
-            case .attributeValue(let s):
+            case let .attributeValue(s):
                 return Statement(
                     type: .attributeValue,
                     attributeTag: string(from: s.attributeTag),
@@ -145,7 +146,7 @@ public extension ZKPPresentationV1 {
                     upper: nil,
                     set: nil
                 )
-            case .attributeInRange(let s):
+            case let .attributeInRange(s):
                 return Statement(
                     type: .attributeInRange,
                     attributeTag: string(from: s.attributeTag),
@@ -154,7 +155,7 @@ public extension ZKPPresentationV1 {
                     upper: s.upper,
                     set: nil
                 )
-            case .attributeInSet(let s):
+            case let .attributeInSet(s):
                 return Statement(
                     type: .attributeInSet,
                     attributeTag: string(from: s.attributeTag),
@@ -163,7 +164,7 @@ public extension ZKPPresentationV1 {
                     upper: nil,
                     set: s.set
                 )
-            case .attributeNotInSet(let s):
+            case let .attributeNotInSet(s):
                 return Statement(
                     type: .attributeNotInSet,
                     attributeTag: string(from: s.attributeTag),
@@ -204,7 +205,7 @@ public extension ZKPPresentationV1 {
                     type: [
                         Self.verifiableCredentialType,
                         Self.concordiumVerifiableCredentialV1Type,
-                        Self.concordiumAccountBasedCredentialType
+                        Self.concordiumAccountBasedCredentialType,
                     ],
                     credentialSubject: subject,
                     validFrom: nil,
@@ -227,7 +228,7 @@ public extension ZKPPresentationV1 {
                     type: [
                         Self.verifiableCredentialType,
                         Self.concordiumVerifiableCredentialV1Type,
-                        Self.concordiumIdentityBasedCredentialType
+                        Self.concordiumIdentityBasedCredentialType,
                     ],
                     credentialSubject: subject,
                     validFrom: formatter.string(from: identity.validFrom),
@@ -252,5 +253,3 @@ public extension ZKPPresentationV1 {
         )
     }
 }
-
-
