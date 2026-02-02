@@ -7,7 +7,7 @@ public enum IdentityRequestError: Error {
 }
 
 public class IdentityRequestURLBuilder {
-    private let callbackURL: URL? // Android example wallet uses: concordiumwallet-example://identity-issuer/callback
+    private let callbackURL: URL?
 
     // If callback URL is nil then only recovery is supported.
     public init(callbackURL: URL?) {

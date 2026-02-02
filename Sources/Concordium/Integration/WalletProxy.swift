@@ -16,6 +16,10 @@ public class WalletProxy {
             try HTTPRequest(url: URL(string: "/v1/ip_info", relativeTo: baseURL) ?! WalletProxyError.cannotConstructURL)
         }
     }
+
+    public func getSubmissionStatus(transactionRef: String) throws -> HTTPRequest<SubmissionStatusJSON> {
+        try HTTPRequest(url: URL(string: "/v0/submissionStatus/\(transactionRef)", relativeTo: baseURL) ?! WalletProxyError.cannotConstructURL)
+    }
 }
 
 public struct IdentityProviderJSON: Decodable {
@@ -77,5 +81,33 @@ public struct IdentityProviderJSON: Decodable {
             metadata: metadata,
             anonymityRevokers: arsInfos.mapValues { try $0.toSDKType() }
         )
+    }
+}
+
+public struct SubmissionStatusJSON: Decodable {
+    public var status: SubmissionStatus
+    public var amount: String?
+    public var sender: String?
+    public var to: String?
+    public var transactionHash: String?
+    public var cost: String?
+    public var outcome: Outcome?
+    public var blockHashes: [String]?
+    public var rejectReason: String?
+    public var newSelfEncryptedAmount: String?
+    public var encryptedAmount: String?
+    public var aggregatedIndex: Int?
+    public var registeredData: String?
+
+    public enum SubmissionStatus: String, Decodable {
+        case received
+        case absent
+        case committed
+        case finalized
+    }
+
+    public enum Outcome: String, Decodable {
+        case success
+        case reject
     }
 }

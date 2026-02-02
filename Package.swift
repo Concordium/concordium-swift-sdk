@@ -23,7 +23,7 @@ let package = Package(
         .package(url: "https://github.com/valpackett/SwiftCBOR.git", from: "0.5.0"),
         overridableCryptoDependency(
             url: "https://github.com/Concordium/concordium-wallet-crypto-swift.git",
-            from: "5.0.0"
+            from: "5.1.1"
         ),
     ],
     targets: [
