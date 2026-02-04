@@ -99,7 +99,7 @@ public typealias MicroCCDAmount = ConcordiumWalletCrypto.MicroCCDAmount
 
 public typealias EncryptedAmount = Data
 
-public typealias AggregatedAmount = Data // in Rust/Java SDK this is (EncryptedAmount<ArCurve>, UInt32)
+public typealias AggregatedAmount = Data // represents (EncryptedAmount<ArCurve>, UInt32)
 
 /// An Ed25519-like public key.
 public typealias VRFPublicKey = Data

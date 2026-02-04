@@ -174,6 +174,22 @@ public class GRPCNodeClient: NodeClient {
         return try SubmittedTransaction(hash: .fromGRPC(res), client: self)
     }
 
+    /// Send a raw block item (for V1 transactions that need to preserve sponsor information)
+    /// This method attempts to submit the transaction as raw bytes
+    ///
+    /// **NOTE**: This method currently throws an error because the GRPC proto file doesn't include
+    /// the `rawBlockItem` field. The proto file needs to be updated to include this field
+    /// in `SendBlockItemRequest`.
+    ///
+    /// Until the proto is updated, sponsored transactions should use the standard `send(transaction:)`
+    /// method, which may fail with verification errors if the node cannot properly detect sponsored
+    /// transactions from the standard format.
+    public func send(rawBlockItem _: Data) async throws -> SubmittedTransaction {
+        // TODO: Update the GRPC proto file to include rawBlockItem field in SendBlockItemRequest
+        // Once the proto is updated and regenerated, we can implement this properly
+        throw GRPCError.unsupportedValue("Raw block item submission requires proto update. The SendBlockItemRequest proto needs to include a rawBlockItem field.")
+    }
+
     public func send(deployment: SerializedSignedAccountCredentialDeployment) async throws -> SubmittedTransaction {
         var req = Concordium_V2_SendBlockItemRequest()
         req.credentialDeployment = deployment.toGRPC()
