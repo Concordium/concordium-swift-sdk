@@ -4,12 +4,23 @@ import Foundation
 /// and it might have some other effects on the state of the chain.
 public struct AccountTransactionDetails {
     /// The amount of CCD the sender paid for including this transaction in
-    /// the block.
+    /// the block. For sponsored transactions, this will be 0.
     public let cost: CCD
     /// Sender of the transaction.
     public let sender: AccountAddress
     /// Effects of the account transaction, if any.
     public let effects: AccountTransactionEffects
+    /// Sponsor account address (for sponsored transactions, V1+)
+    /// Note: This field will be populated when GRPC API supports it
+    public let sponsor: AccountAddress?
+    
+    // Internal initializer for current GRPC support
+    internal init(cost: CCD, sender: AccountAddress, effects: AccountTransactionEffects, sponsor: AccountAddress? = nil) {
+        self.cost = cost
+        self.sender = sender
+        self.effects = effects
+        self.sponsor = sponsor
+    }
 }
 
 extension AccountTransactionDetails: FromGRPC {
@@ -19,7 +30,9 @@ extension AccountTransactionDetails: FromGRPC {
         let cost = try CCD.fromGRPC(g.cost)
         let sender = try AccountAddress.fromGRPC(g.sender)
         let effects = try AccountTransactionEffects.fromGRPC(g.effects)
-        return Self(cost: cost, sender: sender, effects: effects)
+        // TODO: When GRPC API adds sponsor field, decode it here
+        // let sponsor = g.hasSponsor ? try AccountAddress.fromGRPC(g.sponsor) : nil
+        return Self(cost: cost, sender: sender, effects: effects, sponsor: nil)
     }
 }
 
