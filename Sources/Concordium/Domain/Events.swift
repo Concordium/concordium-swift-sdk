@@ -13,9 +13,8 @@ public struct AccountTransactionDetails {
     /// Sponsor account address (for sponsored transactions, V1+)
     /// Note: This field will be populated when GRPC API supports it
     public let sponsor: AccountAddress?
-    
-    // Internal initializer for current GRPC support
-    internal init(cost: CCD, sender: AccountAddress, effects: AccountTransactionEffects, sponsor: AccountAddress? = nil) {
+
+    init(cost: CCD, sender: AccountAddress, effects: AccountTransactionEffects, sponsor: AccountAddress? = nil) {
         self.cost = cost
         self.sender = sender
         self.effects = effects
