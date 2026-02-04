@@ -165,7 +165,7 @@ public extension Signatures {
             throw DeserializeError(Signatures.self, data: data)
         }
 
-        for _ in 0..<numCredentials {
+        for _ in 0 ..< numCredentials {
             // Read credential index (UInt8)
             guard let credIndexValue = cursor.parseUInt(UInt8.self) else {
                 throw DeserializeError(Signatures.self, data: data)
@@ -179,7 +179,7 @@ public extension Signatures {
 
             var credSignatures: CredentialSignatures = [:]
 
-            for _ in 0..<numKeys {
+            for _ in 0 ..< numKeys {
                 // Read key index (UInt8)
                 guard let keyIndexValue = cursor.parseUInt(UInt8.self) else {
                     throw DeserializeError(Signatures.self, data: data)
