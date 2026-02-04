@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-02-04
+
+## [Unreleased]
+
+### Added
+- Sponsored transaction (V1) support with `AccountTransactionHeaderV1` for transactions with sponsor addresses
+- `SponsoredTransactionBuilder` for creating, validating, and signing sponsored transactions
+- `SponsoredTransactionValidator` for validating sender, balance, and token balance
+- `SignedSponsoredTransaction` structure for handling separate sender and sponsor signatures
+- Support for both CCD and PLT token transfers in sponsored transactions
+- `PreparedSponsoredTransaction` for preparing sponsored transactions with V1 headers
+- `TransactionSignaturesV1` structure for proper signature handling in sponsored transactions
+
 ## [1.3.0] - 2026-02-2
 
 ### Added
