@@ -9,8 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.0] - 2026-02-04
 
-## [Unreleased]
-
 ### Added
 - Sponsored transaction (V1) support with `AccountTransactionHeaderV1` for transactions with sponsor addresses
 - `SponsoredTransactionBuilder` for creating, validating, and signing sponsored transactions
