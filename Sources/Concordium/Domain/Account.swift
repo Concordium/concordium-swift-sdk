@@ -95,7 +95,7 @@ public typealias SignatureThreshold = UInt8
 public typealias RevocationThreshold = UInt8
 
 /// Amount of uCCD.
-public typealias MicroCCDAmount = ConcordiumWalletCrypto.MicroCCDAmount
+public typealias MicroCCDAmount = ConcordiumWalletCrypto.MicroCcdAmount
 
 public typealias EncryptedAmount = Data
 
